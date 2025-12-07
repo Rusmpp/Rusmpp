@@ -139,10 +139,10 @@ mod tests {
                 Self::SmeAddress(SmeAddress::new(
                     Ton::International,
                     Npi::Isdn,
-                    COctetString::new(b"1234567890123456789\0").unwrap(),
+                    COctetString::new(b"1234567890123456789\0".to_vec()).unwrap(),
                 )),
                 Self::DistributionListName(DistributionListName::new(
-                    COctetString::new(b"1234567890123456789\0").unwrap(),
+                    COctetString::new(b"1234567890123456789\0".to_vec()).unwrap(),
                 )),
             ]
         }

@@ -44,9 +44,7 @@ impl AnyOctetString {
 
     /// Create a new [`AnyOctetString`] from a sequence of bytes.
     #[inline]
-    pub fn new(bytes: impl AsRef<[u8]>) -> Self {
-        let bytes = bytes.as_ref().to_vec();
-
+    pub fn new(bytes: Vec<u8>) -> Self {
         Self { bytes }
     }
 
@@ -100,7 +98,7 @@ impl core::str::FromStr for AnyOctetString {
     type Err = core::convert::Infallible;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self::new(s.as_bytes()))
+        Ok(Self::new(s.as_bytes().to_vec()))
     }
 }
 
@@ -168,14 +166,14 @@ mod tests {
         #[test]
         fn ok() {
             let bytes = b"Hello\0World!\0";
-            let octet_string = AnyOctetString::new(bytes);
+            let octet_string = AnyOctetString::new(bytes.to_vec());
             assert_eq!(octet_string.bytes, bytes);
         }
 
         #[test]
         fn ok_len() {
             let bytes = b"Hello\0World!\0";
-            let octet_string = AnyOctetString::new(bytes);
+            let octet_string = AnyOctetString::new(bytes.to_vec());
             assert_eq!(octet_string.bytes.len(), 13);
             assert_eq!(octet_string.length(), 13);
         }

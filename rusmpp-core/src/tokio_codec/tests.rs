@@ -162,31 +162,31 @@ async fn send_broadcast_sm() {
                 .push_tlv(BroadcastRequestTlvValue::BroadcastAreaIdentifier(
                     BroadcastAreaIdentifier::new(
                         BroadcastAreaFormat::Polygon,
-                        AnyOctetString::new(b"Polygon Area"),
+                        AnyOctetString::new(b"Polygon Area".to_vec()),
                     ),
                 ))
                 .push_tlv(BroadcastRequestTlvValue::BroadcastAreaIdentifier(
                     BroadcastAreaIdentifier::new(
                         BroadcastAreaFormat::AliasName,
-                        AnyOctetString::new(b"AliasName Area"),
+                        AnyOctetString::new(b"AliasName Area".to_vec()),
                     ),
                 ))
                 .push_tlv(BroadcastRequestTlvValue::BroadcastAreaIdentifier(
                     BroadcastAreaIdentifier::new(
                         BroadcastAreaFormat::EllipsoidArc,
-                        AnyOctetString::new(b"EllipsoidArc Area"),
+                        AnyOctetString::new(b"EllipsoidArc Area".to_vec()),
                     ),
                 ))
                 .push_tlv(BroadcastRequestTlvValue::BroadcastAreaIdentifier(
                     BroadcastAreaIdentifier::new(
                         BroadcastAreaFormat::EllipsoidArc,
-                        AnyOctetString::new(b"EllipsoidArc Area 2"),
+                        AnyOctetString::new(b"EllipsoidArc Area 2".to_vec()),
                     ),
                 ))
                 .push_tlv(BroadcastRequestTlvValue::BroadcastAreaIdentifier(
                     BroadcastAreaIdentifier::new(
                         BroadcastAreaFormat::EllipsoidArc,
-                        AnyOctetString::new(b"EllipsoidArc Area 3"),
+                        AnyOctetString::new(b"EllipsoidArc Area 3".to_vec()),
                     ),
                 ))
                 .push_tlv(BroadcastRequestTlvValue::BroadcastMessageClass(
@@ -207,9 +207,9 @@ async fn send_submit_sm() {
         .sequence_number(1)
         .pdu(
             SubmitSm::builder()
-                .short_message(OctetString::new(b"Short Message").unwrap())
+                .short_message(OctetString::new(b"Short Message".to_vec()).unwrap())
                 .push_tlv(MessageSubmissionRequestTlvValue::MessagePayload(
-                    MessagePayload::new(AnyOctetString::new(b"Message Payload")),
+                    MessagePayload::new(AnyOctetString::new(b"Message Payload".to_vec())),
                 ))
                 .build(),
         );

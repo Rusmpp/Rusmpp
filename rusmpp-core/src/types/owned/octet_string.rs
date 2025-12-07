@@ -86,7 +86,7 @@ impl<const MIN: usize, const MAX: usize> OctetString<MIN, MAX> {
     /// Create a new [`OctetString`] from the given bytes.
     ///
     /// This should replace the current `new` method.
-    fn new_(bytes: Vec<u8>) -> Result<Self, Error> {
+    pub fn new(bytes: Vec<u8>) -> Result<Self, Error> {
         Self::_ASSERT_MIN_LESS_THAN_OR_EQUAL_TO_MAX;
 
         if bytes.len() > MAX {
@@ -104,15 +104,6 @@ impl<const MIN: usize, const MAX: usize> OctetString<MIN, MAX> {
         }
 
         Ok(Self { bytes })
-    }
-
-    // TODO: what the fuck is this api? impl as ref really? see `new_`
-    pub fn new(bytes: impl AsRef<[u8]>) -> Result<Self, Error> {
-        Self::_ASSERT_MIN_LESS_THAN_OR_EQUAL_TO_MAX;
-
-        let bytes = bytes.as_ref().to_vec();
-
-        Self::new_(bytes)
     }
 
     /// Convert an [`OctetString`] to a &[`str`].
@@ -159,7 +150,7 @@ impl<const MIN: usize, const MAX: usize> core::str::FromStr for OctetString<MIN,
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Self::new(s.as_bytes())
+        Self::new(s.as_bytes().to_vec())
     }
 }
 
@@ -257,42 +248,42 @@ mod tests {
         #[test]
         fn too_many_bytes() {
             let bytes = b"Hello\0World!\0";
-            let error = OctetString::<0, 5>::new(bytes).unwrap_err();
+            let error = OctetString::<0, 5>::new(bytes.to_vec()).unwrap_err();
             assert!(matches!(error, Error::TooManyBytes { actual: 13, .. }));
         }
 
         #[test]
         fn too_few_bytes() {
             let bytes = b"Hello World!";
-            let error = OctetString::<15, 20>::new(bytes).unwrap_err();
+            let error = OctetString::<15, 20>::new(bytes.to_vec()).unwrap_err();
             assert!(matches!(error, Error::TooFewBytes { actual: 12, .. }));
         }
 
         #[test]
         fn ok_min() {
             let bytes = b"H";
-            let octet_string = OctetString::<1, 13>::new(bytes).unwrap();
+            let octet_string = OctetString::<1, 13>::new(bytes.to_vec()).unwrap();
             assert_eq!(octet_string.bytes, bytes);
         }
 
         #[test]
         fn ok_max() {
             let bytes = b"Hello\0World!\0";
-            let octet_string = OctetString::<1, 13>::new(bytes).unwrap();
+            let octet_string = OctetString::<1, 13>::new(bytes.to_vec()).unwrap();
             assert_eq!(octet_string.bytes, bytes);
         }
 
         #[test]
         fn ok_between_min_max() {
             let bytes = b"Hello\0";
-            let octet_string = OctetString::<1, 13>::new(bytes).unwrap();
+            let octet_string = OctetString::<1, 13>::new(bytes.to_vec()).unwrap();
             assert_eq!(octet_string.bytes, bytes);
         }
 
         #[test]
         fn ok_len() {
             let bytes = b"Hello\0World!\0";
-            let octet_string = OctetString::<0, 13>::new(bytes).unwrap();
+            let octet_string = OctetString::<0, 13>::new(bytes.to_vec()).unwrap();
             assert_eq!(octet_string.bytes.len(), 13);
             assert_eq!(octet_string.length(), 13);
         }
@@ -304,7 +295,7 @@ mod tests {
         #[test]
         fn ok() {
             let bytes = b"Hello\0World!\0";
-            let octet_string = OctetString::<0, 13>::new(bytes).unwrap();
+            let octet_string = OctetString::<0, 13>::new(bytes.to_vec()).unwrap();
             assert_eq!(octet_string.to_str().unwrap(), "Hello\0World!\0");
         }
     }

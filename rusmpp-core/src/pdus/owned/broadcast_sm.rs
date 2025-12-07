@@ -275,7 +275,7 @@ mod tests {
                     .message_id(COctetString::from_str("MessageId").unwrap())
                     .priority_flag(PriorityFlag::from(PriorityFlagType::from(Ansi136::Bulk)))
                     .schedule_delivery_time(
-                        EmptyOrFullCOctetString::new(b"2023-10-01T00:00\0").unwrap(),
+                        EmptyOrFullCOctetString::new(b"2023-10-01T00:00\0".to_vec()).unwrap(),
                     )
                     .validity_period(EmptyOrFullCOctetString::empty())
                     .replace_if_present_flag(ReplaceIfPresentFlag::DoNotReplace)

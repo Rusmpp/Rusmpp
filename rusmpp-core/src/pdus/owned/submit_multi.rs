@@ -392,28 +392,28 @@ mod tests {
                     .replace_if_present_flag(ReplaceIfPresentFlag::default())
                     .data_coding(DataCoding::default())
                     .sm_default_msg_id(0)
-                    .short_message(OctetString::new(b"Short Message").unwrap())
+                    .short_message(OctetString::new(b"Short Message".to_vec()).unwrap())
                     .build(),
                 Self::builder()
-                    .short_message(OctetString::new(b"Short Message").unwrap())
+                    .short_message(OctetString::new(b"Short Message".to_vec()).unwrap())
                     .push_tlv(MessageSubmissionRequestTlvValue::MessagePayload(
-                        MessagePayload::new(AnyOctetString::new(b"Message Payload")),
+                        MessagePayload::new(AnyOctetString::new(b"Message Payload".to_vec())),
                     ))
                     .build(),
                 Self::builder()
                     .push_dest_address(DestAddress::SmeAddress(SmeAddress::new(
                         Ton::International,
                         Npi::Isdn,
-                        COctetString::new(b"1234567890123456789\0").unwrap(),
+                        COctetString::new(b"1234567890123456789\0".to_vec()).unwrap(),
                     )))
                     .push_dest_address(DestAddress::DistributionListName(
                         DistributionListName::new(
-                            COctetString::new(b"1234567890123456789\0").unwrap(),
+                            COctetString::new(b"1234567890123456789\0".to_vec()).unwrap(),
                         ),
                     ))
-                    .short_message(OctetString::new(b"Short Message").unwrap())
+                    .short_message(OctetString::new(b"Short Message".to_vec()).unwrap())
                     .push_tlv(MessageSubmissionRequestTlvValue::MessagePayload(
-                        MessagePayload::new(AnyOctetString::new(b"Message Payload")),
+                        MessagePayload::new(AnyOctetString::new(b"Message Payload".to_vec())),
                     ))
                     .push_tlv(MessageSubmissionRequestTlvValue::DestTelematicsId(16))
                     .build(),
@@ -428,7 +428,7 @@ mod tests {
 
     #[test]
     fn short_message_length() {
-        let short_message = OctetString::new(b"Short Message").unwrap();
+        let short_message = OctetString::new(b"Short Message".to_vec()).unwrap();
 
         let submit_sm = SubmitMulti::builder()
             .short_message(short_message.clone())
@@ -440,8 +440,8 @@ mod tests {
 
     #[test]
     fn short_message_override() {
-        let short_message_1 = OctetString::new(b"Short Message 101").unwrap();
-        let short_message_2 = OctetString::new(b"Short Message 2").unwrap();
+        let short_message_1 = OctetString::new(b"Short Message 101".to_vec()).unwrap();
+        let short_message_2 = OctetString::new(b"Short Message 2".to_vec()).unwrap();
 
         let submit_sm = SubmitMulti::builder()
             .short_message(short_message_1)
@@ -454,8 +454,8 @@ mod tests {
 
     #[test]
     fn message_payload_suppresses_short_message() {
-        let short_message = OctetString::new(b"Short Message").unwrap();
-        let message_payload = MessagePayload::new(AnyOctetString::new(b"Message Payload"));
+        let short_message = OctetString::new(b"Short Message".to_vec()).unwrap();
+        let message_payload = MessagePayload::new(AnyOctetString::new(b"Message Payload".to_vec()));
 
         // Using push_tlv
         let submit_sm = SubmitMulti::builder()
@@ -529,10 +529,10 @@ mod tests {
                 DestAddress::SmeAddress(SmeAddress::new(
                     Ton::International,
                     Npi::Isdn,
-                    COctetString::new(b"1234567890123456789\0").unwrap(),
+                    COctetString::new(b"1234567890123456789\0".to_vec()).unwrap(),
                 )),
                 DestAddress::DistributionListName(DistributionListName::new(
-                    COctetString::new(b"1234567890123456789\0").unwrap(),
+                    COctetString::new(b"1234567890123456789\0".to_vec()).unwrap(),
                 )),
             ])
             .build();
@@ -544,10 +544,12 @@ mod tests {
             .push_dest_address(DestAddress::SmeAddress(SmeAddress::new(
                 Ton::International,
                 Npi::Isdn,
-                COctetString::new(b"1234567890123456789\0").unwrap(),
+                COctetString::new(b"1234567890123456789\0".to_vec()).unwrap(),
             )))
             .push_dest_address(DestAddress::DistributionListName(
-                DistributionListName::new(COctetString::new(b"1234567890123456789\0").unwrap()),
+                DistributionListName::new(
+                    COctetString::new(b"1234567890123456789\0".to_vec()).unwrap(),
+                ),
             ))
             .build();
 
@@ -558,10 +560,12 @@ mod tests {
             .push_dest_address(DestAddress::SmeAddress(SmeAddress::new(
                 Ton::International,
                 Npi::Isdn,
-                COctetString::new(b"1234567890123456789\0").unwrap(),
+                COctetString::new(b"1234567890123456789\0".to_vec()).unwrap(),
             )))
             .push_dest_address(DestAddress::DistributionListName(
-                DistributionListName::new(COctetString::new(b"1234567890123456789\0").unwrap()),
+                DistributionListName::new(
+                    COctetString::new(b"1234567890123456789\0".to_vec()).unwrap(),
+                ),
             ))
             .clear_dest_address()
             .build();

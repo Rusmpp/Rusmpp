@@ -68,10 +68,8 @@ impl<const N: usize> EmptyOrFullCOctetString<N> {
     }
 
     /// Create a new [`EmptyOrFullCOctetString`] from a sequence of bytes including a null terminator.
-    pub fn new(bytes: impl AsRef<[u8]>) -> Result<Self, Error> {
+    pub fn new(bytes: Vec<u8>) -> Result<Self, Error> {
         Self::_ASSERT_NON_ZERO;
-
-        let bytes = bytes.as_ref();
 
         // We must have at least the null terminator
         if bytes.is_empty() {
@@ -113,8 +111,6 @@ impl<const N: usize> EmptyOrFullCOctetString<N> {
         if !bytes.is_ascii() {
             return Err(Error::NotAscii);
         }
-
-        let bytes = bytes.to_vec();
 
         Ok(Self { bytes })
     }
@@ -304,56 +300,56 @@ mod tests {
         #[test]
         fn empty_too_few_bytes() {
             let bytes = b"";
-            let error = EmptyOrFullCOctetString::<5>::new(bytes).unwrap_err();
+            let error = EmptyOrFullCOctetString::<5>::new(bytes.to_vec()).unwrap_err();
             assert!(matches!(error, Error::TooFewBytes { actual: 0 }));
         }
 
         #[test]
         fn too_many_bytes() {
             let bytes = b"Hello\0";
-            let error = EmptyOrFullCOctetString::<5>::new(bytes).unwrap_err();
+            let error = EmptyOrFullCOctetString::<5>::new(bytes.to_vec()).unwrap_err();
             assert!(matches!(error, Error::TooManyBytes { actual: 6, max: 5 }));
         }
 
         #[test]
         fn too_few_bytes() {
             let bytes = b"Hel\0";
-            let error = EmptyOrFullCOctetString::<5>::new(bytes).unwrap_err();
+            let error = EmptyOrFullCOctetString::<5>::new(bytes.to_vec()).unwrap_err();
             assert!(matches!(error, Error::TooFewBytes { actual: 4 }));
         }
 
         #[test]
         fn not_null_terminated() {
             let bytes = b"Hello";
-            let error = EmptyOrFullCOctetString::<5>::new(bytes).unwrap_err();
+            let error = EmptyOrFullCOctetString::<5>::new(bytes.to_vec()).unwrap_err();
             assert!(matches!(error, Error::NotNullTerminated));
         }
 
         #[test]
         fn not_ascii() {
             let bytes = b"Hell\xF0\0";
-            let error = EmptyOrFullCOctetString::<6>::new(bytes).unwrap_err();
+            let error = EmptyOrFullCOctetString::<6>::new(bytes.to_vec()).unwrap_err();
             assert!(matches!(error, Error::NotAscii));
         }
 
         #[test]
         fn null_byte_found() {
             let bytes = b"Hel\0lo\0";
-            let error = EmptyOrFullCOctetString::<7>::new(bytes).unwrap_err();
+            let error = EmptyOrFullCOctetString::<7>::new(bytes.to_vec()).unwrap_err();
             assert!(matches!(error, Error::NullByteFound));
         }
 
         #[test]
         fn ok() {
             let bytes = b"Hello\0";
-            let string = EmptyOrFullCOctetString::<6>::new(bytes).unwrap();
+            let string = EmptyOrFullCOctetString::<6>::new(bytes.to_vec()).unwrap();
             assert_eq!(string.bytes, bytes);
         }
 
         #[test]
         fn ok_len() {
             let bytes = b"Hello\0";
-            let string = EmptyOrFullCOctetString::<6>::new(bytes).unwrap();
+            let string = EmptyOrFullCOctetString::<6>::new(bytes.to_vec()).unwrap();
             assert_eq!(string.bytes.len(), 6);
             assert_eq!(string.length(), 6);
         }
@@ -361,7 +357,7 @@ mod tests {
         #[test]
         fn ok_empty() {
             let bytes = b"\0";
-            let string = EmptyOrFullCOctetString::<6>::new(bytes).unwrap();
+            let string = EmptyOrFullCOctetString::<6>::new(bytes.to_vec()).unwrap();
             assert_eq!(string.bytes, bytes);
             assert_eq!(string.bytes.len(), 1);
             assert_eq!(string.length(), 1);
@@ -440,7 +436,7 @@ mod tests {
         #[test]
         fn empty_ok() {
             let bytes = b"\0";
-            let string = EmptyOrFullCOctetString::<6>::new(bytes).unwrap();
+            let string = EmptyOrFullCOctetString::<6>::new(bytes.to_vec()).unwrap();
             assert!(string.as_str().is_empty());
             assert!(string.to_string().is_empty());
         }
@@ -448,7 +444,7 @@ mod tests {
         #[test]
         fn ok() {
             let bytes = b"Hello\0";
-            let string = EmptyOrFullCOctetString::<6>::new(bytes).unwrap();
+            let string = EmptyOrFullCOctetString::<6>::new(bytes.to_vec()).unwrap();
             assert_eq!(string.as_str(), "Hello");
             assert_eq!(string.to_string(), "Hello");
         }

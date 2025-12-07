@@ -150,8 +150,7 @@ impl<'a, const MIN: usize, const MAX: usize> COctetString<'a, MIN, MAX> {
 
     /// Create a new [`COctetString`] from a sequence of bytes without checking the length and null termination.
     #[inline]
-    #[doc(hidden)]
-    pub const fn new_unchecked(bytes: &'a [u8]) -> Self {
+    pub(crate) const fn new_unchecked(bytes: &'a [u8]) -> Self {
         Self::_ASSERT_VALID;
 
         Self { bytes }

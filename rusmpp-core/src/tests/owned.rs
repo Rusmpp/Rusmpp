@@ -126,7 +126,7 @@ pub fn test_commands() -> alloc::vec::Vec<Command> {
         .chain_single_cmd(Pdu::CancelBroadcastSmResp)
         .chain_single_cmd(Pdu::Other {
             command_id: CommandId::Other(100),
-            body: AnyOctetString::new(b"SMPP"),
+            body: AnyOctetString::new(b"SMPP".to_vec()),
         })
         .collect()
 }
