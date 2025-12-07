@@ -49,6 +49,11 @@ impl Gsm7BitUnpacked {
         self
     }
 
+    /// Returns the associated [`Gsm7BitAlphabet`].
+    pub const fn alphabet(&self) -> &Gsm7BitAlphabet {
+        &self.alphabet
+    }
+
     /// Returns the associated [`DataCoding`].
     pub const fn data_coding(&self) -> DataCoding {
         DataCoding::McSpecific
