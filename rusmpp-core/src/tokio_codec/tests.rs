@@ -207,7 +207,7 @@ async fn send_submit_sm() {
         .sequence_number(1)
         .pdu(
             SubmitSm::builder()
-                .short_message(OctetString::new(b"Short Message").unwrap())
+                .short_message(OctetString::new(b"Short Message".to_vec()).unwrap())
                 .push_tlv(MessageSubmissionRequestTlvValue::MessagePayload(
                     MessagePayload::new(AnyOctetString::new(b"Message Payload")),
                 ))

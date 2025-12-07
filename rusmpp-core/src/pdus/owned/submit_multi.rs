@@ -392,10 +392,10 @@ mod tests {
                     .replace_if_present_flag(ReplaceIfPresentFlag::default())
                     .data_coding(DataCoding::default())
                     .sm_default_msg_id(0)
-                    .short_message(OctetString::new(b"Short Message").unwrap())
+                    .short_message(OctetString::new(b"Short Message".to_vec()).unwrap())
                     .build(),
                 Self::builder()
-                    .short_message(OctetString::new(b"Short Message").unwrap())
+                    .short_message(OctetString::new(b"Short Message".to_vec()).unwrap())
                     .push_tlv(MessageSubmissionRequestTlvValue::MessagePayload(
                         MessagePayload::new(AnyOctetString::new(b"Message Payload")),
                     ))
@@ -411,7 +411,7 @@ mod tests {
                             COctetString::new(b"1234567890123456789\0").unwrap(),
                         ),
                     ))
-                    .short_message(OctetString::new(b"Short Message").unwrap())
+                    .short_message(OctetString::new(b"Short Message".to_vec()).unwrap())
                     .push_tlv(MessageSubmissionRequestTlvValue::MessagePayload(
                         MessagePayload::new(AnyOctetString::new(b"Message Payload")),
                     ))
@@ -428,7 +428,7 @@ mod tests {
 
     #[test]
     fn short_message_length() {
-        let short_message = OctetString::new(b"Short Message").unwrap();
+        let short_message = OctetString::new(b"Short Message".to_vec()).unwrap();
 
         let submit_sm = SubmitMulti::builder()
             .short_message(short_message.clone())
@@ -440,8 +440,8 @@ mod tests {
 
     #[test]
     fn short_message_override() {
-        let short_message_1 = OctetString::new(b"Short Message 101").unwrap();
-        let short_message_2 = OctetString::new(b"Short Message 2").unwrap();
+        let short_message_1 = OctetString::new(b"Short Message 101".to_vec()).unwrap();
+        let short_message_2 = OctetString::new(b"Short Message 2".to_vec()).unwrap();
 
         let submit_sm = SubmitMulti::builder()
             .short_message(short_message_1)
@@ -454,7 +454,7 @@ mod tests {
 
     #[test]
     fn message_payload_suppresses_short_message() {
-        let short_message = OctetString::new(b"Short Message").unwrap();
+        let short_message = OctetString::new(b"Short Message".to_vec()).unwrap();
         let message_payload = MessagePayload::new(AnyOctetString::new(b"Message Payload"));
 
         // Using push_tlv
