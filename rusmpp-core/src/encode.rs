@@ -187,8 +187,8 @@ mod tests {
             assert_eq!(values.length(), 10);
 
             let values = alloc::vec![
-                COctetString::<1, 6>::new(b"Hello\0").unwrap(),
-                COctetString::<1, 6>::new(b"World\0").unwrap(),
+                COctetString::<1, 6>::new(b"Hello\0".to_vec()).unwrap(),
+                COctetString::<1, 6>::new(b"World\0".to_vec()).unwrap(),
             ];
             assert_eq!(values.length(), 12);
 
@@ -274,8 +274,8 @@ mod tests {
             assert_eq!(&buf[..size], b"HelloWorld");
 
             let values = alloc::vec![
-                COctetString::<1, 6>::new(b"Hello\0").unwrap(),
-                COctetString::<1, 6>::new(b"World\0").unwrap(),
+                COctetString::<1, 6>::new(b"Hello\0".to_vec()).unwrap(),
+                COctetString::<1, 6>::new(b"World\0".to_vec()).unwrap(),
             ];
             assert!(buf.len() >= values.length());
 

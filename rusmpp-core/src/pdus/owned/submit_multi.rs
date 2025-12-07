@@ -404,11 +404,11 @@ mod tests {
                     .push_dest_address(DestAddress::SmeAddress(SmeAddress::new(
                         Ton::International,
                         Npi::Isdn,
-                        COctetString::new(b"1234567890123456789\0").unwrap(),
+                        COctetString::new(b"1234567890123456789\0".to_vec()).unwrap(),
                     )))
                     .push_dest_address(DestAddress::DistributionListName(
                         DistributionListName::new(
-                            COctetString::new(b"1234567890123456789\0").unwrap(),
+                            COctetString::new(b"1234567890123456789\0".to_vec()).unwrap(),
                         ),
                     ))
                     .short_message(OctetString::new(b"Short Message".to_vec()).unwrap())
@@ -529,10 +529,10 @@ mod tests {
                 DestAddress::SmeAddress(SmeAddress::new(
                     Ton::International,
                     Npi::Isdn,
-                    COctetString::new(b"1234567890123456789\0").unwrap(),
+                    COctetString::new(b"1234567890123456789\0".to_vec()).unwrap(),
                 )),
                 DestAddress::DistributionListName(DistributionListName::new(
-                    COctetString::new(b"1234567890123456789\0").unwrap(),
+                    COctetString::new(b"1234567890123456789\0".to_vec()).unwrap(),
                 )),
             ])
             .build();
@@ -544,10 +544,12 @@ mod tests {
             .push_dest_address(DestAddress::SmeAddress(SmeAddress::new(
                 Ton::International,
                 Npi::Isdn,
-                COctetString::new(b"1234567890123456789\0").unwrap(),
+                COctetString::new(b"1234567890123456789\0".to_vec()).unwrap(),
             )))
             .push_dest_address(DestAddress::DistributionListName(
-                DistributionListName::new(COctetString::new(b"1234567890123456789\0").unwrap()),
+                DistributionListName::new(
+                    COctetString::new(b"1234567890123456789\0".to_vec()).unwrap(),
+                ),
             ))
             .build();
 
@@ -558,10 +560,12 @@ mod tests {
             .push_dest_address(DestAddress::SmeAddress(SmeAddress::new(
                 Ton::International,
                 Npi::Isdn,
-                COctetString::new(b"1234567890123456789\0").unwrap(),
+                COctetString::new(b"1234567890123456789\0".to_vec()).unwrap(),
             )))
             .push_dest_address(DestAddress::DistributionListName(
-                DistributionListName::new(COctetString::new(b"1234567890123456789\0").unwrap()),
+                DistributionListName::new(
+                    COctetString::new(b"1234567890123456789\0".to_vec()).unwrap(),
+                ),
             ))
             .clear_dest_address()
             .build();

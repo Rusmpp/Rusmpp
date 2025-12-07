@@ -426,10 +426,10 @@ mod tests {
                     ))
                     .source_addr_ton(Ton::International)
                     .source_addr_npi(Npi::Isdn)
-                    .source_addr(COctetString::new(b"Source Address\0").unwrap())
+                    .source_addr(COctetString::new(b"Source Address\0".to_vec()).unwrap())
                     .dest_addr_ton(Ton::International)
                     .dest_addr_npi(Npi::Isdn)
-                    .destination_addr(COctetString::new(b"Destination Address\0").unwrap())
+                    .destination_addr(COctetString::new(b"Destination Address\0".to_vec()).unwrap())
                     .esm_class(EsmClass::new(
                         MessagingMode::Default,
                         MessageType::ShortMessageContainsIntermediateDeliveryNotification,

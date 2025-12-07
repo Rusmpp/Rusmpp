@@ -117,10 +117,8 @@ impl<const MIN: usize, const MAX: usize> COctetString<MIN, MAX> {
     }
 
     /// Create a new [`COctetString`] from a sequence of bytes.
-    pub fn new(bytes: impl AsRef<[u8]>) -> Result<Self, Error> {
+    pub fn new(bytes: Vec<u8>) -> Result<Self, Error> {
         Self::_ASSERT_VALID;
-
-        let bytes = bytes.as_ref();
 
         if bytes.len() < MIN {
             return Err(Error::TooFewBytes {
@@ -150,17 +148,13 @@ impl<const MIN: usize, const MAX: usize> COctetString<MIN, MAX> {
             return Err(Error::NotAscii);
         }
 
-        let bytes = bytes.to_vec();
-
         Ok(Self { bytes })
     }
 
     /// Create a new [`COctetString`] from a sequence of bytes without checking the length and null termination.
     #[inline]
-    pub(crate) fn new_unchecked(bytes: impl AsRef<[u8]>) -> Self {
+    pub(crate) fn new_unchecked(bytes: Vec<u8>) -> Self {
         Self::_ASSERT_VALID;
-
-        let bytes = bytes.as_ref().to_vec();
 
         Self { bytes }
     }
@@ -356,70 +350,70 @@ mod tests {
         #[test]
         fn empty_too_few_bytes() {
             let bytes = b"";
-            let error = COctetString::<1, 5>::new(bytes).unwrap_err();
+            let error = COctetString::<1, 5>::new(bytes.to_vec()).unwrap_err();
             assert!(matches!(error, Error::TooFewBytes { actual: 0, min: 1 }));
         }
 
         #[test]
         fn too_many_bytes() {
             let bytes = b"Hello\0";
-            let error = COctetString::<1, 5>::new(bytes).unwrap_err();
+            let error = COctetString::<1, 5>::new(bytes.to_vec()).unwrap_err();
             assert!(matches!(error, Error::TooManyBytes { actual: 6, max: 5 }));
         }
 
         #[test]
         fn too_few_bytes() {
             let bytes = b"Hello\0";
-            let error = COctetString::<10, 20>::new(bytes).unwrap_err();
+            let error = COctetString::<10, 20>::new(bytes.to_vec()).unwrap_err();
             assert!(matches!(error, Error::TooFewBytes { actual: 6, min: 10 }));
         }
 
         #[test]
         fn not_null_terminated() {
             let bytes = b"Hello";
-            let error = COctetString::<1, 5>::new(bytes).unwrap_err();
+            let error = COctetString::<1, 5>::new(bytes.to_vec()).unwrap_err();
             assert!(matches!(error, Error::NotNullTerminated));
         }
 
         #[test]
         fn not_ascii() {
             let bytes = b"Hell\xF0\0";
-            let error = COctetString::<1, 6>::new(bytes).unwrap_err();
+            let error = COctetString::<1, 6>::new(bytes.to_vec()).unwrap_err();
             assert!(matches!(error, Error::NotAscii));
         }
 
         #[test]
         fn null_byte_found() {
             let bytes = b"Hel\0o\0";
-            let error = COctetString::<1, 6>::new(bytes).unwrap_err();
+            let error = COctetString::<1, 6>::new(bytes.to_vec()).unwrap_err();
             assert!(matches!(error, Error::NullByteFound));
         }
 
         #[test]
         fn ok_min() {
             let bytes = b"\0";
-            let string = COctetString::<1, 6>::new(bytes).unwrap();
+            let string = COctetString::<1, 6>::new(bytes.to_vec()).unwrap();
             assert_eq!(string.bytes, bytes);
         }
 
         #[test]
         fn ok_max() {
             let bytes = b"Hello\0";
-            let string = COctetString::<1, 6>::new(bytes).unwrap();
+            let string = COctetString::<1, 6>::new(bytes.to_vec()).unwrap();
             assert_eq!(string.bytes, bytes);
         }
 
         #[test]
         fn ok_between_min_max() {
             let bytes = b"Hel\0";
-            let string = COctetString::<1, 6>::new(bytes).unwrap();
+            let string = COctetString::<1, 6>::new(bytes.to_vec()).unwrap();
             assert_eq!(string.bytes, bytes);
         }
 
         #[test]
         fn ok_len() {
             let bytes = b"Hello\0";
-            let string = COctetString::<1, 6>::new(bytes).unwrap();
+            let string = COctetString::<1, 6>::new(bytes.to_vec()).unwrap();
             assert_eq!(string.bytes.len(), 6);
             assert_eq!(string.length(), 6);
         }
@@ -427,14 +421,14 @@ mod tests {
         #[test]
         fn ok_empty() {
             let bytes = b"\0";
-            let string = COctetString::<1, 6>::new(bytes).unwrap();
+            let string = COctetString::<1, 6>::new(bytes.to_vec()).unwrap();
             assert_eq!(string.bytes, bytes);
         }
 
         #[test]
         fn ok_empty_len() {
             let bytes = b"\0";
-            let string = COctetString::<1, 6>::new(bytes).unwrap();
+            let string = COctetString::<1, 6>::new(bytes.to_vec()).unwrap();
             assert_eq!(string.bytes.len(), 1);
             assert_eq!(string.length(), 1);
         }
@@ -535,7 +529,7 @@ mod tests {
         #[test]
         fn ok() {
             let bytes = b"Hello\0";
-            let string = COctetString::<1, 6>::new(bytes).unwrap();
+            let string = COctetString::<1, 6>::new(bytes.to_vec()).unwrap();
             assert_eq!(string.as_str(), "Hello");
             assert_eq!(string.to_string(), "Hello");
         }

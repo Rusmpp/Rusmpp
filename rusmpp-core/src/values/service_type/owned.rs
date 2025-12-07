@@ -8,19 +8,23 @@ impl From<GenericServiceType> for COctetString<1, 6> {
     fn from(value: GenericServiceType) -> Self {
         match value {
             GenericServiceType::Default => COctetString::null(),
-            GenericServiceType::CellularMessaging => COctetString::new_unchecked(b"CMT\0"),
-            GenericServiceType::CellularPaging => COctetString::new_unchecked(b"CPT\0"),
-            GenericServiceType::VoiceMailNotification => COctetString::new_unchecked(b"VMN\0"),
-            GenericServiceType::VoiceMailAlerting => COctetString::new_unchecked(b"VMA\0"),
+            GenericServiceType::CellularMessaging => COctetString::new_unchecked(b"CMT\0".to_vec()),
+            GenericServiceType::CellularPaging => COctetString::new_unchecked(b"CPT\0".to_vec()),
+            GenericServiceType::VoiceMailNotification => {
+                COctetString::new_unchecked(b"VMN\0".to_vec())
+            }
+            GenericServiceType::VoiceMailAlerting => COctetString::new_unchecked(b"VMA\0".to_vec()),
             GenericServiceType::WirelessApplicationProtocol => {
-                COctetString::new_unchecked(b"WAP\0")
+                COctetString::new_unchecked(b"WAP\0".to_vec())
             }
             GenericServiceType::UnstructuredSupplementaryServicesData => {
-                COctetString::new_unchecked(b"USSD\0")
+                COctetString::new_unchecked(b"USSD\0".to_vec())
             }
-            GenericServiceType::CellBroadcastService => COctetString::new_unchecked(b"CBS\0"),
+            GenericServiceType::CellBroadcastService => {
+                COctetString::new_unchecked(b"CBS\0".to_vec())
+            }
             GenericServiceType::GenericUDPTransportService => {
-                COctetString::new_unchecked(b"GUTS\0")
+                COctetString::new_unchecked(b"GUTS\0".to_vec())
             }
         }
     }
