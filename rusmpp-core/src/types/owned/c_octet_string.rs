@@ -1,7 +1,5 @@
 #![allow(path_statements)]
 
-use core::{borrow::Borrow, ops::Deref};
-
 use alloc::{string::String, string::ToString, vec::Vec};
 use bytes::{Bytes, BytesMut};
 
@@ -116,7 +114,7 @@ impl<const MIN: usize, const MAX: usize> COctetString<MIN, MAX> {
         }
     }
 
-    /// Returns the number of bytes contained in this [`COctetString`].
+    /// Returns the number of bytes contained in this [`COctetString`] including the null terminator.
     #[inline]
     pub fn len(&self) -> usize {
         self.bytes.len()
@@ -131,7 +129,7 @@ impl<const MIN: usize, const MAX: usize> COctetString<MIN, MAX> {
         self.len() == 1
     }
 
-    /// Create a new [`COctetString`] from [`Bytes`].
+    /// Create a new [`COctetString`] from [`Bytes`] including the null terminator.
     pub fn from_bytes(bytes: Bytes) -> Result<Self, Error> {
         Self::_ASSERT_VALID;
 
@@ -166,36 +164,37 @@ impl<const MIN: usize, const MAX: usize> COctetString<MIN, MAX> {
         Ok(Self { bytes })
     }
 
-    /// Create a new [`COctetString`] from [`BytesMut`].
+    /// Create a new [`COctetString`] from [`BytesMut`] including the null terminator.
     pub fn from_bytes_mut(bytes: BytesMut) -> Result<Self, Error> {
         Self::_ASSERT_VALID;
 
         Self::from_bytes(bytes.freeze())
     }
 
-    /// Create a new [`COctetString`] from `&[u8]`.
+    /// Create a new [`COctetString`] from `&[u8]` including the null terminator.
     pub fn from_slice(bytes: &[u8]) -> Result<Self, Error> {
         Self::_ASSERT_VALID;
 
         Self::from_bytes(Bytes::copy_from_slice(bytes))
     }
 
-    // XXX: there is no `from_static_str` because it would allocate (Null terminator).
-    /// Create a new [`COctetString`] from `&'static [u8]`.
+    /// Create a new [`COctetString`] from `&'static [u8]` including the null terminator.
     pub fn from_static_slice(bytes: &'static [u8]) -> Result<Self, Error> {
         Self::_ASSERT_VALID;
 
         Self::from_bytes(Bytes::from_static(bytes))
     }
 
-    /// Create a new [`COctetString`] from [`Vec<u8>`].
+    // XXX: there is no `from_static_str` because it would allocate (Null terminator).
+
+    /// Create a new [`COctetString`] from [`Vec<u8>`] including the null terminator.
     pub fn from_vec(bytes: Vec<u8>) -> Result<Self, Error> {
         Self::_ASSERT_VALID;
 
         Self::from_bytes(Bytes::from_owner(bytes))
     }
 
-    /// Create a new [`COctetString`] from [`String`].
+    /// Create a new [`COctetString`] from [`String`] without the null terminator.
     pub fn from_string(string: String) -> Result<Self, Error> {
         Self::_ASSERT_VALID;
 
@@ -205,7 +204,7 @@ impl<const MIN: usize, const MAX: usize> COctetString<MIN, MAX> {
         Self::from_vec(bytes)
     }
 
-    /// Create a new [`COctetString`] from a sequence of bytes without checking the length and null termination.
+    /// Create a new [`COctetString`] from `&'static [u8]` without checking the length and the null terminator.
     #[inline]
     pub(crate) fn from_static_slice_unchecked(bytes: &'static [u8]) -> Self {
         Self::_ASSERT_VALID;
@@ -215,25 +214,25 @@ impl<const MIN: usize, const MAX: usize> COctetString<MIN, MAX> {
         }
     }
 
-    /// Get the bytes of a [`COctetString`].
+    /// Get the bytes of a [`COctetString`] including the null terminator.
     #[inline]
     pub fn as_bytes(&self) -> &[u8] {
         &self.bytes
     }
 
-    /// Convert a [`COctetString`] to [`Bytes`].
+    /// Convert a [`COctetString`] to [`Bytes`] including the null terminator.
     #[inline]
     pub fn into_bytes(self) -> Bytes {
         self.bytes
     }
 
-    /// Convert a [`COctetString`] to [`Vec<u8>`].
+    /// Convert a [`COctetString`] to [`Vec<u8>`] including the null terminator.
     #[inline]
     pub fn into_vec(self) -> Vec<u8> {
         self.into_bytes().into()
     }
 
-    /// Convert a [`COctetString`] to a &[`str`].
+    /// Convert a [`COctetString`] to a &[`str`] without the null terminator.
     #[inline]
     pub fn as_str(&self) -> &str {
         core::str::from_utf8(&self.bytes[..self.bytes.len() - 1])
@@ -280,25 +279,23 @@ impl<const MIN: usize, const MAX: usize> core::str::FromStr for COctetString<MIN
 
 impl<const MIN: usize, const MAX: usize> core::fmt::Display for COctetString<MIN, MAX> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.write_str(&String::from_utf8_lossy(
-            &self.bytes[..self.bytes.len() - 1],
-        ))
+        f.write_str(self.as_str())
     }
 }
 
-impl<const MIN: usize, const MAX: usize> AsRef<[u8]> for COctetString<MIN, MAX> {
+impl<const MIN: usize, const MAX: usize> core::convert::AsRef<[u8]> for COctetString<MIN, MAX> {
     fn as_ref(&self) -> &[u8] {
         &self.bytes
     }
 }
 
-impl<const MIN: usize, const MAX: usize> Borrow<[u8]> for COctetString<MIN, MAX> {
+impl<const MIN: usize, const MAX: usize> core::borrow::Borrow<[u8]> for COctetString<MIN, MAX> {
     fn borrow(&self) -> &[u8] {
         &self.bytes
     }
 }
 
-impl<const MIN: usize, const MAX: usize> Deref for COctetString<MIN, MAX> {
+impl<const MIN: usize, const MAX: usize> core::ops::Deref for COctetString<MIN, MAX> {
     type Target = [u8];
 
     fn deref(&self) -> &Self::Target {
@@ -314,7 +311,7 @@ impl<const MIN: usize, const MAX: usize> Length for COctetString<MIN, MAX> {
 
 impl<const MIN: usize, const MAX: usize> Encode for COctetString<MIN, MAX> {
     fn encode(&self, dst: &mut [u8]) -> usize {
-        _ = &mut dst[..self.bytes.len()].copy_from_slice(&self.bytes);
+        _ = &mut dst[..self.len()].copy_from_slice(&self.bytes);
 
         self.len()
     }

@@ -193,8 +193,8 @@ mod tests {
             assert_eq!(values.length(), 12);
 
             let values = alloc::vec![
-                EmptyOrFullCOctetString::<6>::new(b"Hello\0".to_vec()).unwrap(),
-                EmptyOrFullCOctetString::<6>::new(b"World\0".to_vec()).unwrap(),
+                EmptyOrFullCOctetString::<6>::from_static_slice(b"Hello\0").unwrap(),
+                EmptyOrFullCOctetString::<6>::from_static_slice(b"World\0").unwrap(),
             ];
             assert_eq!(values.length(), 12);
 
@@ -285,8 +285,8 @@ mod tests {
             assert_eq!(&buf[..size], b"Hello\0World\0");
 
             let values = alloc::vec![
-                EmptyOrFullCOctetString::<6>::new(b"Hello\0".to_vec()).unwrap(),
-                EmptyOrFullCOctetString::<6>::new(b"World\0".to_vec()).unwrap(),
+                EmptyOrFullCOctetString::<6>::from_static_slice(b"Hello\0").unwrap(),
+                EmptyOrFullCOctetString::<6>::from_static_slice(b"World\0").unwrap(),
             ];
             assert!(buf.len() >= values.length());
 

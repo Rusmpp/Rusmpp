@@ -411,7 +411,7 @@ mod tests {
                     .protocol_id(0)
                     .priority_flag(PriorityFlag::from(PriorityFlagType::from(Ansi136::Bulk)))
                     .schedule_delivery_time(
-                        EmptyOrFullCOctetString::new(b"2023-09-01T12:00\0".to_vec()).unwrap(),
+                        EmptyOrFullCOctetString::from_static_slice(b"2023-09-01T12:00\0").unwrap(),
                     )
                     .validity_period(EmptyOrFullCOctetString::from_str("2023-10-01T12:00").unwrap())
                     .registered_delivery(RegisteredDelivery::request_all())
@@ -443,7 +443,7 @@ mod tests {
                         Ansi136::VeryUrgent,
                     )))
                     .schedule_delivery_time(
-                        EmptyOrFullCOctetString::new(b"2023-09-01T12:01\0".to_vec()).unwrap(),
+                        EmptyOrFullCOctetString::from_static_slice(b"2023-09-01T12:01\0").unwrap(),
                     )
                     .validity_period(EmptyOrFullCOctetString::from_str("2023-10-01T12:20").unwrap())
                     .registered_delivery(RegisteredDelivery::request_all())
