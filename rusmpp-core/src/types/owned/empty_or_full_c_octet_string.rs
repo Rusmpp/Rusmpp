@@ -332,7 +332,45 @@ impl<const N: usize> Decode for EmptyOrFullCOctetString<N> {
     }
 }
 
-// TODO: add TryFrom Traits
+impl<const N: usize> TryFrom<Bytes> for EmptyOrFullCOctetString<N> {
+    type Error = Error;
+
+    fn try_from(bytes: Bytes) -> Result<Self, Self::Error> {
+        Self::from_bytes(bytes)
+    }
+}
+
+impl<const N: usize> TryFrom<BytesMut> for EmptyOrFullCOctetString<N> {
+    type Error = Error;
+
+    fn try_from(bytes: BytesMut) -> Result<Self, Self::Error> {
+        Self::from_bytes_mut(bytes)
+    }
+}
+
+impl<const N: usize> TryFrom<&[u8]> for EmptyOrFullCOctetString<N> {
+    type Error = Error;
+
+    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+        Self::from_slice(bytes)
+    }
+}
+
+impl<const N: usize> TryFrom<String> for EmptyOrFullCOctetString<N> {
+    type Error = Error;
+
+    fn try_from(string: String) -> Result<Self, Self::Error> {
+        Self::from_string(string)
+    }
+}
+
+impl<const N: usize> TryFrom<Vec<u8>> for EmptyOrFullCOctetString<N> {
+    type Error = Error;
+
+    fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
+        Self::from_vec(bytes)
+    }
+}
 
 #[cfg(test)]
 mod tests {

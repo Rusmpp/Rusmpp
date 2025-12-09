@@ -221,13 +221,35 @@ impl DecodeWithLength for AnyOctetString {
     }
 }
 
+impl From<Bytes> for AnyOctetString {
+    fn from(bytes: Bytes) -> Self {
+        Self::from_bytes(bytes)
+    }
+}
+
+impl From<BytesMut> for AnyOctetString {
+    fn from(bytes: BytesMut) -> Self {
+        Self::from_bytes_mut(bytes)
+    }
+}
+
+impl From<&[u8]> for AnyOctetString {
+    fn from(bytes: &[u8]) -> Self {
+        Self::from_slice(bytes)
+    }
+}
+
+impl From<String> for AnyOctetString {
+    fn from(string: String) -> Self {
+        Self::from_string(string)
+    }
+}
+
 impl From<Vec<u8>> for AnyOctetString {
     fn from(bytes: Vec<u8>) -> Self {
         Self::from_vec(bytes)
     }
 }
-
-// TODO: add From Traits
 
 #[cfg(test)]
 mod tests {

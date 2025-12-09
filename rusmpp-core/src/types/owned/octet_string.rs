@@ -321,7 +321,45 @@ impl<const MIN: usize, const MAX: usize> From<OctetString<MIN, MAX>>
     }
 }
 
-// TODO: add TryFrom Traits
+impl<const MIN: usize, const MAX: usize> TryFrom<Bytes> for OctetString<MIN, MAX> {
+    type Error = Error;
+
+    fn try_from(bytes: Bytes) -> Result<Self, Self::Error> {
+        Self::from_bytes(bytes)
+    }
+}
+
+impl<const MIN: usize, const MAX: usize> TryFrom<BytesMut> for OctetString<MIN, MAX> {
+    type Error = Error;
+
+    fn try_from(bytes: BytesMut) -> Result<Self, Self::Error> {
+        Self::from_bytes_mut(bytes)
+    }
+}
+
+impl<const MIN: usize, const MAX: usize> TryFrom<&[u8]> for OctetString<MIN, MAX> {
+    type Error = Error;
+
+    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+        Self::from_slice(bytes)
+    }
+}
+
+impl<const MIN: usize, const MAX: usize> TryFrom<String> for OctetString<MIN, MAX> {
+    type Error = Error;
+
+    fn try_from(string: String) -> Result<Self, Self::Error> {
+        Self::from_string(string)
+    }
+}
+
+impl<const MIN: usize, const MAX: usize> TryFrom<Vec<u8>> for OctetString<MIN, MAX> {
+    type Error = Error;
+
+    fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
+        Self::from_vec(bytes)
+    }
+}
 
 #[cfg(test)]
 mod tests {
