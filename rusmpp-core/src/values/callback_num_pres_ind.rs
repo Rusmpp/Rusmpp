@@ -90,10 +90,13 @@ mod tests {
 
     #[test]
     fn encode_decode() {
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<CallbackNumPresInd>();
         crate::tests::borrowed::encode_decode_test_instances::<CallbackNumPresInd>();
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<Presentation>();
         crate::tests::borrowed::encode_decode_test_instances::<Presentation>();
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<Screening>();
         crate::tests::borrowed::encode_decode_test_instances::<Screening>();
     }

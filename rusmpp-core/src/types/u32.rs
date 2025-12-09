@@ -7,7 +7,7 @@
 //! would be encoded as 4 octets with the value 0x1D95E1F
 
 use crate::{
-    decode::{DecodeError, borrowed, owned},
+    decode::{DecodeError, borrowed},
     encode::{Encode, Length},
 };
 
@@ -30,7 +30,8 @@ impl Encode for u32 {
     }
 }
 
-impl owned::Decode for u32 {
+#[cfg(feature = "alloc")]
+impl crate::decode::owned::Decode for u32 {
     fn decode(src: &[u8]) -> Result<(Self, usize), DecodeError> {
         if src.len() < 4 {
             return Err(DecodeError::unexpected_eof());
@@ -48,6 +49,16 @@ impl owned::Decode for u32 {
 
 impl borrowed::Decode<'_> for u32 {
     fn decode(src: &[u8]) -> Result<(Self, usize), DecodeError> {
-        owned::Decode::decode(src)
+        if src.len() < 4 {
+            return Err(DecodeError::unexpected_eof());
+        }
+
+        let mut bytes = [0; 4];
+
+        bytes.copy_from_slice(&src[..4]);
+
+        let value = u32::from_be_bytes(bytes);
+
+        Ok((value, 4))
     }
 }

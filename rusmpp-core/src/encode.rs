@@ -108,7 +108,7 @@ impl<T: Length> Length for &[T] {
     }
 }
 
-#[cfg(any(test, feature = "alloc"))]
+#[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl<T: Length> Length for alloc::vec::Vec<T> {
     fn length(&self) -> usize {
@@ -135,7 +135,7 @@ impl<T: Encode> Encode for &[T] {
     }
 }
 
-#[cfg(any(test, feature = "alloc"))]
+#[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl<T: Encode> Encode for alloc::vec::Vec<T> {
     fn encode(&self, dst: &mut [u8]) -> usize {
@@ -151,14 +151,13 @@ impl<T: Encode, const N: usize> Encode for heapless::vec::Vec<T, N> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
+    #[cfg(feature = "alloc")]
     mod owned {
         use crate::types::owned::{
             AnyOctetString, COctetString, EmptyOrFullCOctetString, OctetString,
         };
 
-        use super::*;
+        use super::super::*;
 
         #[test]
         fn length_option() {

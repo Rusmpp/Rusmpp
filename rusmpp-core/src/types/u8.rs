@@ -7,7 +7,7 @@
 //! single octet with the value 0x05
 
 use crate::{
-    decode::{DecodeError, borrowed, owned},
+    decode::{DecodeError, borrowed},
     encode::{Encode, Length},
 };
 
@@ -25,7 +25,8 @@ impl Encode for u8 {
     }
 }
 
-impl owned::Decode for u8 {
+#[cfg(feature = "alloc")]
+impl crate::decode::owned::Decode for u8 {
     fn decode(src: &[u8]) -> Result<(Self, usize), DecodeError> {
         if src.is_empty() {
             return Err(DecodeError::unexpected_eof());
@@ -37,6 +38,10 @@ impl owned::Decode for u8 {
 
 impl borrowed::Decode<'_> for u8 {
     fn decode(src: &[u8]) -> Result<(Self, usize), DecodeError> {
-        owned::Decode::decode(src)
+        if src.is_empty() {
+            return Err(DecodeError::unexpected_eof());
+        }
+
+        Ok((src[0], 1))
     }
 }

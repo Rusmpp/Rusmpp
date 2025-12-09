@@ -7,7 +7,7 @@
 //! be encoded as 2 octets with the value 0xA312
 
 use crate::{
-    decode::{DecodeError, borrowed, owned},
+    decode::{DecodeError, borrowed},
     encode::{Encode, Length},
 };
 
@@ -28,7 +28,8 @@ impl Encode for u16 {
     }
 }
 
-impl owned::Decode for u16 {
+#[cfg(feature = "alloc")]
+impl crate::decode::owned::Decode for u16 {
     fn decode(src: &[u8]) -> Result<(Self, usize), DecodeError> {
         if src.len() < 2 {
             return Err(DecodeError::unexpected_eof());
@@ -46,6 +47,16 @@ impl owned::Decode for u16 {
 
 impl borrowed::Decode<'_> for u16 {
     fn decode(src: &[u8]) -> Result<(Self, usize), DecodeError> {
-        owned::Decode::decode(src)
+        if src.len() < 2 {
+            return Err(DecodeError::unexpected_eof());
+        }
+
+        let mut bytes = [0; 2];
+
+        bytes.copy_from_slice(&src[..2]);
+
+        let value = u16::from_be_bytes(bytes);
+
+        Ok((value, 2))
     }
 }

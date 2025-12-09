@@ -377,7 +377,7 @@ pub trait DecodeExt: Decode {
     }
 
     /// Decode a vector of values from a slice with a specified count.
-    #[cfg(any(test, feature = "alloc"))]
+    #[cfg(feature = "alloc")]
     #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     fn counted(src: &[u8], count: usize) -> Result<(alloc::vec::Vec<Self>, usize), DecodeError> {
         (0..count).try_fold(
@@ -392,7 +392,7 @@ pub trait DecodeExt: Decode {
         )
     }
 
-    #[cfg(any(test, feature = "alloc"))]
+    #[cfg(feature = "alloc")]
     #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     fn counted_move(
         src: &[u8],
@@ -480,7 +480,7 @@ pub trait DecodeWithKeyOptionalExt: DecodeWithKeyOptional {
 
 impl<T: DecodeWithKeyOptional> DecodeWithKeyOptionalExt for T {}
 
-#[cfg(any(test, feature = "alloc"))]
+#[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl<T: Decode> DecodeWithLength for alloc::vec::Vec<T> {
     fn decode(src: &[u8], length: usize) -> Result<(Self, usize), DecodeError> {

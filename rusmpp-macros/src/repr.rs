@@ -63,6 +63,7 @@ impl Repr {
         let repr_ident = &self.ident;
 
         quote! {
+            #[cfg(feature = "alloc")]
             impl crate::decode::owned::Decode for #name {
                 fn decode(src: &[u8]) -> Result<(Self, usize), crate::decode::DecodeError> {
                     #repr_ident::decode(src).map(|(this, size)| (Self::from(this), size))

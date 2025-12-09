@@ -58,7 +58,7 @@ where
     }
 }
 
-/// See [`ChainExt`](crate::tests::owned::ChainExt) for details.
+/// See [`ChainExt`](#[cfg(feature = "alloc")] crate::tests::owned:ChainExt) for details.
 pub trait ChainExt {
     fn chain_instances_as_cmds<T: TestInstance + Into<Pdu<'static, 16>> + 'static>(
         self,

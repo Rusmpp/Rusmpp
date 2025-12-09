@@ -8,7 +8,6 @@ use crate::{
 
 /// No fixed size [`OctetString`](struct@crate::types::owned::octet_string::OctetString).
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 #[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
 #[cfg_attr(
@@ -17,6 +16,17 @@ use crate::{
 )]
 pub struct AnyOctetString {
     bytes: Bytes,
+}
+
+#[cfg(feature = "arbitrary")]
+impl<'a> ::arbitrary::Arbitrary<'a> for AnyOctetString {
+    fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
+        let bytes = Vec::<u8>::arbitrary(u)?;
+
+        Ok(Self {
+            bytes: Bytes::from_owner(bytes),
+        })
+    }
 }
 
 impl AnyOctetString {
@@ -229,6 +239,7 @@ mod tests {
 
     #[test]
     fn encode_decode() {
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_with_length_test_instances::<AnyOctetString>();
     }
 

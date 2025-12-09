@@ -26,6 +26,7 @@ mod tests {
     #[test]
     fn encode_decode() {
         crate::tests::borrowed::encode_decode_test_instances::<BearerType>();
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<BearerType>();
     }
 }

@@ -27,7 +27,6 @@ use crate::{
 /// let string = EmptyOrFullCOctetString::<0>::from_static_slice(b"Hello\0");
 /// ```
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 #[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
 #[cfg_attr(
@@ -36,6 +35,17 @@ use crate::{
 )]
 pub struct EmptyOrFullCOctetString<const N: usize> {
     bytes: Bytes,
+}
+
+#[cfg(feature = "arbitrary")]
+impl<'a, const N: usize> ::arbitrary::Arbitrary<'a> for EmptyOrFullCOctetString<N> {
+    fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
+        let bytes = Vec::<u8>::arbitrary(u)?;
+
+        Ok(Self {
+            bytes: Bytes::from_owner(bytes),
+        })
+    }
 }
 
 impl<const N: usize> EmptyOrFullCOctetString<N> {
@@ -337,8 +347,11 @@ mod tests {
 
     #[test]
     fn encode_decode() {
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<EmptyOrFullCOctetString<1>>();
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<EmptyOrFullCOctetString<2>>();
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<EmptyOrFullCOctetString<3>>();
     }
 

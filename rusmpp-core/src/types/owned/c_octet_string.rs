@@ -64,7 +64,6 @@ use crate::{
 /// let string = COctetString::<10, 6>::from_static_slice(b"Hello\0");
 /// ```
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 #[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
 #[cfg_attr(
@@ -73,6 +72,17 @@ use crate::{
 )]
 pub struct COctetString<const MIN: usize, const MAX: usize> {
     bytes: Bytes,
+}
+
+#[cfg(feature = "arbitrary")]
+impl<'a, const MIN: usize, const MAX: usize> ::arbitrary::Arbitrary<'a> for COctetString<MIN, MAX> {
+    fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
+        let bytes = Vec::<u8>::arbitrary(u)?;
+
+        Ok(Self {
+            bytes: Bytes::from_owner(bytes),
+        })
+    }
 }
 
 impl<const MIN: usize, const MAX: usize> COctetString<MIN, MAX> {
@@ -397,8 +407,11 @@ mod tests {
 
     #[test]
     fn encode_decode() {
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<COctetString<1, 5>>();
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<COctetString<2, 5>>();
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<COctetString<3, 5>>();
     }
 

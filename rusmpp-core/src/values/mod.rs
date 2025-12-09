@@ -172,7 +172,7 @@ pub mod borrowed {
     pub use super::unsuccess_sme::borrowed::UnsuccessSme;
 }
 
-#[cfg(any(test, feature = "alloc"))]
+#[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub mod owned {
     //! Owned `SMPP` values.

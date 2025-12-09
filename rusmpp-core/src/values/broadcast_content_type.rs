@@ -93,10 +93,13 @@ mod tests {
 
     #[test]
     fn encode_decode() {
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<TypeOfNetwork>();
         crate::tests::borrowed::encode_decode_test_instances::<TypeOfNetwork>();
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<EncodingContentType>();
         crate::tests::borrowed::encode_decode_test_instances::<EncodingContentType>();
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<BroadcastContentType>();
         crate::tests::borrowed::encode_decode_test_instances::<BroadcastContentType>();
     }

@@ -1,5 +1,5 @@
 pub mod borrowed;
-#[cfg(any(test, feature = "alloc"))]
+#[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub mod owned;
 
@@ -29,6 +29,7 @@ mod tests {
 
     #[test]
     fn encode_decode() {
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<DestFlag>();
         crate::tests::borrowed::encode_decode_test_instances::<DestFlag>();
     }

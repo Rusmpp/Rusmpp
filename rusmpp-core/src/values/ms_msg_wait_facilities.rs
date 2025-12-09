@@ -87,10 +87,13 @@ mod tests {
 
     #[test]
     fn encode_decode() {
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<MsMsgWaitFacilities>();
         crate::tests::borrowed::encode_decode_test_instances::<MsMsgWaitFacilities>();
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<Indicator>();
         crate::tests::borrowed::encode_decode_test_instances::<Indicator>();
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<TypeOfMessage>();
         crate::tests::borrowed::encode_decode_test_instances::<TypeOfMessage>();
     }

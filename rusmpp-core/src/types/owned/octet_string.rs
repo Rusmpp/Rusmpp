@@ -42,7 +42,6 @@ use crate::{
 /// let string = OctetString::<10,5>::from_static_slice(b"Hello");
 /// ```
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 #[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
 #[cfg_attr(
@@ -51,6 +50,17 @@ use crate::{
 )]
 pub struct OctetString<const MIN: usize, const MAX: usize> {
     bytes: Bytes,
+}
+
+#[cfg(feature = "arbitrary")]
+impl<'a, const MIN: usize, const MAX: usize> ::arbitrary::Arbitrary<'a> for OctetString<MIN, MAX> {
+    fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
+        let bytes = Vec::<u8>::arbitrary(u)?;
+
+        Ok(Self {
+            bytes: Bytes::from_owner(bytes),
+        })
+    }
 }
 
 impl<const MIN: usize, const MAX: usize> OctetString<MIN, MAX> {
@@ -321,8 +331,11 @@ mod tests {
 
     #[test]
     fn encode_decode() {
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_with_length_test_instances::<OctetString<0, 5>>();
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_with_length_test_instances::<OctetString<1, 5>>();
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_with_length_test_instances::<OctetString<2, 5>>();
     }
 

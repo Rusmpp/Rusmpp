@@ -578,9 +578,9 @@ impl TryFrom<g::MessageSubmissionRequestTlvValue> for MessageSubmissionRequestTl
             GValue::CallbackNum(value) => {
                 Self::CallbackNum(OctetString::from_bytes(value).map_value_err("callback_num")?)
             }
-            GValue::CallbackNumAtag(value) => {
-                Self::CallbackNumAtag(OctetString::from_bytes(value).map_value_err("callback_num_atag")?)
-            }
+            GValue::CallbackNumAtag(value) => Self::CallbackNumAtag(
+                OctetString::from_bytes(value).map_value_err("callback_num_atag")?,
+            ),
             GValue::CallbackNumPresInd(value) => Self::CallbackNumPresInd(value.into()),
             GValue::DestAddrNpCountry(value) => Self::DestAddrNpCountry(
                 OctetString::from_bytes(value).map_value_err("dest_addr_np_country")?,

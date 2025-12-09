@@ -43,6 +43,7 @@ mod tests {
 
     #[test]
     fn encode_decode() {
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<BroadcastAreaSuccess>();
         crate::tests::borrowed::encode_decode_test_instances::<BroadcastAreaSuccess>();
     }
