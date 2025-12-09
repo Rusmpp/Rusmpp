@@ -20,7 +20,7 @@ pyo3-stub-gen-derive = "0.11.1"
 futures = "0.3.3"
 tokio = { version = "1.47.0", features = ["full"] }
 tokio-util = { version = "0.7.15", features = ["io"] }
-bytes = "1.10.1"
+bytes = "1"
 humantime = "2.2.0"
 pyo3-log = "0.12.4"
 tracing = { version = "0.1.41", features = ["log-always"] }

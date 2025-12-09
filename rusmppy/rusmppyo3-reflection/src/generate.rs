@@ -379,7 +379,8 @@ where
             F64 => "f64".into(),
             Char => "char".into(),
             Str => "String".into(),
-            Bytes => "Bytes".into(),
+            // Use Vec<u8> instead of bytes
+            Bytes => "Vec<u8>".into(),
 
             Option(format) => format!("Option<{}>", Self::quote_type(format, known_sizes)),
             Seq(format) => format!("Vec<{}>", Self::quote_type(format, None)),
