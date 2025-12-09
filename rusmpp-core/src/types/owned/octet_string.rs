@@ -71,7 +71,7 @@ impl<const MIN: usize, const MAX: usize> OctetString<MIN, MAX> {
         Self::_ASSERT_MIN_LESS_THAN_OR_EQUAL_TO_MAX;
     };
 
-    /// Create a new empty [`OctetString`].
+    /// Creates a new empty [`OctetString`].
     ///
     /// Equivalent to [`OctetString::empty`].
     #[inline]
@@ -79,7 +79,7 @@ impl<const MIN: usize, const MAX: usize> OctetString<MIN, MAX> {
         Self::empty()
     }
 
-    /// Create a new empty [`OctetString`].
+    /// Creates a new empty [`OctetString`].
     #[inline]
     pub fn empty() -> Self {
         Self::_ASSERT_VALID;
@@ -89,13 +89,13 @@ impl<const MIN: usize, const MAX: usize> OctetString<MIN, MAX> {
         }
     }
 
-    /// Returns the number of bytes contained in this [`OctetString`].
+    /// Returns the number of bytes contained in the [`OctetString`].
     #[inline]
     pub fn len(&self) -> usize {
         self.bytes.len()
     }
 
-    /// Check if an [`OctetString`] is empty.
+    /// Checks if the [`OctetString`] is empty.
     ///
     /// An [`OctetString`] is considered empty if it
     /// contains no octets.
@@ -104,7 +104,7 @@ impl<const MIN: usize, const MAX: usize> OctetString<MIN, MAX> {
         self.bytes.is_empty()
     }
 
-    /// Create a new [`OctetString`] from [`Bytes`].
+    /// Creates a new [`OctetString`] from [`Bytes`].
     pub fn from_bytes(bytes: Bytes) -> Result<Self, Error> {
         Self::_ASSERT_VALID;
 
@@ -125,67 +125,65 @@ impl<const MIN: usize, const MAX: usize> OctetString<MIN, MAX> {
         Ok(Self { bytes })
     }
 
-    /// Create a new [`OctetString`] from [`BytesMut`].
+    /// Creates a new [`OctetString`] from [`BytesMut`].
     pub fn from_bytes_mut(bytes: BytesMut) -> Result<Self, Error> {
         Self::_ASSERT_VALID;
 
         Self::from_bytes(bytes.freeze())
     }
 
-    /// Create a new [`OctetString`] from `&[u8]`.
+    /// Creates a new [`OctetString`] from `&[u8]`.
     pub fn from_slice(bytes: &[u8]) -> Result<Self, Error> {
         Self::_ASSERT_VALID;
 
         Self::from_bytes(Bytes::copy_from_slice(bytes))
     }
 
-    /// Create a new [`OctetString`] from `&'static [u8]`.
+    /// Creates a new [`OctetString`] from `&'static [u8]`.
+    ///
+    /// This function does not copy or allocate.
     pub fn from_static_slice(bytes: &'static [u8]) -> Result<Self, Error> {
         Self::_ASSERT_VALID;
 
         Self::from_bytes(Bytes::from_static(bytes))
     }
 
-    /// Create a new [`OctetString`] from `&'static` [`str`].
+    /// Creates a new [`OctetString`] from `&'static` [`str`].
+    ///
+    /// This function does not copy or allocate.
     pub fn from_static_str(str: &'static str) -> Result<Self, Error> {
         Self::_ASSERT_VALID;
 
         Self::from_bytes(Bytes::from_static(str.as_bytes()))
     }
 
-    /// Create a new [`OctetString`] from [`Vec<u8>`].
+    /// Creates a new [`OctetString`] from [`Vec<u8>`].
     pub fn from_vec(bytes: Vec<u8>) -> Result<Self, Error> {
         Self::_ASSERT_VALID;
 
         Self::from_bytes(Bytes::from_owner(bytes))
     }
 
-    /// Create a new [`OctetString`] from [`String`].
+    /// Creates a new [`OctetString`] from [`String`].
     pub fn from_string(string: String) -> Result<Self, Error> {
         Self::_ASSERT_VALID;
 
         Self::from_vec(string.into_bytes())
     }
 
-    /// Get the bytes of a [`OctetString`].
-    #[inline]
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.bytes
-    }
-
-    /// Convert a [`OctetString`] to [`Bytes`].
+    /// Converts the [`OctetString`] into [`Bytes`].
     #[inline]
     pub fn into_bytes(self) -> Bytes {
         self.bytes
     }
 
-    /// Convert a [`OctetString`] to [`Vec<u8>`].
+    /// Converts the [`OctetString`] into [`Vec<u8>`].
     #[inline]
     pub fn into_vec(self) -> Vec<u8> {
         self.into_bytes().into()
     }
 
-    /// Convert an [`OctetString`] to a &[`str`].
+    /// Interprets the [`OctetString`] as &[`str`].
     #[inline]
     pub fn to_str(&self) -> Result<&str, core::str::Utf8Error> {
         core::str::from_utf8(&self.bytes)
@@ -360,21 +358,21 @@ mod tests {
         fn ok_min() {
             let bytes = b"H";
             let octet_string = OctetString::<1, 13>::from_static_slice(bytes).unwrap();
-            assert_eq!(octet_string.as_bytes(), bytes);
+            assert_eq!(octet_string.as_ref(), bytes);
         }
 
         #[test]
         fn ok_max() {
             let bytes = b"Hello\0World!\0";
             let octet_string = OctetString::<1, 13>::from_static_slice(bytes).unwrap();
-            assert_eq!(octet_string.as_bytes(), bytes);
+            assert_eq!(octet_string.as_ref(), bytes);
         }
 
         #[test]
         fn ok_between_min_max() {
             let bytes = b"Hello\0";
             let octet_string = OctetString::<1, 13>::from_static_slice(bytes).unwrap();
-            assert_eq!(octet_string.as_bytes(), bytes);
+            assert_eq!(octet_string.as_ref(), bytes);
         }
 
         #[test]
@@ -443,7 +441,7 @@ mod tests {
             let bytes = b"Hello";
             let (string, size) = OctetString::<0, 5>::decode(bytes, 5).unwrap();
 
-            assert_eq!(string.as_bytes(), b"Hello");
+            assert_eq!(string.as_ref(), b"Hello");
             assert_eq!(string.length(), 5);
 
             assert_eq!(size, 5);
@@ -455,7 +453,7 @@ mod tests {
             let bytes = b"Hello";
             let (string, size) = OctetString::<0, 5>::decode(bytes, 3).unwrap();
 
-            assert_eq!(string.as_bytes(), b"Hel");
+            assert_eq!(string.as_ref(), b"Hel");
             assert_eq!(string.length(), 3);
             assert_eq!(size, 3);
             assert_eq!(&bytes[size..], b"lo");

@@ -30,7 +30,7 @@ impl<'a> ::arbitrary::Arbitrary<'a> for AnyOctetString {
 }
 
 impl AnyOctetString {
-    /// Create a new empty [`AnyOctetString`].
+    /// Creates a new empty [`AnyOctetString`].
     ///
     /// Equivalent to [`AnyOctetString::empty`].
     #[inline]
@@ -38,7 +38,7 @@ impl AnyOctetString {
         Self::empty()
     }
 
-    /// Create a new empty [`AnyOctetString`].
+    /// Creates a new empty [`AnyOctetString`].
     #[inline]
     pub fn empty() -> Self {
         Self {
@@ -46,13 +46,13 @@ impl AnyOctetString {
         }
     }
 
-    /// Returns the number of bytes contained in this [`AnyOctetString`].
+    /// Returns the number of bytes contained in the [`AnyOctetString`].
     #[inline]
     pub fn len(&self) -> usize {
         self.bytes.len()
     }
 
-    /// Check if an [`AnyOctetString`] is empty.
+    /// Checks if an [`AnyOctetString`] is empty.
     ///
     /// An [`AnyOctetString`] is considered empty if it
     /// contains no octets.
@@ -61,61 +61,59 @@ impl AnyOctetString {
         self.bytes.is_empty()
     }
 
-    /// Create a new [`AnyOctetString`] from [`Bytes`].
+    /// Creates a new [`AnyOctetString`] from [`Bytes`].
     #[inline]
     pub fn from_bytes(bytes: Bytes) -> Self {
         Self { bytes }
     }
 
-    /// Create a new [`AnyOctetString`] from [`BytesMut`].
+    /// Creates a new [`AnyOctetString`] from [`BytesMut`].
     pub fn from_bytes_mut(bytes: BytesMut) -> Self {
         Self::from_bytes(bytes.freeze())
     }
 
-    /// Create a new [`AnyOctetString`] from `&[u8]`.
+    /// Creates a new [`AnyOctetString`] from `&[u8]`.
     pub fn from_slice(bytes: &[u8]) -> Self {
         Self::from_bytes(Bytes::copy_from_slice(bytes))
     }
 
-    /// Create a new [`AnyOctetString`] from `&'static [u8]`.
+    /// Creates a new [`AnyOctetString`] from `&'static [u8]`.
+    ///
+    /// This function does not copy or allocate.
     pub fn from_static_slice(bytes: &'static [u8]) -> Self {
         Self::from_bytes(Bytes::from_static(bytes))
     }
 
-    /// Create a new [`AnyOctetString`] from `&'static` [`str`].
+    /// Creates a new [`AnyOctetString`] from `&'static` [`str`].
+    ///
+    /// This function does not copy or allocate.
     pub fn from_static_str(str: &'static str) -> Self {
         Self::from_bytes(Bytes::from_static(str.as_bytes()))
     }
 
-    /// Create a new [`AnyOctetString`] from [`Vec<u8>`].
+    /// Creates a new [`AnyOctetString`] from [`Vec<u8>`].
     pub fn from_vec(bytes: Vec<u8>) -> Self {
         Self::from_bytes(Bytes::from_owner(bytes))
     }
 
-    /// Create a new [`AnyOctetString`] from [`String`].
+    /// Creates a new [`AnyOctetString`] from [`String`].
     pub fn from_string(string: String) -> Self {
         Self::from_vec(string.into_bytes())
     }
 
-    /// Get the bytes of a [`AnyOctetString`].
-    #[inline]
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.bytes
-    }
-
-    /// Convert a [`AnyOctetString`] to [`Bytes`].
+    /// Converts the [`AnyOctetString`] into [`Bytes`].
     #[inline]
     pub fn into_bytes(self) -> Bytes {
         self.bytes
     }
 
-    /// Convert a [`AnyOctetString`] to [`Vec<u8>`].
+    /// Converts the [`AnyOctetString`] into [`Vec<u8>`].
     #[inline]
     pub fn into_vec(self) -> Vec<u8> {
         self.into_bytes().into()
     }
 
-    /// Convert an [`AnyOctetString`] to a &[`str`].
+    /// Interprets the [`AnyOctetString`] as &[`str`].
     #[inline]
     pub fn to_str(&self) -> Result<&str, core::str::Utf8Error> {
         core::str::from_utf8(&self.bytes)
@@ -250,7 +248,7 @@ mod tests {
         fn ok() {
             let bytes = b"Hello\0World!\0";
             let octet_string = AnyOctetString::from_static_slice(bytes);
-            assert_eq!(octet_string.as_bytes(), bytes);
+            assert_eq!(octet_string.as_ref(), bytes);
         }
 
         #[test]
@@ -280,7 +278,7 @@ mod tests {
             let bytes = b"Hello";
             let (string, size) = AnyOctetString::decode(bytes, 5).unwrap();
 
-            assert_eq!(string.as_bytes(), b"Hello");
+            assert_eq!(string.as_ref(), b"Hello");
             assert_eq!(string.length(), 5);
             assert_eq!(size, 5);
             assert_eq!(&bytes[size..], b"");
@@ -291,7 +289,7 @@ mod tests {
             let bytes = b"Hello";
             let (string, size) = AnyOctetString::decode(bytes, 3).unwrap();
 
-            assert_eq!(string.as_bytes(), b"Hel");
+            assert_eq!(string.as_ref(), b"Hel");
             assert_eq!(string.length(), 3);
             assert_eq!(size, 3);
             assert_eq!(&bytes[size..], b"lo");

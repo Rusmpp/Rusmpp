@@ -55,7 +55,7 @@ impl<const N: usize> EmptyOrFullCOctetString<N> {
         Self::_ASSERT_NON_ZERO;
     };
 
-    /// Create a new empty [`EmptyOrFullCOctetString`].
+    /// Creates a new empty [`EmptyOrFullCOctetString`].
     ///
     /// Equivalent to [`EmptyOrFullCOctetString::empty`].
     #[inline]
@@ -63,7 +63,7 @@ impl<const N: usize> EmptyOrFullCOctetString<N> {
         Self::empty()
     }
 
-    /// Create a new empty [`EmptyOrFullCOctetString`].
+    /// Creates a new empty [`EmptyOrFullCOctetString`].
     #[inline]
     pub fn empty() -> Self {
         Self::_ASSERT_VALID;
@@ -73,13 +73,13 @@ impl<const N: usize> EmptyOrFullCOctetString<N> {
         }
     }
 
-    /// Returns the number of bytes contained in this [`EmptyOrFullCOctetString`] including the null terminator.
+    /// Returns the number of bytes contained in the [`EmptyOrFullCOctetString`] including the null terminator.
     #[inline]
     pub fn len(&self) -> usize {
         self.bytes.len()
     }
 
-    /// Check if an [`EmptyOrFullCOctetString`] is empty.
+    /// Checks if the [`EmptyOrFullCOctetString`] is empty.
     ///
     /// An [`EmptyOrFullCOctetString`] is considered empty if it
     /// contains only a single NULL octet `(0x00)`.
@@ -88,7 +88,7 @@ impl<const N: usize> EmptyOrFullCOctetString<N> {
         self.len() == 1
     }
 
-    /// Create a new [`EmptyOrFullCOctetString`] from [`Bytes`] including the null terminator.
+    /// Creates a new [`EmptyOrFullCOctetString`] from [`Bytes`] including the null terminator.
     pub fn from_bytes(bytes: Bytes) -> Result<Self, Error> {
         Self::_ASSERT_VALID;
 
@@ -134,21 +134,23 @@ impl<const N: usize> EmptyOrFullCOctetString<N> {
         Ok(Self { bytes })
     }
 
-    /// Create a new [`EmptyOrFullCOctetString`] from [`BytesMut`] including the null terminator.
+    /// Creates a new [`EmptyOrFullCOctetString`] from [`BytesMut`] including the null terminator.
     pub fn from_bytes_mut(bytes: BytesMut) -> Result<Self, Error> {
         Self::_ASSERT_VALID;
 
         Self::from_bytes(bytes.freeze())
     }
 
-    /// Create a new [`EmptyOrFullCOctetString`] from `&[u8]` including the null terminator.
+    /// Creates a new [`EmptyOrFullCOctetString`] from `&[u8]` including the null terminator.
     pub fn from_slice(bytes: &[u8]) -> Result<Self, Error> {
         Self::_ASSERT_VALID;
 
         Self::from_bytes(Bytes::copy_from_slice(bytes))
     }
 
-    /// Create a new [`EmptyOrFullCOctetString`] from `&'static [u8]` including the null terminator.
+    /// Creates a new [`EmptyOrFullCOctetString`] from `&'static [u8]` including the null terminator.
+    ///
+    /// This function does not copy or allocate.
     pub fn from_static_slice(bytes: &'static [u8]) -> Result<Self, Error> {
         Self::_ASSERT_VALID;
 
@@ -157,14 +159,14 @@ impl<const N: usize> EmptyOrFullCOctetString<N> {
 
     // XXX: there is no `from_static_str` because it would allocate (Null terminator).
 
-    /// Create a new [`EmptyOrFullCOctetString`] from [`Vec<u8>`] including the null terminator.
+    /// Creates a new [`EmptyOrFullCOctetString`] from [`Vec<u8>`] including the null terminator.
     pub fn from_vec(bytes: Vec<u8>) -> Result<Self, Error> {
         Self::_ASSERT_VALID;
 
         Self::from_bytes(Bytes::from_owner(bytes))
     }
 
-    /// Create a new [`EmptyOrFullCOctetString`] from [`String`] without the null terminator.
+    /// Creates a new [`EmptyOrFullCOctetString`] from [`String`] without the null terminator.
     pub fn from_string(string: String) -> Result<Self, Error> {
         Self::_ASSERT_VALID;
 
@@ -174,25 +176,19 @@ impl<const N: usize> EmptyOrFullCOctetString<N> {
         Self::from_vec(bytes)
     }
 
-    /// Get the bytes of a [`EmptyOrFullCOctetString`] including the null terminator.
-    #[inline]
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.bytes
-    }
-
-    /// Convert a [`EmptyOrFullCOctetString`] to [`Bytes`] including the null terminator.
+    /// Converts the [`EmptyOrFullCOctetString`] into [`Bytes`] including the null terminator.
     #[inline]
     pub fn into_bytes(self) -> Bytes {
         self.bytes
     }
 
-    /// Convert a [`EmptyOrFullCOctetString`] to [`Vec<u8>`] including the null terminator.
+    /// Converts the [`EmptyOrFullCOctetString`] into [`Vec<u8>`] including the null terminator.
     #[inline]
     pub fn into_vec(self) -> Vec<u8> {
         self.into_bytes().into()
     }
 
-    /// Convert an [`EmptyOrFullCOctetString`] to a &[`str`] without the null terminator.
+    /// Interprets the [`EmptyOrFullCOctetString`] as &[`str`] without the null terminator.
     #[inline]
     pub fn as_str(&self) -> &str {
         core::str::from_utf8(&self.bytes[0..self.bytes.len() - 1])
@@ -404,7 +400,7 @@ mod tests {
         fn ok() {
             let bytes = b"Hello\0";
             let string = EmptyOrFullCOctetString::<6>::from_static_slice(bytes).unwrap();
-            assert_eq!(string.as_bytes(), bytes);
+            assert_eq!(string.as_ref(), bytes);
         }
 
         #[test]
@@ -419,7 +415,7 @@ mod tests {
         fn ok_empty() {
             let bytes = b"\0";
             let string = EmptyOrFullCOctetString::<6>::from_static_slice(bytes).unwrap();
-            assert_eq!(string.as_bytes(), bytes);
+            assert_eq!(string.as_ref(), bytes);
             assert_eq!(string.bytes.len(), 1);
             assert_eq!(string.length(), 1);
         }
@@ -463,7 +459,7 @@ mod tests {
             let string = "Hello";
             let bytes = b"Hello\0";
             let string = EmptyOrFullCOctetString::<6>::from_str(string).unwrap();
-            assert_eq!(string.as_bytes(), bytes);
+            assert_eq!(string.as_ref(), bytes);
         }
 
         #[test]
@@ -479,7 +475,7 @@ mod tests {
             let string = "";
             let bytes = b"\0";
             let string = EmptyOrFullCOctetString::<6>::from_str(string).unwrap();
-            assert_eq!(string.as_bytes(), bytes);
+            assert_eq!(string.as_ref(), bytes);
         }
 
         #[test]
@@ -580,7 +576,7 @@ mod tests {
             let bytes = b"Hello\0World!";
             let (string, size) = EmptyOrFullCOctetString::<6>::decode(bytes).unwrap();
 
-            assert_eq!(string.as_bytes(), b"Hello\0");
+            assert_eq!(string.as_ref(), b"Hello\0");
             assert_eq!(string.length(), 6);
             assert_eq!(size, 6);
             assert_eq!(&bytes[size..], b"World!");
@@ -591,7 +587,7 @@ mod tests {
             let bytes = b"\0World!";
             let (string, size) = EmptyOrFullCOctetString::<6>::decode(bytes).unwrap();
 
-            assert_eq!(string.as_bytes(), b"\0");
+            assert_eq!(string.as_ref(), b"\0");
             assert_eq!(string.length(), 1);
             assert_eq!(size, 1);
             assert_eq!(&bytes[size..], b"World!");
