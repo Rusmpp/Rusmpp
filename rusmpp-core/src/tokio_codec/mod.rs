@@ -10,7 +10,7 @@ use tokio_util::{
 use crate::{
     command::owned::Command,
     decode::owned::DecodeWithLength,
-    encode::{Encode, Length},
+    encode::{Length, bytes::Encode},
     logging::{debug, error, trace},
 };
 
@@ -98,15 +98,10 @@ impl Encoder<&Command> for CommandCodec {
 
         dst.reserve(command_length);
         dst.put_u32(command_length as u32);
-
-        // TODO: Can we encode directly into dst?
-        let mut buf = alloc::vec![0; command.length()];
-        let _ = command.encode(buf.as_mut_slice());
-
-        dst.put_slice(&buf);
+        command.encode(dst);
 
         debug!(target: "rusmpp::codec::encode", command=?command, "Encoding");
-        debug!(target: "rusmpp::codec::encode", encoded=?crate::formatter::Formatter(&buf), encoded_length=command.length(), command_length, "Encoded");
+        debug!(target: "rusmpp::codec::encode", encoded=?crate::formatter::Formatter(&dst[..command_length]), encoded_length=command.length(), command_length, "Encoded");
 
         Ok(())
     }

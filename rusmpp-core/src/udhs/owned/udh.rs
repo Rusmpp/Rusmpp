@@ -5,7 +5,7 @@ use crate::{
         DecodeError, DecodeResultExt,
         owned::{Decode, DecodeWithKey, DecodeWithLength},
     },
-    encode::{Encode, Length},
+    encode::Length,
     types::owned::AnyOctetString,
     udhs::{
         UdhId,
@@ -97,8 +97,18 @@ impl Length for UdhValue {
     }
 }
 
-impl Encode for UdhValue {
+impl crate::encode::Encode for UdhValue {
     fn encode(&self, dst: &mut [u8]) -> usize {
+        match self {
+            UdhValue::ConcatenatedShortMessage8Bit(udh) => udh.encode(dst),
+            UdhValue::ConcatenatedShortMessage16Bit(udh) => udh.encode(dst),
+            UdhValue::Other { value, .. } => value.encode(dst),
+        }
+    }
+}
+
+impl crate::encode::bytes::Encode for UdhValue {
+    fn encode(&self, dst: &mut bytes::BytesMut) {
         match self {
             UdhValue::ConcatenatedShortMessage8Bit(udh) => udh.encode(dst),
             UdhValue::ConcatenatedShortMessage16Bit(udh) => udh.encode(dst),
@@ -169,6 +179,8 @@ mod tests {
 
         #[test]
         fn ok() {
+            use crate::encode::Encode;
+
             let udh = Udh::new(ConcatenatedShortMessage16Bit::new(0x1234, 3, 1).unwrap());
 
             let expected = [

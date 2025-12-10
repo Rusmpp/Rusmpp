@@ -155,6 +155,15 @@ impl<const N: usize> Encode for EmptyOrFullCOctetString<'_, N> {
     }
 }
 
+#[cfg(feature = "alloc")]
+impl<const N: usize> crate::encode::bytes::Encode for EmptyOrFullCOctetString<'_, N> {
+    fn encode(&self, dst: &mut bytes::BytesMut) {
+        use bytes::BufMut;
+
+        dst.put_slice(self.bytes);
+    }
+}
+
 impl<'a, const N: usize> Decode<'a> for EmptyOrFullCOctetString<'a, N> {
     fn decode(src: &'a [u8]) -> Result<(Self, usize), DecodeError> {
         Self::_ASSERT_NON_ZERO;

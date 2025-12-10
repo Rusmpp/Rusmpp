@@ -1,3 +1,5 @@
+use bytes::BufMut;
+
 use crate::{
     decode::{ConcatenatedShortMessageDecodeError, DecodeError},
     encode::Length,
@@ -160,6 +162,14 @@ impl crate::encode::Encode for ConcatenatedShortMessage16Bit {
         dst[..Self::LENGTH].copy_from_slice(&bytes);
 
         Self::LENGTH
+    }
+}
+
+impl crate::encode::bytes::Encode for ConcatenatedShortMessage16Bit {
+    fn encode(&self, dst: &mut bytes::BytesMut) {
+        let bytes = self.bytes();
+
+        dst.put(&bytes[..]);
     }
 }
 

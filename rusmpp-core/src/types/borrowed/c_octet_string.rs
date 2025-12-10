@@ -205,6 +205,17 @@ impl<const MIN: usize, const MAX: usize> Encode for COctetString<'_, MIN, MAX> {
     }
 }
 
+#[cfg(feature = "alloc")]
+impl<const MIN: usize, const MAX: usize> crate::encode::bytes::Encode
+    for COctetString<'_, MIN, MAX>
+{
+    fn encode(&self, dst: &mut bytes::BytesMut) {
+        use bytes::BufMut;
+
+        dst.put_slice(self.bytes);
+    }
+}
+
 impl<'a, const MIN: usize, const MAX: usize> Decode<'a> for COctetString<'a, MIN, MAX> {
     fn decode(src: &'a [u8]) -> Result<(Self, usize), DecodeError> {
         Self::_ASSERT_VALID;

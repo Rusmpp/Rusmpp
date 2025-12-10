@@ -5,7 +5,7 @@ use crate::{
         DecodeError, DecodeResultExt,
         borrowed::{Decode, DecodeExt},
     },
-    encode::{Encode, Length},
+    encode::Length,
     types::borrowed::COctetString,
     values::{dest_address::DestFlag, npi::Npi, ton::Ton},
 };
@@ -29,8 +29,18 @@ impl Length for DestAddress<'_> {
     }
 }
 
-impl Encode for DestAddress<'_> {
+impl crate::encode::Encode for DestAddress<'_> {
     fn encode(&self, dst: &mut [u8]) -> usize {
+        match self {
+            Self::SmeAddress(sa) => sa.encode(dst),
+            Self::DistributionListName(dlm) => dlm.encode(dst),
+        }
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl crate::encode::bytes::Encode for DestAddress<'_> {
+    fn encode(&self, dst: &mut bytes::BytesMut) {
         match self {
             Self::SmeAddress(sa) => sa.encode(dst),
             Self::DistributionListName(dlm) => dlm.encode(dst),

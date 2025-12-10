@@ -90,6 +90,15 @@ impl Encode for AnyOctetString<'_> {
     }
 }
 
+#[cfg(feature = "alloc")]
+impl crate::encode::bytes::Encode for AnyOctetString<'_> {
+    fn encode(&self, dst: &mut bytes::BytesMut) {
+        use bytes::BufMut;
+
+        dst.put_slice(self.bytes);
+    }
+}
+
 impl<'a> DecodeWithLength<'a> for AnyOctetString<'a> {
     fn decode(src: &'a [u8], length: usize) -> Result<(Self, usize), DecodeError> {
         if src.len() < length {
