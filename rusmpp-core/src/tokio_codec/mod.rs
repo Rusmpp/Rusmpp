@@ -2,14 +2,15 @@
 
 use core::num::TryFromIntError;
 
+use bytes::Buf;
 use tokio_util::{
-    bytes::{Buf, BufMut, BytesMut},
+    bytes::{BufMut, BytesMut},
     codec::{Decoder, Encoder},
 };
 
 use crate::{
     command::owned::Command,
-    decode::owned::DecodeWithLength,
+    decode::bytes::DecodeWithLength,
     encode::{Length, bytes::Encode},
     logging::{debug, error, trace},
 };
@@ -17,10 +18,19 @@ use crate::{
 #[cfg(test)]
 mod tests;
 
+#[derive(Debug)]
+enum DecodeState {
+    /// Decoding the command length.
+    Length,
+    /// Decoding the command (Header without length + Body).
+    Command { command_length: usize },
+}
+
 /// Codec for encoding and decoding `SMPP` PDUs.
 #[derive(Debug)]
 pub struct CommandCodec {
     max_length: Option<usize>,
+    state: DecodeState,
 }
 
 impl CommandCodec {
@@ -29,6 +39,7 @@ impl CommandCodec {
     pub const fn new() -> Self {
         Self {
             max_length: Some(8192),
+            state: DecodeState::Length,
         }
     }
 
@@ -47,6 +58,18 @@ impl CommandCodec {
     pub fn without_max_length(mut self) -> Self {
         self.max_length = None;
         self
+    }
+
+    /// Sets the decoder state to decode the command length.
+    #[inline]
+    const fn decode_length(&mut self) {
+        self.state = DecodeState::Length;
+    }
+
+    /// Sets the decoder state to decode the rest of the command.
+    #[inline]
+    const fn decode_command(&mut self, command_length: usize) {
+        self.state = DecodeState::Command { command_length };
     }
 }
 
@@ -184,72 +207,83 @@ impl Decoder for CommandCodec {
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         const HEADER_LENGTH: usize = 16;
 
-        if src.len() < HEADER_LENGTH {
-            trace!(target: "rusmpp::codec::decode", source_length=src.len(), "Not enough bytes to read the header");
+        loop {
+            match self.state {
+                DecodeState::Length => {
+                    if src.len() < HEADER_LENGTH {
+                        trace!(target: "rusmpp::codec::decode", source_length=src.len(), "Not enough bytes to read the header");
 
-            return Ok(None);
-        }
+                        return Ok(None);
+                    }
 
-        let command_length = usize::try_from(u32::from_be_bytes([src[0], src[1], src[2], src[3]])).map_err(|err|
-             {
-                error!(target: "rusmpp::codec::decode", ?err, "Failed to convert command length to usize");
+                    let command_length = usize::try_from(src.get_u32()).map_err(|err|
+                        {
+                            error!(target: "rusmpp::codec::decode", ?err, "Failed to convert command length to usize");
 
-                DecodeError::InvalidLength(err)
-             })?;
+                            DecodeError::InvalidLength(err)
+                        })?;
 
-        trace!(target: "rusmpp::codec::decode", command_length);
+                    trace!(target: "rusmpp::codec::decode", command_length);
 
-        if command_length < HEADER_LENGTH {
-            error!(target: "rusmpp::codec::decode", command_length, min_command_length=HEADER_LENGTH, "Minimum command length not met");
+                    if command_length < HEADER_LENGTH {
+                        error!(target: "rusmpp::codec::decode", command_length, min_command_length=HEADER_LENGTH, "Minimum command length not met");
 
-            return Err(DecodeError::MinLength {
-                actual: command_length,
-                min: HEADER_LENGTH,
-            });
-        }
+                        return Err(DecodeError::MinLength {
+                            actual: command_length,
+                            min: HEADER_LENGTH,
+                        });
+                    }
 
-        // XXX: keep msrv lower than 1.90
-        #[allow(clippy::collapsible_if)]
-        if let Some(max_command_length) = self.max_length {
-            if command_length > max_command_length {
-                error!(target: "rusmpp::codec::decode", command_length, max_command_length, "Maximum command length exceeded");
+                    // XXX: keep msrv lower than 1.90
+                    #[allow(clippy::collapsible_if)]
+                    if let Some(max_command_length) = self.max_length {
+                        if command_length > max_command_length {
+                            error!(target: "rusmpp::codec::decode", command_length, max_command_length, "Maximum command length exceeded");
 
-                return Err(DecodeError::MaxLength {
-                    actual: command_length,
-                    max: max_command_length,
-                });
+                            return Err(DecodeError::MaxLength {
+                                actual: command_length,
+                                max: max_command_length,
+                            });
+                        }
+                    }
+
+                    self.decode_command(command_length);
+                }
+                DecodeState::Command { command_length } => {
+                    // command_length is at least 16 (bytes)
+                    let pdu_length = command_length - 4;
+
+                    if src.len() < pdu_length {
+                        // Reserve enough space to read the entire command
+                        src.reserve(pdu_length - src.len());
+
+                        trace!(target: "rusmpp::codec::decode", command_length, "Not enough bytes to read the entire command");
+
+                        return Ok(None);
+                    }
+
+                    debug!(target: "rusmpp::codec::decode", command_length, decoding=?crate::formatter::Formatter(&src[..pdu_length]), "Decoding");
+
+                    let (command, _size) = match Command::decode(src, pdu_length) {
+                        Ok((command, size)) => {
+                            debug!(target: "rusmpp::codec::decode", command=?command, command_length, decoded_length=size, "Decoded");
+
+                            (command, size)
+                        }
+                        Err(err) => {
+                            error!(target: "rusmpp::codec::decode", ?err);
+
+                            self.decode_length();
+
+                            return Err(DecodeError::Decode(err));
+                        }
+                    };
+
+                    self.decode_length();
+
+                    return Ok(Some(command));
+                }
             }
         }
-
-        if src.len() < command_length {
-            // Reserve enough space to read the entire command
-            src.reserve(command_length - src.len());
-
-            trace!(target: "rusmpp::codec::decode", command_length, "Not enough bytes to read the entire command");
-
-            return Ok(None);
-        }
-
-        // command_length is at least 16 bytes
-        let pdu_len = command_length - 4;
-
-        debug!(target: "rusmpp::codec::decode", decoding=?crate::formatter::Formatter(&src[..command_length]), "Decoding");
-
-        let (command, _size) = match Command::decode(&src[4..command_length], pdu_len) {
-            Ok((command, size)) => {
-                debug!(target: "rusmpp::codec::decode", command=?command, command_length, decoded_length=size, "Decoded");
-
-                (command, size)
-            }
-            Err(err) => {
-                error!(target: "rusmpp::codec::decode", ?err);
-
-                return Err(DecodeError::Decode(err));
-            }
-        };
-
-        src.advance(command_length);
-
-        Ok(Some(command))
     }
 }

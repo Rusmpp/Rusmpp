@@ -3,6 +3,8 @@ use bytes::BytesMut;
 
 use crate::decode::DecodeError;
 
+// TODO: take the docs from the owned decode before removing it.
+
 /// Trait for decoding `SMPP` values from a buffer.
 pub trait Decode: Sized {
     /// Decode a value from a buffer.

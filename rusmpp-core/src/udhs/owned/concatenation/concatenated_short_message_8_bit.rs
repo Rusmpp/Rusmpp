@@ -174,8 +174,8 @@ impl crate::encode::bytes::Encode for ConcatenatedShortMessage8Bit {
     }
 }
 
-impl crate::decode::owned::Decode for ConcatenatedShortMessage8Bit {
-    fn decode(src: &[u8]) -> Result<(Self, usize), DecodeError> {
+impl crate::decode::bytes::Decode for ConcatenatedShortMessage8Bit {
+    fn decode(src: &mut bytes::BytesMut) -> Result<(Self, usize), DecodeError> {
         if src.len() < Self::LENGTH {
             return Err(DecodeError::concatenated_short_message_decode_error(
                 ConcatenatedShortMessageDecodeError::TooFewBytes {
@@ -265,14 +265,16 @@ mod tests {
     }
 
     mod decode {
-        use crate::decode::{DecodeErrorKind, UdhDecodeError, owned::Decode};
+        use bytes::BytesMut;
+
+        use crate::decode::{DecodeErrorKind, UdhDecodeError, bytes::Decode};
 
         use super::*;
 
         #[test]
         fn ok() {
-            let data = [0x03, 0x12, 0x34, 0x02];
-            let (udh, size) = ConcatenatedShortMessage8Bit::decode(&data).unwrap();
+            let mut buf = BytesMut::from(&[0x03, 0x12, 0x34, 0x02][..]);
+            let (udh, size) = ConcatenatedShortMessage8Bit::decode(&mut buf).unwrap();
             assert_eq!(size, 4);
             assert_eq!(udh.reference, 0x12);
             assert_eq!(udh.total_parts, 0x34);
@@ -281,8 +283,8 @@ mod tests {
 
         #[test]
         fn too_few_bytes() {
-            let data = [0x03, 0x12, 0x34];
-            let err = ConcatenatedShortMessage8Bit::decode(&data).unwrap_err();
+            let mut buf = BytesMut::from(&[0x03, 0x12, 0x34][..]);
+            let err = ConcatenatedShortMessage8Bit::decode(&mut buf).unwrap_err();
             assert!(matches!(
                 err.kind(),
                 DecodeErrorKind::UdhDecodeError(
@@ -295,8 +297,8 @@ mod tests {
 
         #[test]
         fn invalid_information_element_length() {
-            let data = [0x04, 0x12, 0x34, 0x02];
-            let err = ConcatenatedShortMessage8Bit::decode(&data).unwrap_err();
+            let mut buf = BytesMut::from(&[0x04, 0x12, 0x34, 0x02][..]);
+            let err = ConcatenatedShortMessage8Bit::decode(&mut buf).unwrap_err();
             assert!(matches!(
                 err.kind(),
                 DecodeErrorKind::UdhDecodeError(
@@ -312,8 +314,8 @@ mod tests {
 
         #[test]
         fn part_number_exceeds_total_parts() {
-            let data = [0x03, 0x12, 2, 3];
-            let err = ConcatenatedShortMessage8Bit::decode(&data).unwrap_err();
+            let mut buf = BytesMut::from(&[0x03, 0x12, 2, 3][..]);
+            let err = ConcatenatedShortMessage8Bit::decode(&mut buf).unwrap_err();
             assert!(matches!(
                 err.kind(),
                 DecodeErrorKind::UdhDecodeError(
@@ -329,8 +331,8 @@ mod tests {
 
         #[test]
         fn total_parts_zero() {
-            let data = [0x03, 0x12, 0x00, 0x01];
-            let err = ConcatenatedShortMessage8Bit::decode(&data).unwrap_err();
+            let mut buf = BytesMut::from(&[0x03, 0x12, 0x00, 0x01][..]);
+            let err = ConcatenatedShortMessage8Bit::decode(&mut buf).unwrap_err();
             assert!(matches!(
                 err.kind(),
                 DecodeErrorKind::UdhDecodeError(
@@ -343,8 +345,8 @@ mod tests {
 
         #[test]
         fn part_number_zero() {
-            let data = [0x03, 0x12, 0x03, 0x00];
-            let err = ConcatenatedShortMessage8Bit::decode(&data).unwrap_err();
+            let mut buf = BytesMut::from(&[0x03, 0x12, 0x03, 0x00][..]);
+            let err = ConcatenatedShortMessage8Bit::decode(&mut buf).unwrap_err();
             assert!(matches!(
                 err.kind(),
                 DecodeErrorKind::UdhDecodeError(

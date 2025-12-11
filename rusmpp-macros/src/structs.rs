@@ -254,8 +254,8 @@ fn quote_owned_decode(input: &DeriveInput, fields: &ValidFields) -> TokenStream 
 
     quote! {
         #[cfg(feature = "alloc")]
-        impl #impl_generics crate::decode::owned::Decode for #name #ty_generics #where_clause {
-            fn decode(src: &[u8]) -> Result<(Self, usize), crate::decode::DecodeError> {
+        impl #impl_generics crate::decode::bytes::Decode for #name #ty_generics #where_clause {
+            fn decode(src: &mut ::bytes::BytesMut) -> Result<(Self, usize), crate::decode::DecodeError> {
                 let size = 0;
                 #(
                     #fields
@@ -329,8 +329,8 @@ fn quote_owned_decode_with_length(input: &DeriveInput, fields: &ValidFields) -> 
 
     quote! {
         #[cfg(feature = "alloc")]
-        impl #impl_generics crate::decode::owned::DecodeWithLength for #name #ty_generics #where_clause {
-            fn decode(src: &[u8], length: usize) -> Result<(Self, usize), crate::decode::DecodeError> {
+        impl #impl_generics crate::decode::bytes::DecodeWithLength for #name #ty_generics #where_clause {
+            fn decode(src: &mut ::bytes::BytesMut, length: usize) -> Result<(Self, usize), crate::decode::DecodeError> {
                 let size = 0;
                 #(
                     #fields
@@ -632,30 +632,30 @@ impl ValidField<'_> {
         match &self.attrs {
             ValidFieldAttributes::None => quote! {
                 let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(
-                    crate::decode::owned::DecodeExt::decode_move(src, size),
+                    crate::decode::bytes::DecodeExt::decode_move(src, size),
                     crate::fields::SmppField::#name,
                 )?;
             },
             ValidFieldAttributes::SkipDecode => quote! {},
             ValidFieldAttributes::LengthUnchecked => quote! {
-                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::owned::DecodeWithLengthExt::decode_move(
+                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::bytes::DecodeWithLengthExt::decode_move(
                     src, length.saturating_sub(size), size
                 ),crate::fields::SmppField::#name)?;
             },
             ValidFieldAttributes::LengthChecked => quote! {
-                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::owned::DecodeExt::length_checked_decode_move(
+                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::bytes::DecodeExt::length_checked_decode_move(
                     src, length.saturating_sub(size), size
                 ),crate::fields::SmppField::#name)?
                 .map(|(this, size)| (Some(this), size))
                 .unwrap_or((None, size));
             },
             ValidFieldAttributes::LengthIdent { length_ident } => quote! {
-                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::owned::DecodeWithLengthExt::decode_move(
+                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::bytes::DecodeWithLengthExt::decode_move(
                     src, #length_ident as usize, size
                 ),crate::fields::SmppField::#name)?;
             },
             ValidFieldAttributes::KeyLengthUnchecked { key_ident } => quote! {
-                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::owned::DecodeWithKeyOptionalExt::decode_move(
+                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::bytes::DecodeWithKeyOptionalExt::decode_move(
                     #key_ident, src, length.saturating_sub(size), size
                 ),crate::fields::SmppField::#name)?
                 .map(|(this, size)| (Some(this), size))
@@ -665,14 +665,14 @@ impl ValidField<'_> {
                 key_ident,
                 length_ident,
             } => quote! {
-                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::owned::DecodeWithKeyExt::optional_length_checked_decode_move(
+                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::bytes::DecodeWithKeyExt::optional_length_checked_decode_move(
                     #key_ident, src, #length_ident as usize, size
                 ),crate::fields::SmppField::#name)?
                 .map(|(this, size)| (Some(this), size))
                 .unwrap_or((None, size));
             },
             ValidFieldAttributes::Count { count_ident } => quote! {
-                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::owned::DecodeExt::counted_move(
+                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::bytes::DecodeExt::counted_move(
                     src, #count_ident as usize, size
                 ),crate::fields::SmppField::#name)?;
             },

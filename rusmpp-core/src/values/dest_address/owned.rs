@@ -3,7 +3,7 @@ use rusmpp_macros::Rusmpp;
 use crate::{
     decode::{
         DecodeError, DecodeResultExt,
-        owned::{Decode, DecodeExt},
+        bytes::{Decode, DecodeExt},
     },
     encode::Length,
     types::owned::COctetString,
@@ -49,7 +49,7 @@ impl crate::encode::bytes::Encode for DestAddress {
 }
 
 impl Decode for DestAddress {
-    fn decode(src: &[u8]) -> Result<(Self, usize), DecodeError> {
+    fn decode(src: &mut bytes::BytesMut) -> Result<(Self, usize), DecodeError> {
         let size = 0;
 
         let (flag, size) = DestFlag::decode_move(src, size)?;

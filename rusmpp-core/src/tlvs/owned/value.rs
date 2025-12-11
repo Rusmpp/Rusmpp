@@ -1,8 +1,10 @@
+use bytes::BytesMut;
+
 use crate::{
     CommandStatus,
     decode::{
         DecodeError, DecodeResultExt,
-        owned::{Decode, DecodeWithKey, DecodeWithLength},
+        bytes::{Decode, DecodeWithKey, DecodeWithLength},
     },
     encode::Length,
     tlvs::TlvTag,
@@ -409,7 +411,11 @@ impl crate::encode::bytes::Encode for TlvValue {
 impl DecodeWithKey for TlvValue {
     type Key = TlvTag;
 
-    fn decode(key: Self::Key, src: &[u8], length: usize) -> Result<(Self, usize), DecodeError> {
+    fn decode(
+        key: Self::Key,
+        src: &mut BytesMut,
+        length: usize,
+    ) -> Result<(Self, usize), DecodeError> {
         let (value, size) = match key {
             TlvTag::AdditionalStatusInfoText => {
                 Decode::decode(src).map_decoded(Self::AdditionalStatusInfoText)?

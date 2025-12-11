@@ -38,7 +38,7 @@ embedded-io-adapters = { version = "0.6.2", default-features = false, features =
 ] }
 
 [features]
-default = ["alloc"] # TODO: remove
+default = ["alloc", "tokio-codec"] # TODO: remove
 # Enables the `alloc` crate.
 alloc = ["serde/alloc", "dep:bytes"]
 # Enables verbose DecodeError with DecodeErrorSource.
