@@ -81,7 +81,7 @@ pub trait Length {
 /// assert_eq!(&buf[..size], expected);
 /// ```
 pub trait Encode: Length {
-    /// Encode a value to a slice
+    /// Encode a value into a slice.
     ///
     /// Implementors are allowed to panic if the slice is not big enough to hold the encoded value. If `dst.len()` < [`Length::length`]
     fn encode(&self, dst: &mut [u8]) -> usize;
@@ -152,12 +152,58 @@ impl<T: Encode, const N: usize> Encode for heapless::vec::Vec<T, N> {
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub mod bytes {
-    //! Traits for encoding `SMPP` values using [`BytesMut`].
+    //! Traits for encoding `SMPP` values using a bytes buffer.
 
     use bytes::BytesMut;
 
     use super::Length;
 
+    /// Trait for encoding `SMPP` values into a buffer.
+    ///
+    /// # Implementation
+    ///
+    /// ```rust
+    /// # use bytes::BytesMut;
+    /// # use rusmpp_core::encode::{bytes::Encode, Length};
+    ///
+    /// struct Foo {
+    ///     a: u8,
+    ///     b: u16,
+    ///     c: u32,
+    /// }
+    ///
+    /// impl Length for Foo {
+    ///     fn length(&self) -> usize {
+    ///         self.a.length() + self.b.length() + self.c.length()
+    ///     }
+    /// }
+    ///
+    /// impl Encode for Foo {
+    ///     fn encode(&self, dst: &mut BytesMut) {
+    ///         self.a.encode(dst);
+    ///         self.b.encode(dst);
+    ///         self.c.encode(dst);
+    ///     }
+    /// }
+    ///
+    /// let foo = Foo {
+    ///     a: 0x01,
+    ///     b: 0x0203,
+    ///     c: 0x04050607,
+    /// };
+    ///
+    /// let mut buf = BytesMut::with_capacity(1024);
+    ///
+    /// assert!(buf.capacity() >= foo.length());
+    ///
+    /// foo.encode(&mut buf);
+    ///
+    /// let expected = &[0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07];
+    ///
+    /// let buf = buf.split_to(foo.length());
+    ///
+    /// assert_eq!(&buf[..], expected);
+    /// ```
     pub trait Encode: Length {
         /// Encode a value into a destination buffer.
         ///
