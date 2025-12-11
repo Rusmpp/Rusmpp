@@ -91,31 +91,6 @@ impl crate::encode::Encode for Tlv {
         size
     }
 }
-impl crate::decode::owned::Decode for Tlv {
-    fn decode(src: &[u8]) -> Result<(Self, usize), crate::decode::DecodeError> {
-        let size = 0;
-        let (tag, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::owned::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::tag,
-        )?;
-        let (value_length, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::owned::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::value_length,
-        )?;
-        let (value, size) = crate::decode::DecodeErrorExt::map_as_source(
-                crate::decode::owned::DecodeWithKeyExt::optional_length_checked_decode_move(
-                    tag,
-                    src,
-                    value_length as usize,
-                    size,
-                ),
-                crate::fields::SmppField::value,
-            )?
-            .map(|(this, size)| (Some(this), size))
-            .unwrap_or((None, size));
-        Ok((Self { tag, value_length, value }, size))
-    }
-}
 /// Docs
 ///
 /// More docs

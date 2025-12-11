@@ -82,27 +82,6 @@ impl crate::encode::Encode for BroadcastAreaIdentifier {
         size
     }
 }
-impl crate::decode::owned::DecodeWithLength for BroadcastAreaIdentifier {
-    fn decode(
-        src: &[u8],
-        length: usize,
-    ) -> Result<(Self, usize), crate::decode::DecodeError> {
-        let size = 0;
-        let (format, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::owned::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::format,
-        )?;
-        let (area, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::owned::DecodeWithLengthExt::decode_move(
-                src,
-                length.saturating_sub(size),
-                size,
-            ),
-            crate::fields::SmppField::area,
-        )?;
-        Ok((Self { format, area }, size))
-    }
-}
 /// Docs
 ///
 /// More docs

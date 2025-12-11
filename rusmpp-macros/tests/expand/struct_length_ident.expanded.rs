@@ -99,38 +99,6 @@ impl crate::encode::Encode for SubmitSm {
         size
     }
 }
-impl crate::decode::owned::DecodeWithLength for SubmitSm {
-    fn decode(
-        src: &[u8],
-        length: usize,
-    ) -> Result<(Self, usize), crate::decode::DecodeError> {
-        let size = 0;
-        let (other, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::owned::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::other,
-        )?;
-        let (sm_length, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::owned::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::sm_length,
-        )?;
-        let (short_message, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::owned::DecodeWithLengthExt::decode_move(
-                src,
-                sm_length as usize,
-                size,
-            ),
-            crate::fields::SmppField::short_message,
-        )?;
-        Ok((
-            Self {
-                other,
-                sm_length,
-                short_message,
-            },
-            size,
-        ))
-    }
-}
 /// Docs
 ///
 /// More docs

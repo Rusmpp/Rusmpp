@@ -124,32 +124,3 @@ impl<'a> crate::decode::borrowed::DecodeWithLength<'a> for MsValidity {
         ))
     }
 }
-impl crate::decode::owned::DecodeWithLength for MsValidity {
-    fn decode(
-        src: &[u8],
-        length: usize,
-    ) -> Result<(Self, usize), crate::decode::DecodeError> {
-        let size = 0;
-        let (validity_behavior, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::owned::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::validity_behavior,
-        )?;
-        let (validity_information, size) = crate::decode::DecodeErrorExt::map_as_source(
-                crate::decode::owned::DecodeExt::length_checked_decode_move(
-                    src,
-                    length.saturating_sub(size),
-                    size,
-                ),
-                crate::fields::SmppField::validity_information,
-            )?
-            .map(|(this, size)| (Some(this), size))
-            .unwrap_or((None, size));
-        Ok((
-            Self {
-                validity_behavior,
-                validity_information,
-            },
-            size,
-        ))
-    }
-}

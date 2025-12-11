@@ -95,31 +95,6 @@ impl crate::encode::Encode for CancelSm {
         size
     }
 }
-impl crate::decode::owned::Decode for CancelSm {
-    fn decode(src: &[u8]) -> Result<(Self, usize), crate::decode::DecodeError> {
-        let size = 0;
-        let (service_type, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::owned::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::service_type,
-        )?;
-        let (message_id, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::owned::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::message_id,
-        )?;
-        let (other, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::owned::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::other,
-        )?;
-        Ok((
-            Self {
-                service_type,
-                message_id,
-                other,
-            },
-            size,
-        ))
-    }
-}
 /// Docs
 ///
 /// More docs

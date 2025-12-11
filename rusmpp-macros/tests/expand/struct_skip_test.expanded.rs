@@ -69,16 +69,6 @@ impl crate::encode::Encode for SubmitSmResp {
         size
     }
 }
-impl crate::decode::owned::Decode for SubmitSmResp {
-    fn decode(src: &[u8]) -> Result<(Self, usize), crate::decode::DecodeError> {
-        let size = 0;
-        let (message_id, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::owned::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::message_id,
-        )?;
-        Ok((Self { message_id }, size))
-    }
-}
 /// Docs
 ///
 /// More docs
