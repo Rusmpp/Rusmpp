@@ -41,23 +41,6 @@ impl crate::encode::bytes::Encode for u32 {
 
 #[cfg(feature = "alloc")]
 impl crate::decode::owned::Decode for u32 {
-    fn decode(src: &[u8]) -> Result<(Self, usize), DecodeError> {
-        if src.len() < 4 {
-            return Err(DecodeError::unexpected_eof());
-        }
-
-        let mut bytes = [0; 4];
-
-        bytes.copy_from_slice(&src[..4]);
-
-        let value = u32::from_be_bytes(bytes);
-
-        Ok((value, 4))
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl crate::decode::bytes::Decode for u32 {
     fn decode(src: &mut bytes::BytesMut) -> Result<(Self, usize), DecodeError> {
         use bytes::Buf;
 

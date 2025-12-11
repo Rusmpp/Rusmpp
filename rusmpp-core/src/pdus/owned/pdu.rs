@@ -4,7 +4,7 @@ use crate::{
     CommandId,
     decode::{
         DecodeError, DecodeResultExt,
-        bytes::{Decode, DecodeWithKeyOptional, DecodeWithLength},
+        owned::{Decode, DecodeWithKeyOptional, DecodeWithLength},
     },
     encode::Length,
     types::owned::AnyOctetString,

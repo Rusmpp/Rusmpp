@@ -36,17 +36,6 @@ impl crate::encode::bytes::Encode for u8 {
 
 #[cfg(feature = "alloc")]
 impl crate::decode::owned::Decode for u8 {
-    fn decode(src: &[u8]) -> Result<(Self, usize), DecodeError> {
-        if src.is_empty() {
-            return Err(DecodeError::unexpected_eof());
-        }
-
-        Ok((src[0], 1))
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl crate::decode::bytes::Decode for u8 {
     fn decode(src: &mut bytes::BytesMut) -> Result<(Self, usize), DecodeError> {
         use bytes::Buf;
 

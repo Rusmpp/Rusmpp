@@ -4,7 +4,7 @@ use alloc::{string::String, string::ToString, vec::Vec};
 use bytes::{BufMut, Bytes, BytesMut};
 
 use crate::{
-    decode::{COctetStringDecodeError, DecodeError, bytes::Decode as BDecode, owned::Decode},
+    decode::{COctetStringDecodeError, DecodeError, owned::Decode},
     encode::{Encode, Length, bytes::Encode as BEncode},
     types::empty_or_full_c_octet_string::Error,
 };
@@ -291,54 +291,6 @@ impl<const N: usize> BEncode for EmptyOrFullCOctetString<N> {
 }
 
 impl<const N: usize> Decode for EmptyOrFullCOctetString<N> {
-    fn decode(src: &[u8]) -> Result<(Self, usize), DecodeError> {
-        Self::_ASSERT_VALID;
-
-        let mut bytes = Vec::with_capacity(N);
-
-        for i in 0..N {
-            if i >= src.len() {
-                return Err(DecodeError::unexpected_eof());
-            }
-
-            let byte = src[i];
-
-            bytes.push(byte);
-
-            if byte == 0 {
-                let len = i + 1;
-
-                if bytes.len() > 1 && bytes.len() < N {
-                    return Err(DecodeError::c_octet_string_decode_error(
-                        COctetStringDecodeError::TooFewBytes {
-                            actual: bytes.len(),
-                            min: N,
-                        },
-                    ));
-                }
-
-                if !bytes.is_ascii() {
-                    return Err(DecodeError::c_octet_string_decode_error(
-                        COctetStringDecodeError::NotAscii,
-                    ));
-                }
-
-                return Ok((
-                    Self {
-                        bytes: Bytes::from_owner(bytes),
-                    },
-                    len,
-                ));
-            }
-        }
-
-        Err(DecodeError::c_octet_string_decode_error(
-            COctetStringDecodeError::NotNullTerminated,
-        ))
-    }
-}
-
-impl<const N: usize> BDecode for EmptyOrFullCOctetString<N> {
     fn decode(src: &mut BytesMut) -> Result<(Self, usize), DecodeError> {
         Self::_ASSERT_VALID;
 
@@ -601,31 +553,16 @@ mod tests {
 
         #[test]
         fn unexpected_eof_empty() {
-            let bytes = b"";
-            let error = <EmptyOrFullCOctetString<6> as Decode>::decode(bytes).unwrap_err();
-
-            assert!(matches!(error.kind(), DecodeErrorKind::UnexpectedEof));
-
             let mut buf = BytesMut::new();
-            let error = <EmptyOrFullCOctetString<6> as BDecode>::decode(&mut buf).unwrap_err();
+            let error = EmptyOrFullCOctetString::<6>::decode(&mut buf).unwrap_err();
 
             assert!(matches!(error.kind(), DecodeErrorKind::UnexpectedEof));
         }
 
         #[test]
         fn not_null_terminated() {
-            let bytes = b"Hi";
-            let error = <EmptyOrFullCOctetString<2> as Decode>::decode(bytes).unwrap_err();
-
-            assert!(matches!(
-                error.kind(),
-                DecodeErrorKind::COctetStringDecodeError(
-                    COctetStringDecodeError::NotNullTerminated
-                )
-            ));
-
-            let mut buf = BytesMut::from(&bytes[..]);
-            let error = <EmptyOrFullCOctetString<2> as BDecode>::decode(&mut buf).unwrap_err();
+            let mut buf = BytesMut::from(&b"Hi"[..]);
+            let error = EmptyOrFullCOctetString::<2>::decode(&mut buf).unwrap_err();
 
             assert!(matches!(
                 error.kind(),
@@ -637,18 +574,8 @@ mod tests {
 
         #[test]
         fn too_many_bytes() {
-            let bytes = b"Hello\0";
-            let error = <EmptyOrFullCOctetString<5> as Decode>::decode(bytes).unwrap_err();
-
-            assert!(matches!(
-                error.kind(),
-                DecodeErrorKind::COctetStringDecodeError(
-                    COctetStringDecodeError::NotNullTerminated,
-                )
-            ));
-
-            let mut buf = BytesMut::from(&bytes[..]);
-            let error = <EmptyOrFullCOctetString<5> as BDecode>::decode(&mut buf).unwrap_err();
+            let mut buf = BytesMut::from(&b"Hello\0"[..]);
+            let error = EmptyOrFullCOctetString::<5>::decode(&mut buf).unwrap_err();
 
             assert!(matches!(
                 error.kind(),
@@ -660,19 +587,8 @@ mod tests {
 
         #[test]
         fn too_few_bytes() {
-            let bytes = b"Hel\0";
-            let error = <EmptyOrFullCOctetString<5> as Decode>::decode(bytes).unwrap_err();
-
-            assert!(matches!(
-                error.kind(),
-                DecodeErrorKind::COctetStringDecodeError(COctetStringDecodeError::TooFewBytes {
-                    actual: 4,
-                    min: 5,
-                },)
-            ));
-
-            let mut buf = BytesMut::from(&bytes[..]);
-            let error = <EmptyOrFullCOctetString<5> as BDecode>::decode(&mut buf).unwrap_err();
+            let mut buf = BytesMut::from(&b"Hel\0"[..]);
+            let error = EmptyOrFullCOctetString::<5>::decode(&mut buf).unwrap_err();
 
             assert!(matches!(
                 error.kind(),
@@ -685,16 +601,8 @@ mod tests {
 
         #[test]
         fn not_ascii() {
-            let bytes = b"Hell\xF0\0";
-            let error = <EmptyOrFullCOctetString<6> as Decode>::decode(bytes).unwrap_err();
-
-            assert!(matches!(
-                error.kind(),
-                DecodeErrorKind::COctetStringDecodeError(COctetStringDecodeError::NotAscii)
-            ));
-
-            let mut buf = BytesMut::from(&bytes[..]);
-            let error = <EmptyOrFullCOctetString<6> as BDecode>::decode(&mut buf).unwrap_err();
+            let mut buf = BytesMut::from(&b"Hell\xF0\0"[..]);
+            let error = EmptyOrFullCOctetString::<6>::decode(&mut buf).unwrap_err();
 
             assert!(matches!(
                 error.kind(),
@@ -704,16 +612,8 @@ mod tests {
 
         #[test]
         fn ok() {
-            let bytes = b"Hello\0World!";
-            let (string, size) = <EmptyOrFullCOctetString<6> as Decode>::decode(bytes).unwrap();
-
-            assert_eq!(string.as_ref(), b"Hello\0");
-            assert_eq!(string.length(), 6);
-            assert_eq!(size, 6);
-            assert_eq!(&bytes[size..], b"World!");
-
-            let mut buf = BytesMut::from(&bytes[..]);
-            let (string, size) = <EmptyOrFullCOctetString<6> as BDecode>::decode(&mut buf).unwrap();
+            let mut buf = BytesMut::from(&b"Hello\0World!"[..]);
+            let (string, size) = EmptyOrFullCOctetString::<6>::decode(&mut buf).unwrap();
 
             assert_eq!(string.as_ref(), b"Hello\0");
             assert_eq!(string.length(), 6);
@@ -723,16 +623,8 @@ mod tests {
 
         #[test]
         fn ok_empty() {
-            let bytes = b"\0World!";
-            let (string, size) = <EmptyOrFullCOctetString<6> as Decode>::decode(bytes).unwrap();
-
-            assert_eq!(string.as_ref(), b"\0");
-            assert_eq!(string.length(), 1);
-            assert_eq!(size, 1);
-            assert_eq!(&bytes[size..], b"World!");
-
-            let mut buf = BytesMut::from(&bytes[..]);
-            let (string, size) = <EmptyOrFullCOctetString<6> as BDecode>::decode(&mut buf).unwrap();
+            let mut buf = BytesMut::from(&b"\0World!"[..]);
+            let (string, size) = EmptyOrFullCOctetString::<6>::decode(&mut buf).unwrap();
 
             assert_eq!(string.as_ref(), b"\0");
             assert_eq!(string.length(), 1);

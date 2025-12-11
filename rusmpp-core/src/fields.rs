@@ -9,7 +9,7 @@
 /// ```rust
 /// # #[cfg(all(feature = "verbose", feature = "alloc"))]
 /// # {
-/// # use rusmpp_core::{command::owned::Command, decode::bytes::DecodeWithLength, fields::SmppField};
+/// # use rusmpp_core::{command::owned::Command, decode::owned::DecodeWithLength, fields::SmppField};
 /// # use bytes::BytesMut;
 /// // bind_transmitter bytes
 /// // The `password` field is not null terminated.

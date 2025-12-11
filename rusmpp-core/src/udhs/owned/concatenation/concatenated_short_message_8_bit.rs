@@ -174,7 +174,7 @@ impl crate::encode::bytes::Encode for ConcatenatedShortMessage8Bit {
     }
 }
 
-impl crate::decode::bytes::Decode for ConcatenatedShortMessage8Bit {
+impl crate::decode::owned::Decode for ConcatenatedShortMessage8Bit {
     fn decode(src: &mut bytes::BytesMut) -> Result<(Self, usize), DecodeError> {
         if src.len() < Self::LENGTH {
             return Err(DecodeError::concatenated_short_message_decode_error(
@@ -267,7 +267,7 @@ mod tests {
     mod decode {
         use bytes::BytesMut;
 
-        use crate::decode::{DecodeErrorKind, UdhDecodeError, bytes::Decode};
+        use crate::decode::{DecodeErrorKind, UdhDecodeError, owned::Decode};
 
         use super::*;
 

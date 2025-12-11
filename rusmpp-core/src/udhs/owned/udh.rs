@@ -3,7 +3,7 @@ use rusmpp_macros::Rusmpp;
 use crate::{
     decode::{
         DecodeError, DecodeResultExt,
-        bytes::{Decode, DecodeWithKey, DecodeWithLength},
+        owned::{Decode, DecodeWithKey, DecodeWithLength},
     },
     encode::Length,
     types::owned::AnyOctetString,
@@ -148,18 +148,18 @@ impl Decode for Udh {
     fn decode(src: &mut bytes::BytesMut) -> Result<(Self, usize), DecodeError> {
         let size = 0;
         let (length, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::bytes::DecodeExt::decode_move(src, size),
+            crate::decode::owned::DecodeExt::decode_move(src, size),
             crate::fields::SmppField::udh_length,
         )?;
         let (id, size): (UdhId, usize) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::bytes::DecodeExt::decode_move(src, size),
+            crate::decode::owned::DecodeExt::decode_move(src, size),
             crate::fields::SmppField::udh_id,
         )?;
 
         let value_length = (length as usize).saturating_sub(id.length());
 
         let (value, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::bytes::DecodeWithKeyExt::optional_length_checked_decode_move(
+            crate::decode::owned::DecodeWithKeyExt::optional_length_checked_decode_move(
                 id,
                 src,
                 value_length,
@@ -224,7 +224,7 @@ mod tests {
     mod decode {
         use bytes::BytesMut;
 
-        use crate::decode::bytes::Decode;
+        use crate::decode::owned::Decode;
 
         use super::*;
 

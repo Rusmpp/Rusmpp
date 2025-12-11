@@ -3,7 +3,7 @@ use rusmpp_macros::Rusmpp;
 use crate::{
     decode::{
         DecodeError, DecodeResultExt,
-        bytes::{Decode, DecodeExt},
+        owned::{Decode, DecodeExt},
     },
     encode::Length,
     types::owned::COctetString,

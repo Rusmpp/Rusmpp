@@ -4,7 +4,7 @@ use crate::{
     CommandStatus,
     decode::{
         DecodeError, DecodeResultExt,
-        bytes::{Decode, DecodeWithKey, DecodeWithLength},
+        owned::{Decode, DecodeWithKey, DecodeWithLength},
     },
     encode::Length,
     tlvs::TlvTag,

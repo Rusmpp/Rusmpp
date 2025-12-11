@@ -5,7 +5,7 @@ use bytes::BytesMut;
 use crate::{
     CommandId,
     command::owned::Command,
-    decode::bytes::{Decode, DecodeWithLength},
+    decode::owned::{Decode, DecodeWithLength},
     encode::{Length, bytes::Encode},
     pdus::owned::*,
     tests::TestInstance,

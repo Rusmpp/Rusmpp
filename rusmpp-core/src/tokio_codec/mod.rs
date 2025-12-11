@@ -10,7 +10,7 @@ use tokio_util::{
 
 use crate::{
     command::owned::Command,
-    decode::bytes::DecodeWithLength,
+    decode::owned::DecodeWithLength,
     encode::{Length, bytes::Encode},
     logging::{debug, error, trace},
 };

@@ -3,10 +3,7 @@ use alloc::{string::String, string::ToString, vec::Vec};
 use bytes::{BufMut, Bytes, BytesMut};
 
 use crate::{
-    decode::{
-        DecodeError, OctetStringDecodeError, bytes::DecodeWithLength as BDecodeWithLength,
-        owned::DecodeWithLength,
-    },
+    decode::{DecodeError, OctetStringDecodeError, owned::DecodeWithLength},
     encode::{Encode, Length, bytes::Encode as BEncode},
     types::octet_string::Error,
 };
@@ -286,43 +283,6 @@ impl<const MIN: usize, const MAX: usize> BEncode for OctetString<MIN, MAX> {
 }
 
 impl<const MIN: usize, const MAX: usize> DecodeWithLength for OctetString<MIN, MAX> {
-    fn decode(src: &[u8], length: usize) -> Result<(Self, usize), DecodeError> {
-        Self::_ASSERT_VALID;
-
-        if length > MAX {
-            return Err(DecodeError::octet_string_decode_error(
-                OctetStringDecodeError::TooManyBytes {
-                    actual: length,
-                    max: MAX,
-                },
-            ));
-        }
-
-        if length < MIN {
-            return Err(DecodeError::octet_string_decode_error(
-                OctetStringDecodeError::TooFewBytes {
-                    actual: length,
-                    min: MIN,
-                },
-            ));
-        }
-
-        if src.len() < length {
-            return Err(DecodeError::unexpected_eof());
-        }
-
-        let bytes = src[..length].to_vec();
-
-        Ok((
-            Self {
-                bytes: Bytes::from_owner(bytes),
-            },
-            length,
-        ))
-    }
-}
-
-impl<const MIN: usize, const MAX: usize> BDecodeWithLength for OctetString<MIN, MAX> {
     fn decode(src: &mut BytesMut, length: usize) -> Result<(Self, usize), DecodeError> {
         Self::_ASSERT_VALID;
 
@@ -489,32 +449,16 @@ mod tests {
 
         #[test]
         fn unexpected_eof_empty() {
-            let bytes = b"";
-            let error = <OctetString<0, 6> as DecodeWithLength>::decode(bytes, 5).unwrap_err();
-
-            assert!(matches!(error.kind(), DecodeErrorKind::UnexpectedEof));
-
             let mut buf = BytesMut::new();
-            let error = <OctetString<0, 6> as BDecodeWithLength>::decode(&mut buf, 5).unwrap_err();
+            let error = OctetString::<0, 6>::decode(&mut buf, 5).unwrap_err();
 
             assert!(matches!(error.kind(), DecodeErrorKind::UnexpectedEof));
         }
 
         #[test]
         fn too_many_bytes() {
-            let bytes = b"Hello";
-            let error = <OctetString<0, 5> as DecodeWithLength>::decode(bytes, 15).unwrap_err();
-
-            assert!(matches!(
-                error.kind(),
-                DecodeErrorKind::OctetStringDecodeError(OctetStringDecodeError::TooManyBytes {
-                    actual: 15,
-                    max: 5,
-                },)
-            ));
-
-            let mut buf = BytesMut::from(&bytes[..]);
-            let error = <OctetString<0, 5> as BDecodeWithLength>::decode(&mut buf, 15).unwrap_err();
+            let mut buf = BytesMut::from(&b"Hello"[..]);
+            let error = OctetString::<0, 5>::decode(&mut buf, 15).unwrap_err();
 
             assert!(matches!(
                 error.kind(),
@@ -527,19 +471,8 @@ mod tests {
 
         #[test]
         fn too_few_bytes() {
-            let bytes = b"Hello";
-            let error = <OctetString<6, 10> as DecodeWithLength>::decode(bytes, 5).unwrap_err();
-
-            assert!(matches!(
-                error.kind(),
-                DecodeErrorKind::OctetStringDecodeError(OctetStringDecodeError::TooFewBytes {
-                    actual: 5,
-                    min: 6,
-                },)
-            ));
-
-            let mut buf = BytesMut::from(&bytes[..]);
-            let error = <OctetString<6, 10> as BDecodeWithLength>::decode(&mut buf, 5).unwrap_err();
+            let mut buf = BytesMut::from(&b"Hello"[..]);
+            let error = OctetString::<6, 10>::decode(&mut buf, 5).unwrap_err();
 
             assert!(matches!(
                 error.kind(),
@@ -552,17 +485,8 @@ mod tests {
 
         #[test]
         fn ok_all() {
-            let bytes = b"Hello";
-            let (string, size) = <OctetString<0, 5> as DecodeWithLength>::decode(bytes, 5).unwrap();
-
-            assert_eq!(string.as_ref(), b"Hello");
-            assert_eq!(string.length(), 5);
-            assert_eq!(size, 5);
-            assert_eq!(&bytes[size..], b"");
-
-            let mut buf = BytesMut::from(&bytes[..]);
-            let (string, size) =
-                <OctetString<0, 5> as BDecodeWithLength>::decode(&mut buf, 5).unwrap();
+            let mut buf = BytesMut::from(&b"Hello"[..]);
+            let (string, size) = OctetString::<0, 5>::decode(&mut buf, 5).unwrap();
 
             assert_eq!(string.as_ref(), b"Hello");
             assert_eq!(string.length(), 5);
@@ -572,17 +496,8 @@ mod tests {
 
         #[test]
         fn ok_partial() {
-            let bytes = b"Hello";
-            let (string, size) = <OctetString<0, 5> as DecodeWithLength>::decode(bytes, 3).unwrap();
-
-            assert_eq!(string.as_ref(), b"Hel");
-            assert_eq!(string.length(), 3);
-            assert_eq!(size, 3);
-            assert_eq!(&bytes[size..], b"lo");
-
-            let mut buf = BytesMut::from(&bytes[..]);
-            let (string, size) =
-                <OctetString<0, 5> as BDecodeWithLength>::decode(&mut buf, 3).unwrap();
+            let mut buf = BytesMut::from(&b"Hello"[..]);
+            let (string, size) = OctetString::<0, 5>::decode(&mut buf, 3).unwrap();
 
             assert_eq!(string.as_ref(), b"Hel");
             assert_eq!(string.length(), 3);
