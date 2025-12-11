@@ -1,17 +1,112 @@
 //! Traits for decoding `SMPP` values with owned data.
+
 use bytes::BytesMut;
 
 use crate::decode::DecodeError;
 
-// TODO: take the docs from the owned decode before removing it.
-
 /// Trait for decoding `SMPP` values from a buffer.
+///
+/// # Implementation
+///
+/// ```rust
+/// # use bytes::BytesMut;
+/// # use rusmpp_core::decode::{bytes::Decode, DecodeError};
+///
+/// #[derive(Debug, PartialEq, Eq)]
+/// struct Foo {
+///     a: u8,
+///     b: u16,
+///     c: u32,
+/// }
+///
+/// impl Decode for Foo {
+///     fn decode(src: &mut BytesMut) -> Result<(Self, usize), DecodeError> {
+///         let index = 0;
+///
+///         let (a, size) = Decode::decode(src)?;
+///         let index = index + size;
+///
+///         let (b, size) = Decode::decode(src)?;
+///         let index = index + size;
+///
+///         let (c, size) = Decode::decode(src)?;
+///         let index = index + size;
+///
+///         Ok((Foo { a, b, c }, index))
+///     }
+/// }
+///
+/// let mut buf = BytesMut::from(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08][..]);
+///
+/// let expected = Foo {
+///     a: 0x01,
+///     b: 0x0203,
+///     c: 0x04050607,
+/// };
+///
+/// let (foo, size) = Foo::decode(&mut buf).unwrap();
+///
+/// assert_eq!(size, 7);
+/// assert_eq!(foo, expected);
+/// assert_eq!(&buf[..], &[0x08]);
+/// ```
 pub trait Decode: Sized {
     /// Decode a value from a buffer.
     fn decode(src: &mut BytesMut) -> Result<(Self, usize), DecodeError>;
 }
 
 /// Trait for decoding `SMPP` values from a buffer with a specified length.
+///
+/// # Implementation
+///
+/// ```rust
+/// # use bytes::BytesMut;
+/// # use rusmpp_core::{
+/// #     decode::{bytes::{Decode, DecodeWithLength}, DecodeError},
+/// #     types::owned::AnyOctetString,
+/// # };
+///
+/// #[derive(Debug, PartialEq, Eq)]
+/// struct Foo {
+///     a: u8,
+///     b: u16,
+///     c: AnyOctetString,
+/// }
+///
+/// impl DecodeWithLength for Foo {
+///     fn decode(src: &mut BytesMut, length: usize) -> Result<(Self, usize), DecodeError> {
+///         let index = 0;
+///
+///         let (a, size) = Decode::decode(src)?;
+///         let index = index + size;
+///
+///         let (b, size) = Decode::decode(src)?;
+///         let index = index + size;
+///
+///         let (c, size) = AnyOctetString::decode(src, length - index)?;
+///         let index = index + size;
+///
+///         Ok((Foo { a, b, c }, index))
+///     }
+/// }
+///
+/// // Received over the wire
+/// let length = 8;
+///
+/// let mut buf = BytesMut::from(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09][..]);
+///
+/// let expected = Foo {
+///     a: 0x01,
+///     b: 0x0203,
+///     c: AnyOctetString::from_static_slice(&[0x04, 0x05, 0x06, 0x07, 0x08]),
+/// };
+///
+/// let (foo, size) = Foo::decode(&mut buf, length).unwrap();
+///
+/// assert_eq!(size, 8);
+/// assert_eq!(foo, expected);
+/// assert_eq!(&buf[..], &[0x09]);
+/// ```
 pub trait DecodeWithLength: Sized {
     /// Decode a value from a buffer, with a specified length
     fn decode(src: &mut BytesMut, length: usize) -> Result<(Self, usize), DecodeError>;
@@ -25,6 +120,90 @@ impl<T: Decode> DecodeWithLength for T {
 }
 
 /// Trait for decoding `SMPP` values from a buffer with a specified key and length.
+///
+/// # Implementation
+///
+/// ```rust
+/// # use bytes::BytesMut;
+/// # use rusmpp_core::{
+/// #     decode::{bytes::{Decode, DecodeWithKey, DecodeWithLength}, DecodeError},
+/// #     types::owned::AnyOctetString,
+/// # };
+///
+/// #[derive(Debug, PartialEq, Eq)]
+/// enum Foo {
+///     A(u16),
+///     B(AnyOctetString),
+/// }
+///
+/// impl DecodeWithKey for Foo {
+///     type Key = u32;
+///
+///     fn decode(key: Self::Key, src: &mut BytesMut, length: usize) -> Result<(Self, usize), DecodeError> {
+///         match key {
+///             0x01020304 => {
+///                 let (a, size) = Decode::decode(src)?;
+///
+///                 Ok((Foo::A(a), size))
+///             }
+///             0x04030201 => {
+///                 let (b, size) = AnyOctetString::decode(src, length)?;
+///
+///                 Ok((Foo::B(b), size))
+///             }
+///             _ => Err(DecodeError::unsupported_key(key)),
+///         }
+///     }
+/// }
+///
+/// // Received over the wire
+/// let length = 8;
+///
+/// // Key is A
+/// let mut buf = BytesMut::from(&[
+///     0x01, 0x02, 0x03, 0x04, // Key
+///     0x05, 0x06, // Value
+///     0x07, 0x08, 0x09, 0x0A, 0x0B, // Rest
+/// ][..]);
+///
+/// let index = 0;
+///
+/// let (key, size) = Decode::decode(&mut buf).unwrap();
+/// let index = index + size;
+///
+/// let (foo, size) = Foo::decode(key, &mut buf, length - index).unwrap();
+/// let index = index + size;
+///
+/// let expected = Foo::A(0x0506);
+///
+/// assert_eq!(size, 2);
+/// assert_eq!(foo, expected);
+/// assert_eq!(&buf[..], &[0x07, 0x08, 0x09, 0x0A, 0x0B]);
+///
+/// // Received over the wire
+/// let length = 8;
+///
+/// // Key is B
+/// let mut buf = BytesMut::from(&[
+///     0x04, 0x03, 0x02, 0x01, // Key
+///     0x05, 0x06, 0x07, 0x08, // Value
+///     0x09, 0x0A, 0x0B, // Rest
+/// ][..]);
+///
+/// let index = 0;
+///
+/// let (key, size) = Decode::decode(&mut buf).unwrap();
+/// let index = index + size;
+///
+/// let (foo, size) = Foo::decode(key, &mut buf, length - index).unwrap();
+/// let index = index + size;
+///
+/// let expected = Foo::B(AnyOctetString::from_static_slice(&[0x05, 0x06, 0x07, 0x08]));
+///
+/// assert_eq!(size, 4);
+/// assert_eq!(foo, expected);
+/// assert_eq!(&buf[..], &[0x09, 0x0A, 0x0B]);
+/// ```
 pub trait DecodeWithKey: Sized {
     type Key;
 
@@ -37,6 +216,150 @@ pub trait DecodeWithKey: Sized {
 }
 
 /// Trait for decoding optional `SMPP` values from a buffer with a specified key and length.
+///
+/// # Implementation
+///
+/// ```rust
+/// # use bytes::BytesMut;
+/// # use rusmpp_core::{
+/// #     decode::{bytes::{Decode, DecodeWithKeyOptional, DecodeWithLength}, DecodeError},
+/// #     types::owned::AnyOctetString,
+/// # };
+///
+/// #[derive(Debug, PartialEq, Eq)]
+/// enum Foo {
+///     A,
+///     B(u16),
+///     C(AnyOctetString),
+/// }
+///
+/// impl DecodeWithKeyOptional for Foo {
+///     type Key = u32;
+///
+///     fn decode(
+///         key: Self::Key,
+///         src: &mut BytesMut,
+///         length: usize,
+///     ) -> Result<Option<(Self, usize)>, DecodeError> {
+///         if length == 0 {
+///             match key {
+///                 0x00000000 => return Ok(Some((Foo::A, 0))),
+///                 _ => return Ok(None),
+///             }
+///         }
+///
+///         match key {
+///             0x01020304 => {
+///                 let (a, size) = Decode::decode(src)?;
+///
+///                 Ok(Some((Foo::B(a), size)))
+///             }
+///             0x04030201 => {
+///                 let (b, size) = AnyOctetString::decode(src, length)?;
+///
+///                 Ok(Some((Foo::C(b), size)))
+///             }
+///             _ => Err(DecodeError::unsupported_key(key)),
+///         }
+///     }
+/// }
+///
+/// // Received over the wire
+/// let length = 4;
+///
+/// // Key is A
+/// let mut buf = BytesMut::from(&[
+///     0x00, 0x00, 0x00, 0x00, // Key
+///     0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, // Rest
+/// ][..]);
+///
+/// let index = 0;
+///
+/// let (key, size) = Decode::decode(&mut buf).unwrap();
+/// let index = index + size;
+///
+/// let (foo, size) = Foo::decode(key, &mut buf, length - index)
+///     .unwrap()
+///     .unwrap();
+/// let index = index + size;
+///
+/// let expected = Foo::A;
+///
+/// assert_eq!(size, 0);
+/// assert_eq!(foo, expected);
+/// assert_eq!(&buf[..], &[0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B]);
+///
+/// // Received over the wire
+/// let length = 4;
+///
+/// // Key is B, but the received length indicates no value
+/// let mut buf = BytesMut::from(&[
+///     0x01, 0x02, 0x03, 0x04, // Key
+///     0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, // Rest
+/// ][..]);
+///
+/// let index = 0;
+///
+/// let (key, size) = Decode::decode(&mut buf).unwrap();
+/// let index = index + size;
+///
+/// let value = Foo::decode(key, &mut buf, length - index).unwrap();
+///
+/// assert!(value.is_none());
+/// assert_eq!(&buf[..], &[0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B]);
+///
+/// // Received over the wire
+/// let length = 8;
+///
+/// // Key is B
+/// let mut buf = BytesMut::from(&[
+///     0x01, 0x02, 0x03, 0x04, // Key
+///     0x05, 0x06, // Value
+///     0x07, 0x08, 0x09, 0x0A, 0x0B, // Rest
+/// ][..]);
+///
+/// let index = 0;
+///
+/// let (key, size) = Decode::decode(&mut buf).unwrap();
+/// let index = index + size;
+///
+/// let (foo, size) = Foo::decode(key, &mut buf, length - index)
+///     .unwrap()
+///     .unwrap();
+/// let index = index + size;
+///
+/// let expected = Foo::B(0x0506);
+///
+/// assert_eq!(size, 2);
+/// assert_eq!(foo, expected);
+/// assert_eq!(&buf[..], &[0x07, 0x08, 0x09, 0x0A, 0x0B]);
+///
+/// // Received over the wire
+/// let length = 8;
+///
+/// // Key is C
+/// let mut buf = BytesMut::from(&[
+///     0x04, 0x03, 0x02, 0x01, // Key
+///     0x05, 0x06, 0x07, 0x08, // Value
+///     0x09, 0x0A, 0x0B, // Rest
+/// ][..]);
+///
+/// let index = 0;
+///
+/// let (key, size) = Decode::decode(&mut buf).unwrap();
+/// let index = index + size;
+///
+/// let (foo, size) = Foo::decode(key, &mut buf, length - index)
+///     .unwrap()
+///     .unwrap();
+/// let index = index + size;
+///
+/// let expected = Foo::C(AnyOctetString::from_static_slice(&[0x05, 0x06, 0x07, 0x08]));
+///
+/// assert_eq!(size, 4);
+/// assert_eq!(foo, expected);
+/// assert_eq!(&buf[..], &[0x09, 0x0A, 0x0B]);
+/// ```
 pub trait DecodeWithKeyOptional: Sized {
     type Key;
 
