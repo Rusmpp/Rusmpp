@@ -28,9 +28,6 @@ concatenation = ["codecs"]
 # Enables encoding/decoding support.
 codecs = ["dep:ucs2", "dep:encoding_rs"]
 
-[dev-dependencies]
-constcat = "0.6.1"
-
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]

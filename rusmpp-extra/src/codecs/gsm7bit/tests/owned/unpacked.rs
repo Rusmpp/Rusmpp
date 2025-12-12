@@ -279,7 +279,7 @@ mod concatenate {
                 allow_split_extended_character: false,
                 expected: Ok(&[
                     b"123456789",
-                    constcat::concat_slices!([u8]: &[0x1B, 0x3C], b"3456789"),
+                    &[0x1B, 0x3C, b'3', b'4', b'5', b'6', b'7', b'8', b'9'],
                 ]),
             },
             TestCase {
@@ -289,8 +289,8 @@ mod concatenate {
                 part_header_size: 6,
                 allow_split_extended_character: true,
                 expected: Ok(&[
-                    constcat::concat_slices!([u8]: b"123456789", &[0x1B]),
-                    constcat::concat_slices!([u8]: &[0x3C], b"3456789"),
+                    &[b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', 0x1B],
+                    &[0x3C, b'3', b'4', b'5', b'6', b'7', b'8', b'9'],
                 ]),
             },
             TestCase {
@@ -301,8 +301,8 @@ mod concatenate {
                 allow_split_extended_character: false,
                 expected: Ok(&[
                     b"123456789",
-                    constcat::concat_slices!([u8]: &[0x1B, 0x3C], b"23456789"),
-                    constcat::concat_slices!([u8]: &[0x1B, 0x3C], b"23456789"),
+                    &[0x1B, 0x3C, b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9'],
+                    &[0x1B, 0x3C, b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9'],
                     &[0x1B, 0x3C],
                 ]),
             },
@@ -313,9 +313,9 @@ mod concatenate {
                 part_header_size: 6,
                 allow_split_extended_character: true,
                 expected: Ok(&[
-                    constcat::concat_slices!([u8]: b"123456789", &[0x1B]),
-                    constcat::concat_slices!([u8]: &[0x3C], b"23456789", &[0x1B]),
-                    constcat::concat_slices!([u8]: &[0x3C], b"23456789", &[0x1B]),
+                    &[b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', 0x1B],
+                    &[0x3C, b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', 0x1B],
+                    &[0x3C, b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', 0x1B],
                     &[0x3C],
                 ]),
             },
