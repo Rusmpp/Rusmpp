@@ -32,10 +32,11 @@ class Client:
     async def connect(
         cls,
         url: builtins.str,
-        enquire_link_interval: Optional[builtins.int] = 5000,
-        enquire_link_response_timeout: builtins.int = 2000,
-        response_timeout: Optional[builtins.int] = 2000,
         max_command_length: builtins.int = 4096,
+        enquire_link_response_timeout: builtins.int = 2000,
+        enquire_link_interval: Optional[builtins.int] = 5000,
+        auto_enquire_link_response: bool = True,
+        response_timeout: Optional[builtins.int] = 2000,
         interface_version_check: bool = True,
     ) -> tuple["Client", Events]:
         """
@@ -52,17 +53,19 @@ class Client:
             - ``smpp`` for plain TCP
             - ``ssmpp`` or ``smpps`` for TLS connections
             If no port is specified, the default port 2775 is used.
-        enquire_link_interval : Optional[int], default=5000
-            Interval in milliseconds between automatic EnquireLink commands.
-            Set to ``None`` to disable EnquireLink.
+        max_command_length : int, default=4096
+            Maximum length in bytes of incoming SMPP commands.
         enquire_link_response_timeout : int, default=2000
             Time in milliseconds to wait for an EnquireLink response before
             considering it failed.
+        enquire_link_interval : Optional[int], default=5000
+            Interval in milliseconds between automatic EnquireLink commands.
+            Set to ``None`` to disable EnquireLink.
+        auto_enquire_link_response : bool, default=True
+            If ``True``, automatically responds to incoming EnquireLink commands
         response_timeout : Optional[int], default=2000
             Time in milliseconds to wait for any command response. Set to
             ``None`` to wait indefinitely.
-        max_command_length : int, default=4096
-            Maximum length in bytes of incoming SMPP commands.
         interface_version_check : bool, default=True
             If ``False``, disables interface version validation.
             This library uses ``SMPP v5`` implementation to encode and decode commands.
@@ -108,11 +111,11 @@ class Client:
         cls,
         read: asyncio.StreamReader,
         write: asyncio.StreamWriter,
-        enquire_link_interval: Optional[builtins.int] = 5000,
-        enquire_link_response_timeout: builtins.int = 2000,
-        response_timeout: Optional[builtins.int] = 2000,
         max_command_length: builtins.int = 4096,
-        interface_version_check: bool = True,
+        enquire_link_response_timeout: builtins.int = 2000,
+        enquire_link_interval: Optional[builtins.int] = 5000,
+        auto_enquire_link_response: bool = True,
+        response_timeout: Optional[builtins.int] = 2000,
     ) -> tuple["Client", Events]:
         """
         Create a client from an existing asyncio connection.
@@ -129,17 +132,19 @@ class Client:
             The asyncio stream reader associated with the existing connection.
         write : asyncio.StreamWriter
             The asyncio stream writer associated with the existing connection.
-        enquire_link_interval : Optional[int], default=5000
-            Interval in milliseconds between automatic EnquireLink commands.
-            Set to ``None`` to disable EnquireLink.
+        max_command_length : int, default=4096
+            Maximum length in bytes of incoming SMPP commands.
         enquire_link_response_timeout : int, default=2000
             Time in milliseconds to wait for an EnquireLink response before
             considering it failed.
+        enquire_link_interval : Optional[int], default=5000
+            Interval in milliseconds between automatic EnquireLink commands.
+            Set to ``None`` to disable EnquireLink.
+        auto_enquire_link_response : bool, default=True
+            If ``True``, automatically responds to incoming EnquireLink commands
         response_timeout : Optional[int], default=2000
             Time in milliseconds to wait for any command response. Set to
             ``None`` to wait indefinitely.
-        max_command_length : int, default=4096
-            Maximum length in bytes of incoming SMPP commands.
         interface_version_check : bool, default=True
             If ``False``, disables interface version validation.
             This library uses ``SMPP v5`` implementation to encode and decode commands.
