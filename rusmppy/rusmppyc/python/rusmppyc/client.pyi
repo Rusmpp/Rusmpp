@@ -552,7 +552,7 @@ class Client:
         """
         ...
 
-    # TODO: docs, short_message is str and not optional. there is no data coding or esm class
+    # TODO: docs, short_message is str and not optional. there is no data coding
     def submit_sm_multipart(
         cls,
         short_message: builtins.str,
@@ -572,7 +572,6 @@ class Client:
         validity_period: builtins.str = "",
         registered_delivery: RegisteredDelivery = RegisteredDelivery.default(),
         replace_if_present_flag: ReplaceIfPresentFlag = ReplaceIfPresentFlag.DoNotReplace(),
-        data_coding: DataCoding = DataCoding.McSpecific(),
         sm_default_msg_id: builtins.int = 0,
         tlvs: builtins.list[MessageSubmissionRequestTlvValue] = [],
     ) -> List[SubmitSm]:
