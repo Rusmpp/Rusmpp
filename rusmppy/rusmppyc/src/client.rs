@@ -493,6 +493,7 @@ impl Client {
         dest_addr_ton=crate::generated::Ton::Unknown(),
         dest_addr_npi=crate::generated::Npi::Unknown(),
         destination_addr=String::new(),
+        esm_class=crate::generated::EsmClass::default_(),
         protocol_id=u8::default(),
         priority_flag=u8::default(),
         schedule_delivery_time=String::new(),
@@ -513,6 +514,7 @@ impl Client {
         dest_addr_ton: crate::generated::Ton,
         dest_addr_npi: crate::generated::Npi,
         destination_addr: String,
+        esm_class: crate::generated::EsmClass,
         protocol_id: u8,
         priority_flag: u8,
         schedule_delivery_time: String,
@@ -534,6 +536,7 @@ impl Client {
             .destination_addr(
                 COctetString::from_string(destination_addr).map_value_err("destination_addr")?,
             )
+            .esm_class(esm_class.into())
             .protocol_id(protocol_id)
             .priority_flag(priority_flag.into())
             .schedule_delivery_time(
