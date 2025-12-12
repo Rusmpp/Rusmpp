@@ -24,30 +24,32 @@ use crate::{
 /// Encode and decode every possible test command created using [`TestInstance`](crate::tests::TestInstance).
 #[tokio::test]
 async fn encode_decode() {
-    let commands = test_commands();
+    for size in [4, 8, 16, 32, 64, 128, 1024, 2048, 4096] {
+        let commands = test_commands();
 
-    let (writer, reader) = tokio::io::duplex(128);
+        let (writer, reader) = tokio::io::duplex(size);
 
-    let mut framed_writer = Framed::new(writer, CommandCodec::new());
-    let mut framed_reader = Framed::new(reader, CommandCodec::new());
+        let mut framed_writer = Framed::new(writer, CommandCodec::new());
+        let mut framed_reader = Framed::new(reader, CommandCodec::new());
 
-    let writer_commands = commands.clone();
-    tokio::spawn(async move {
-        for command in writer_commands {
-            framed_writer
-                .send(command)
-                .await
-                .expect("Failed to send PDU");
+        let writer_commands = commands.clone();
+        tokio::spawn(async move {
+            for command in writer_commands {
+                framed_writer
+                    .send(command)
+                    .await
+                    .expect("Failed to send PDU");
+            }
+        });
+
+        let mut client_commands = Vec::new();
+
+        while let Some(Ok(command)) = framed_reader.next().await {
+            client_commands.push(command);
         }
-    });
 
-    let mut client_commands = Vec::new();
-
-    while let Some(Ok(command)) = framed_reader.next().await {
-        client_commands.push(command);
+        assert_eq!(client_commands, commands);
     }
-
-    assert_eq!(client_commands, commands);
 }
 
 #[tokio::test]
@@ -162,31 +164,31 @@ async fn send_broadcast_sm() {
                 .push_tlv(BroadcastRequestTlvValue::BroadcastAreaIdentifier(
                     BroadcastAreaIdentifier::new(
                         BroadcastAreaFormat::Polygon,
-                        AnyOctetString::new(b"Polygon Area".to_vec()),
+                        AnyOctetString::from_static_slice(b"Polygon Area"),
                     ),
                 ))
                 .push_tlv(BroadcastRequestTlvValue::BroadcastAreaIdentifier(
                     BroadcastAreaIdentifier::new(
                         BroadcastAreaFormat::AliasName,
-                        AnyOctetString::new(b"AliasName Area".to_vec()),
+                        AnyOctetString::from_static_slice(b"AliasName Area"),
                     ),
                 ))
                 .push_tlv(BroadcastRequestTlvValue::BroadcastAreaIdentifier(
                     BroadcastAreaIdentifier::new(
                         BroadcastAreaFormat::EllipsoidArc,
-                        AnyOctetString::new(b"EllipsoidArc Area".to_vec()),
+                        AnyOctetString::from_static_slice(b"EllipsoidArc Area"),
                     ),
                 ))
                 .push_tlv(BroadcastRequestTlvValue::BroadcastAreaIdentifier(
                     BroadcastAreaIdentifier::new(
                         BroadcastAreaFormat::EllipsoidArc,
-                        AnyOctetString::new(b"EllipsoidArc Area 2".to_vec()),
+                        AnyOctetString::from_static_slice(b"EllipsoidArc Area 2"),
                     ),
                 ))
                 .push_tlv(BroadcastRequestTlvValue::BroadcastAreaIdentifier(
                     BroadcastAreaIdentifier::new(
                         BroadcastAreaFormat::EllipsoidArc,
-                        AnyOctetString::new(b"EllipsoidArc Area 3".to_vec()),
+                        AnyOctetString::from_static_slice(b"EllipsoidArc Area 3"),
                     ),
                 ))
                 .push_tlv(BroadcastRequestTlvValue::BroadcastMessageClass(
@@ -207,9 +209,9 @@ async fn send_submit_sm() {
         .sequence_number(1)
         .pdu(
             SubmitSm::builder()
-                .short_message(OctetString::new(b"Short Message".to_vec()).unwrap())
+                .short_message(OctetString::from_static_slice(b"Short Message").unwrap())
                 .push_tlv(MessageSubmissionRequestTlvValue::MessagePayload(
-                    MessagePayload::new(AnyOctetString::new(b"Message Payload".to_vec())),
+                    MessagePayload::new(AnyOctetString::from_static_slice(b"Message Payload")),
                 ))
                 .build(),
         );
@@ -218,7 +220,7 @@ async fn send_submit_sm() {
 }
 
 // FIXME: Not really helpful.
-// cargo test do_codec --features tokio-codec -- --ignored --nocapture
+// cargo test --package rusmpp-core --lib -- tokio_codec::tests::do_codec --exact --ignored --nocapture
 #[tokio::test]
 #[ignore = "integration test"]
 async fn do_codec() {

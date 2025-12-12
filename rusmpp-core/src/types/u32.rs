@@ -7,7 +7,7 @@
 //! would be encoded as 4 octets with the value 0x1D95E1F
 
 use crate::{
-    decode::{DecodeError, borrowed, owned},
+    decode::{DecodeError, borrowed},
     encode::{Encode, Length},
 };
 
@@ -30,7 +30,29 @@ impl Encode for u32 {
     }
 }
 
-impl owned::Decode for u32 {
+#[cfg(feature = "alloc")]
+impl crate::encode::owned::Encode for u32 {
+    fn encode(&self, dst: &mut bytes::BytesMut) {
+        use bytes::BufMut;
+
+        dst.put_u32(*self);
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl crate::decode::owned::Decode for u32 {
+    fn decode(src: &mut bytes::BytesMut) -> Result<(Self, usize), DecodeError> {
+        use bytes::Buf;
+
+        if src.len() < 4 {
+            return Err(DecodeError::unexpected_eof());
+        }
+
+        Ok((src.get_u32(), 4))
+    }
+}
+
+impl borrowed::Decode<'_> for u32 {
     fn decode(src: &[u8]) -> Result<(Self, usize), DecodeError> {
         if src.len() < 4 {
             return Err(DecodeError::unexpected_eof());
@@ -43,11 +65,5 @@ impl owned::Decode for u32 {
         let value = u32::from_be_bytes(bytes);
 
         Ok((value, 4))
-    }
-}
-
-impl borrowed::Decode<'_> for u32 {
-    fn decode(src: &[u8]) -> Result<(Self, usize), DecodeError> {
-        owned::Decode::decode(src)
     }
 }

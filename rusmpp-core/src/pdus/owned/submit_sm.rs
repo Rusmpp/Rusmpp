@@ -411,14 +411,14 @@ mod tests {
                     .protocol_id(0)
                     .priority_flag(PriorityFlag::from(PriorityFlagType::from(Ansi136::Bulk)))
                     .schedule_delivery_time(
-                        EmptyOrFullCOctetString::new(b"2023-09-01T12:00\0".to_vec()).unwrap(),
+                        EmptyOrFullCOctetString::from_static_slice(b"2023-09-01T12:00\0").unwrap(),
                     )
                     .validity_period(EmptyOrFullCOctetString::from_str("2023-10-01T12:00").unwrap())
                     .registered_delivery(RegisteredDelivery::request_all())
                     .replace_if_present_flag(ReplaceIfPresentFlag::Replace)
                     .data_coding(DataCoding::Ksc5601)
                     .sm_default_msg_id(69)
-                    .short_message(OctetString::new(b"Short Message".to_vec()).unwrap())
+                    .short_message(OctetString::from_static_slice(b"Short Message").unwrap())
                     .build(),
                 Self::builder()
                     .service_type(ServiceType::new(
@@ -426,10 +426,12 @@ mod tests {
                     ))
                     .source_addr_ton(Ton::International)
                     .source_addr_npi(Npi::Isdn)
-                    .source_addr(COctetString::new(b"Source Address\0".to_vec()).unwrap())
+                    .source_addr(COctetString::from_static_slice(b"Source Address\0").unwrap())
                     .dest_addr_ton(Ton::International)
                     .dest_addr_npi(Npi::Isdn)
-                    .destination_addr(COctetString::new(b"Destination Address\0".to_vec()).unwrap())
+                    .destination_addr(
+                        COctetString::from_static_slice(b"Destination Address\0").unwrap()
+                    )
                     .esm_class(EsmClass::new(
                         MessagingMode::Default,
                         MessageType::ShortMessageContainsIntermediateDeliveryNotification,
@@ -441,25 +443,25 @@ mod tests {
                         Ansi136::VeryUrgent,
                     )))
                     .schedule_delivery_time(
-                        EmptyOrFullCOctetString::new(b"2023-09-01T12:01\0".to_vec()).unwrap(),
+                        EmptyOrFullCOctetString::from_static_slice(b"2023-09-01T12:01\0").unwrap(),
                     )
                     .validity_period(EmptyOrFullCOctetString::from_str("2023-10-01T12:20").unwrap())
                     .registered_delivery(RegisteredDelivery::request_all())
                     .replace_if_present_flag(ReplaceIfPresentFlag::DoNotReplace)
                     .data_coding(DataCoding::Jis)
                     .sm_default_msg_id(96)
-                    .short_message(OctetString::new(b"Short Message".to_vec()).unwrap())
+                    .short_message(OctetString::from_static_slice(b"Short Message").unwrap())
                     .tlvs(alloc::vec![
                         MessageSubmissionRequestTlvValue::MessagePayload(MessagePayload::new(
-                            AnyOctetString::new(b"Message Payload".to_vec())
+                            AnyOctetString::from_static_slice(b"Message Payload")
                         ),)
                     ])
                     .build(),
                 Self::builder()
-                    .short_message(OctetString::new(b"Short Message".to_vec()).unwrap())
+                    .short_message(OctetString::from_static_slice(b"Short Message").unwrap())
                     .tlvs(alloc::vec![
                         MessageSubmissionRequestTlvValue::MessagePayload(MessagePayload::new(
-                            AnyOctetString::new(b"Message Payload".to_vec()),
+                            AnyOctetString::from_static_slice(b"Message Payload"),
                         )),
                         MessageSubmissionRequestTlvValue::UserResponseCode(3),
                         MessageSubmissionRequestTlvValue::DestBearerType(BearerType::FlexReFlex),
@@ -475,12 +477,13 @@ mod tests {
 
     #[test]
     fn encode_decode() {
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_with_length_test_instances::<SubmitSm>();
     }
 
     #[test]
     fn short_message_length() {
-        let short_message = OctetString::new(b"Short Message".to_vec()).unwrap();
+        let short_message = OctetString::from_static_slice(b"Short Message").unwrap();
 
         let submit_sm = SubmitSm::builder()
             .short_message(short_message.clone())
@@ -492,8 +495,8 @@ mod tests {
 
     #[test]
     fn short_message_override() {
-        let short_message_1 = OctetString::new(b"Short Message 101".to_vec()).unwrap();
-        let short_message_2 = OctetString::new(b"Short Message 2".to_vec()).unwrap();
+        let short_message_1 = OctetString::from_static_slice(b"Short Message 101").unwrap();
+        let short_message_2 = OctetString::from_static_slice(b"Short Message 2").unwrap();
 
         let submit_sm = SubmitSm::builder()
             .short_message(short_message_1)
@@ -506,8 +509,9 @@ mod tests {
 
     #[test]
     fn message_payload_suppresses_short_message() {
-        let short_message = OctetString::new(b"Short Message".to_vec()).unwrap();
-        let message_payload = MessagePayload::new(AnyOctetString::new(b"Message Payload".to_vec()));
+        let short_message = OctetString::from_static_slice(b"Short Message").unwrap();
+        let message_payload =
+            MessagePayload::new(AnyOctetString::from_static_slice(b"Message Payload"));
 
         // Using push_tlv
         let submit_sm = SubmitSm::builder()

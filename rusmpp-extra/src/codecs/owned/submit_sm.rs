@@ -83,7 +83,7 @@ where
             .encode(self.short_message)
             .map_err(EncodeError::encode)?;
 
-        let short_message = OctetString::new(encoded)?;
+        let short_message = OctetString::from_vec(encoded)?;
 
         let sm = self
             .sm

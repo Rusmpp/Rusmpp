@@ -10,12 +10,13 @@
 /// # #[cfg(all(feature = "verbose", feature = "alloc"))]
 /// # {
 /// # use rusmpp_core::{command::owned::Command, decode::owned::DecodeWithLength, fields::SmppField};
+/// # use bytes::BytesMut;
 /// // bind_transmitter bytes
 /// // The `password` field is not null terminated.
 /// // The `decode` method will return an error with
 /// // the `SmppField::password` field as a source in
 /// // the sources tree.
-/// let bytes: [u8; 46] = [
+/// let mut bytes = BytesMut::from(&[
 ///     // Header
 ///     0x00, 0x00, 0x00, 0x2E, // Command Length (46 bytes total)
 ///     0x00, 0x00, 0x00, 0x02, // Command ID (bind_transmitter)
@@ -36,9 +37,9 @@
 ///     0x01,
 ///     // addr_range
 ///     0x00,
-/// ];
+/// ][..]);
 ///
-/// let error = Command::decode(&bytes[4..], 46 - 4).unwrap_err();
+/// let error = Command::decode(&mut bytes.split_off(4), 46 - 4).unwrap_err();
 ///
 /// assert!(error.field_exists(SmppField::password));
 ///

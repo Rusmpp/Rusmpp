@@ -5,7 +5,7 @@ use crate::{
         DecodeError, DecodeResultExt,
         owned::{Decode, DecodeWithKey, DecodeWithLength},
     },
-    encode::{Encode, Length},
+    encode::Length,
     types::owned::AnyOctetString,
     udhs::{
         UdhId,
@@ -97,8 +97,18 @@ impl Length for UdhValue {
     }
 }
 
-impl Encode for UdhValue {
+impl crate::encode::Encode for UdhValue {
     fn encode(&self, dst: &mut [u8]) -> usize {
+        match self {
+            UdhValue::ConcatenatedShortMessage8Bit(udh) => udh.encode(dst),
+            UdhValue::ConcatenatedShortMessage16Bit(udh) => udh.encode(dst),
+            UdhValue::Other { value, .. } => value.encode(dst),
+        }
+    }
+}
+
+impl crate::encode::owned::Encode for UdhValue {
+    fn encode(&self, dst: &mut bytes::BytesMut) {
         match self {
             UdhValue::ConcatenatedShortMessage8Bit(udh) => udh.encode(dst),
             UdhValue::ConcatenatedShortMessage16Bit(udh) => udh.encode(dst),
@@ -110,7 +120,11 @@ impl Encode for UdhValue {
 impl DecodeWithKey for UdhValue {
     type Key = UdhId;
 
-    fn decode(key: Self::Key, src: &[u8], length: usize) -> Result<(Self, usize), DecodeError> {
+    fn decode(
+        key: Self::Key,
+        src: &mut bytes::BytesMut,
+        length: usize,
+    ) -> Result<(Self, usize), DecodeError> {
         let (value, size) = match key {
             UdhId::ConcatenatedShortMessages8Bit => {
                 Decode::decode(src).map_decoded(Self::ConcatenatedShortMessage8Bit)?
@@ -131,7 +145,7 @@ impl DecodeWithKey for UdhValue {
 }
 
 impl Decode for Udh {
-    fn decode(src: &[u8]) -> Result<(Self, usize), DecodeError> {
+    fn decode(src: &mut bytes::BytesMut) -> Result<(Self, usize), DecodeError> {
         let size = 0;
         let (length, size) = crate::decode::DecodeErrorExt::map_as_source(
             crate::decode::owned::DecodeExt::decode_move(src, size),
@@ -169,6 +183,8 @@ mod tests {
 
         #[test]
         fn ok() {
+            use crate::encode::Encode;
+
             let udh = Udh::new(ConcatenatedShortMessage16Bit::new(0x1234, 3, 1).unwrap());
 
             let expected = [
@@ -206,25 +222,29 @@ mod tests {
     }
 
     mod decode {
+        use bytes::BytesMut;
+
         use crate::decode::owned::Decode;
 
         use super::*;
 
         #[test]
         fn ok() {
-            let buf = [
-                0x06, // UDH length (following bytes = 6)
-                0x08, // UDH ID: Concatenated Short Messages, 16-bit reference number
-                0x04, // IE Data Length = 4 bytes
-                0x12, // Ref high
-                0x34, // Ref low
-                0x03, // Total parts
-                0x01, // Part number
-                0x00, // Extra bytes
-                0x00,
-            ];
+            let mut buf = BytesMut::from(
+                &[
+                    0x06, // UDH length (following bytes = 6)
+                    0x08, // UDH ID: Concatenated Short Messages, 16-bit reference number
+                    0x04, // IE Data Length = 4 bytes
+                    0x12, // Ref high
+                    0x34, // Ref low
+                    0x03, // Total parts
+                    0x01, // Part number
+                    0x00, // Extra bytes
+                    0x00,
+                ][..],
+            );
 
-            let (udh, size) = <Udh as Decode>::decode(&buf).unwrap();
+            let (udh, size) = <Udh as Decode>::decode(&mut buf).unwrap();
 
             assert_eq!(size, 7);
             assert_eq!(
@@ -232,19 +252,20 @@ mod tests {
                 Udh::new(ConcatenatedShortMessage16Bit::new(0x1234, 3, 1).unwrap())
             );
 
-            let buf = [
-                0x05, // UDH length (following bytes = 5)
-                0x00, // UDH ID: Concatenated Short Messages, 8-bit reference number
-                0x03, // IE Data Length = 3 bytes
-                0x12, // Ref
-                0x03, // Total parts
-                0x01, // Part number
-                0x00, // Extra bytes
-                0x00,
-            ];
+            let mut buf = BytesMut::from(
+                &[
+                    0x05, // UDH length (following bytes = 5)
+                    0x00, // UDH ID: Concatenated Short Messages, 8-bit reference number
+                    0x03, // IE Data Length = 3 bytes
+                    0x12, // Ref
+                    0x03, // Total parts
+                    0x01, // Part number
+                    0x00, // Extra bytes
+                    0x00,
+                ][..],
+            );
 
-            let (udh, size) = <Udh as Decode>::decode(&buf).unwrap();
-
+            let (udh, size) = <Udh as Decode>::decode(&mut buf).unwrap();
             assert_eq!(size, 6);
             assert_eq!(
                 udh,

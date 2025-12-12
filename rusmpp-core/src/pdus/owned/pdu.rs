@@ -1,10 +1,12 @@
+use bytes::BytesMut;
+
 use crate::{
     CommandId,
     decode::{
         DecodeError, DecodeResultExt,
         owned::{Decode, DecodeWithKeyOptional, DecodeWithLength},
     },
-    encode::{Encode, Length},
+    encode::Length,
     types::owned::AnyOctetString,
 };
 
@@ -267,7 +269,7 @@ impl Length for Pdu {
     }
 }
 
-impl Encode for Pdu {
+impl crate::encode::Encode for Pdu {
     fn encode(&self, dst: &mut [u8]) -> usize {
         match self {
             Pdu::BindTransmitter(body) => body.encode(dst),
@@ -308,12 +310,53 @@ impl Encode for Pdu {
     }
 }
 
+impl crate::encode::owned::Encode for Pdu {
+    fn encode(&self, dst: &mut bytes::BytesMut) {
+        match self {
+            Pdu::BindTransmitter(body) => body.encode(dst),
+            Pdu::BindTransmitterResp(body) => body.encode(dst),
+            Pdu::BindReceiver(body) => body.encode(dst),
+            Pdu::BindReceiverResp(body) => body.encode(dst),
+            Pdu::BindTransceiver(body) => body.encode(dst),
+            Pdu::BindTransceiverResp(body) => body.encode(dst),
+            Pdu::Outbind(body) => body.encode(dst),
+            Pdu::AlertNotification(body) => body.encode(dst),
+            Pdu::SubmitSm(body) => body.encode(dst),
+            Pdu::SubmitSmResp(body) => body.encode(dst),
+            Pdu::QuerySm(body) => body.encode(dst),
+            Pdu::QuerySmResp(body) => body.encode(dst),
+            Pdu::DeliverSm(body) => body.encode(dst),
+            Pdu::DeliverSmResp(body) => body.encode(dst),
+            Pdu::DataSm(body) => body.encode(dst),
+            Pdu::DataSmResp(body) => body.encode(dst),
+            Pdu::CancelSm(body) => body.encode(dst),
+            Pdu::ReplaceSm(body) => body.encode(dst),
+            Pdu::SubmitMulti(body) => body.encode(dst),
+            Pdu::SubmitMultiResp(body) => body.encode(dst),
+            Pdu::BroadcastSm(body) => body.encode(dst),
+            Pdu::BroadcastSmResp(body) => body.encode(dst),
+            Pdu::QueryBroadcastSm(body) => body.encode(dst),
+            Pdu::QueryBroadcastSmResp(body) => body.encode(dst),
+            Pdu::CancelBroadcastSm(body) => body.encode(dst),
+            Pdu::Unbind
+            | Pdu::UnbindResp
+            | Pdu::EnquireLink
+            | Pdu::EnquireLinkResp
+            | Pdu::GenericNack
+            | Pdu::CancelSmResp
+            | Pdu::ReplaceSmResp
+            | Pdu::CancelBroadcastSmResp => {}
+            Pdu::Other { body, .. } => body.encode(dst),
+        }
+    }
+}
+
 impl DecodeWithKeyOptional for Pdu {
     type Key = CommandId;
 
     fn decode(
         key: Self::Key,
-        src: &[u8],
+        src: &mut BytesMut,
         length: usize,
     ) -> Result<Option<(Self, usize)>, DecodeError> {
         if length == 0 {

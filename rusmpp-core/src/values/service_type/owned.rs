@@ -8,23 +8,29 @@ impl From<GenericServiceType> for COctetString<1, 6> {
     fn from(value: GenericServiceType) -> Self {
         match value {
             GenericServiceType::Default => COctetString::null(),
-            GenericServiceType::CellularMessaging => COctetString::new_unchecked(b"CMT\0".to_vec()),
-            GenericServiceType::CellularPaging => COctetString::new_unchecked(b"CPT\0".to_vec()),
-            GenericServiceType::VoiceMailNotification => {
-                COctetString::new_unchecked(b"VMN\0".to_vec())
+            GenericServiceType::CellularMessaging => {
+                COctetString::from_static_slice_unchecked(b"CMT\0")
             }
-            GenericServiceType::VoiceMailAlerting => COctetString::new_unchecked(b"VMA\0".to_vec()),
+            GenericServiceType::CellularPaging => {
+                COctetString::from_static_slice_unchecked(b"CPT\0")
+            }
+            GenericServiceType::VoiceMailNotification => {
+                COctetString::from_static_slice_unchecked(b"VMN\0")
+            }
+            GenericServiceType::VoiceMailAlerting => {
+                COctetString::from_static_slice_unchecked(b"VMA\0")
+            }
             GenericServiceType::WirelessApplicationProtocol => {
-                COctetString::new_unchecked(b"WAP\0".to_vec())
+                COctetString::from_static_slice_unchecked(b"WAP\0")
             }
             GenericServiceType::UnstructuredSupplementaryServicesData => {
-                COctetString::new_unchecked(b"USSD\0".to_vec())
+                COctetString::from_static_slice_unchecked(b"USSD\0")
             }
             GenericServiceType::CellBroadcastService => {
-                COctetString::new_unchecked(b"CBS\0".to_vec())
+                COctetString::from_static_slice_unchecked(b"CBS\0")
             }
             GenericServiceType::GenericUDPTransportService => {
-                COctetString::new_unchecked(b"GUTS\0".to_vec())
+                COctetString::from_static_slice_unchecked(b"GUTS\0")
             }
         }
     }
@@ -86,6 +92,7 @@ mod tests {
 
     #[test]
     fn encode_decode() {
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<ServiceType>();
     }
 }

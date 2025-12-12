@@ -1,4 +1,6 @@
 pub mod borrowed;
+
+#[cfg(feature = "alloc")]
 pub mod owned;
 
 /// Trait for creating test instances of a type.

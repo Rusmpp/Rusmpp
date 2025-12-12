@@ -79,16 +79,6 @@ impl crate::encode::Encode for DistributionListName {
         size
     }
 }
-impl crate::decode::owned::Decode for DistributionListName {
-    fn decode(src: &[u8]) -> Result<(Self, usize), crate::decode::DecodeError> {
-        let size = 0;
-        let (dl_name, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::owned::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::dl_name,
-        )?;
-        Ok((Self::new(dl_name), size))
-    }
-}
 /// Docs
 ///
 /// More docs

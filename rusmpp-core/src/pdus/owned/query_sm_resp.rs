@@ -110,7 +110,7 @@ mod tests {
                 Self::builder()
                     .message_id(COctetString::from_str("123456789012345678901234").unwrap())
                     .final_date(
-                        EmptyOrFullCOctetString::new(b"2023-10-01T12:00\0".to_vec()).unwrap()
+                        EmptyOrFullCOctetString::from_static_slice(b"2023-10-01T12:00\0").unwrap()
                     )
                     .message_state(MessageState::Delivered)
                     .error_code(0)
@@ -121,6 +121,7 @@ mod tests {
 
     #[test]
     fn encode_decode() {
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<QuerySmResp>();
     }
 }

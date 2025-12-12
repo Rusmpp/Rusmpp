@@ -103,38 +103,6 @@ impl crate::encode::Encode for SubmitMulti {
         size
     }
 }
-impl crate::decode::owned::DecodeWithLength for SubmitMulti {
-    fn decode(
-        src: &[u8],
-        length: usize,
-    ) -> Result<(Self, usize), crate::decode::DecodeError> {
-        let size = 0;
-        let (other, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::owned::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::other,
-        )?;
-        let (number_of_dests, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::owned::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::number_of_dests,
-        )?;
-        let (dest_address, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::owned::DecodeExt::counted_move(
-                src,
-                number_of_dests as usize,
-                size,
-            ),
-            crate::fields::SmppField::dest_address,
-        )?;
-        Ok((
-            Self {
-                other,
-                number_of_dests,
-                dest_address,
-            },
-            size,
-        ))
-    }
-}
 /// Docs
 ///
 /// More docs

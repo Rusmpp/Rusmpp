@@ -52,7 +52,7 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
         println!(
             "Submitting part {}: short_message_len = {}, esm_class = {:?}, data_coding = {:?}, short_message = {:?}",
             i + 1,
-            sm.short_message().bytes().len(),
+            sm.short_message().len(),
             sm.esm_class,
             sm.data_coding,
             sm.short_message()

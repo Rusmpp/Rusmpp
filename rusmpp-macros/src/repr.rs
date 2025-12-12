@@ -56,6 +56,13 @@ impl Repr {
                     #repr_ident::from(*self).encode(dst)
                 }
             }
+
+            #[cfg(feature = "alloc")]
+            impl crate::encode::owned::Encode for #name {
+                fn encode(&self, dst: &mut ::bytes::BytesMut){
+                    #repr_ident::from(*self).encode(dst)
+                }
+            }
         }
     }
 
@@ -63,8 +70,9 @@ impl Repr {
         let repr_ident = &self.ident;
 
         quote! {
+            #[cfg(feature = "alloc")]
             impl crate::decode::owned::Decode for #name {
-                fn decode(src: &[u8]) -> Result<(Self, usize), crate::decode::DecodeError> {
+                fn decode(src: &mut ::bytes::BytesMut) -> Result<(Self, usize), crate::decode::DecodeError> {
                     #repr_ident::decode(src).map(|(this, size)| (Self::from(this), size))
                 }
             }

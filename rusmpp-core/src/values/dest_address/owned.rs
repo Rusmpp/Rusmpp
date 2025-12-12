@@ -5,7 +5,7 @@ use crate::{
         DecodeError, DecodeResultExt,
         owned::{Decode, DecodeExt},
     },
-    encode::{Encode, Length},
+    encode::Length,
     types::owned::COctetString,
     values::{dest_address::DestFlag, npi::Npi, ton::Ton},
 };
@@ -30,7 +30,7 @@ impl Length for DestAddress {
     }
 }
 
-impl Encode for DestAddress {
+impl crate::encode::Encode for DestAddress {
     fn encode(&self, dst: &mut [u8]) -> usize {
         match self {
             Self::SmeAddress(sa) => sa.encode(dst),
@@ -39,8 +39,17 @@ impl Encode for DestAddress {
     }
 }
 
+impl crate::encode::owned::Encode for DestAddress {
+    fn encode(&self, dst: &mut bytes::BytesMut) {
+        match self {
+            Self::SmeAddress(sa) => sa.encode(dst),
+            Self::DistributionListName(dlm) => dlm.encode(dst),
+        }
+    }
+}
+
 impl Decode for DestAddress {
-    fn decode(src: &[u8]) -> Result<(Self, usize), DecodeError> {
+    fn decode(src: &mut bytes::BytesMut) -> Result<(Self, usize), DecodeError> {
         let size = 0;
 
         let (flag, size) = DestFlag::decode_move(src, size)?;
@@ -139,10 +148,10 @@ mod tests {
                 Self::SmeAddress(SmeAddress::new(
                     Ton::International,
                     Npi::Isdn,
-                    COctetString::new(b"1234567890123456789\0".to_vec()).unwrap(),
+                    COctetString::from_static_slice(b"1234567890123456789\0").unwrap(),
                 )),
                 Self::DistributionListName(DistributionListName::new(
-                    COctetString::new(b"1234567890123456789\0".to_vec()).unwrap(),
+                    COctetString::from_static_slice(b"1234567890123456789\0").unwrap(),
                 )),
             ]
         }
@@ -150,6 +159,7 @@ mod tests {
 
     #[test]
     fn encode_decode() {
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<DestAddress>();
     }
 }

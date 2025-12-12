@@ -166,8 +166,11 @@ mod tests {
 
     #[test]
     fn encode_decode() {
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_with_length_test_instances::<BindTransmitterResp>();
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_with_length_test_instances::<BindReceiverResp>();
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_with_length_test_instances::<BindTransceiverResp>();
     }
 }

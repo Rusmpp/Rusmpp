@@ -40,7 +40,7 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
 
     println!(
         "Encoded: short_message_len = {}, data_coding = {:?}, short_message = {:?}",
-        sm.short_message().bytes().len(),
+        sm.short_message().len(),
         sm.data_coding,
         sm.short_message()
     );

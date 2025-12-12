@@ -1,10 +1,12 @@
 use std::boxed::Box;
 
+use bytes::BytesMut;
+
 use crate::{
     CommandId,
     command::owned::Command,
     decode::owned::{Decode, DecodeWithLength},
-    encode::{Encode, Length},
+    encode::{Length, owned::Encode},
     pdus::owned::*,
     tests::TestInstance,
     types::owned::AnyOctetString,
@@ -18,15 +20,17 @@ where
     T: TestInstance + core::fmt::Debug + PartialEq + Encode + Decode,
 {
     for original in T::instances() {
-        let buf = &mut [0u8; 1024];
+        let mut buf = BytesMut::with_capacity(1024);
 
-        if original.length() > buf.len() {
-            panic!("Buffer is too small to hold the encoded data");
+        if original.length() > buf.capacity() {
+            panic!("Buffer capacity is too small to hold the encoded data");
         }
 
-        let size = original.encode(buf);
+        original.encode(&mut buf);
 
-        let (decoded, _size) = T::decode(&buf[..size]).expect("Failed to decode");
+        let mut encoded = buf.split_to(original.length());
+
+        let (decoded, _size) = T::decode(&mut encoded).expect("Failed to decode");
 
         assert_eq!(original, decoded);
     }
@@ -40,16 +44,18 @@ where
     T: TestInstance + core::fmt::Debug + PartialEq + Encode + DecodeWithLength,
 {
     for original in T::instances() {
-        let buf = &mut [0u8; 1024];
+        let mut buf = BytesMut::with_capacity(1024);
 
-        if original.length() > buf.len() {
-            panic!("Buffer is too small to hold the encoded data");
+        if original.length() > buf.capacity() {
+            panic!("Buffer capacity is too small to hold the encoded data");
         }
 
-        let size = original.encode(buf);
+        original.encode(&mut buf);
+
+        let mut encoded = buf.split_to(original.length());
 
         let (decoded, _size) =
-            T::decode(&buf[..size], original.length()).expect("Failed to decode");
+            T::decode(&mut encoded, original.length()).expect("Failed to decode");
 
         assert_eq!(original, decoded);
     }
@@ -126,7 +132,7 @@ pub fn test_commands() -> alloc::vec::Vec<Command> {
         .chain_single_cmd(Pdu::CancelBroadcastSmResp)
         .chain_single_cmd(Pdu::Other {
             command_id: CommandId::Other(100),
-            body: AnyOctetString::new(b"SMPP".to_vec()),
+            body: AnyOctetString::from_static_slice(b"SMPP"),
         })
         .collect()
 }
@@ -134,21 +140,21 @@ pub fn test_commands() -> alloc::vec::Vec<Command> {
 #[test]
 #[ignore = "observation test"]
 fn print_decode_errors() {
-    let buf = &mut [0u8; 1024];
+    let mut buf = BytesMut::from(&[0u8; 1024][..]);
 
     for command in test_commands() {
         if command.length() > buf.len() {
             panic!("Buffer is too small to hold the encoded data");
         }
 
-        let size = command.encode(buf);
+        command.encode(&mut buf);
         // Destroy random bytes in the buffer
         buf[8] = 0xFF;
         buf[16] = 0xFF;
         buf[32] = 0xFF;
         buf[64] = 0xFF;
 
-        let result = Command::decode(&buf[..size], size);
+        let result = Command::decode(&mut buf, command.length());
 
         let _ = std::dbg!(result);
     }

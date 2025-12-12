@@ -24,7 +24,7 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
     // Rusmppc produces a lot of logs while managing the SMPP connection in the background.
     // You can filter them out by setting the `rusmppc` target to `off`.
     tracing_subscriber::fmt()
-        .with_env_filter("rusmppc_submit_sm=info,rusmpp=off,rusmppc=debug")
+        .with_env_filter("rusmppc_submit_sm=info,rusmpp=trace,rusmppc=debug")
         .init();
 
     let (client, mut events) = ConnectionBuilder::new()

@@ -172,15 +172,19 @@ mod tests {
 
     #[test]
     fn encode_decode() {
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<EsmClass>();
         crate::tests::borrowed::encode_decode_test_instances::<EsmClass>();
 
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<MessagingMode>();
         crate::tests::borrowed::encode_decode_test_instances::<MessagingMode>();
 
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<MessageType>();
         crate::tests::borrowed::encode_decode_test_instances::<MessageType>();
 
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<Ansi41Specific>();
         crate::tests::borrowed::encode_decode_test_instances::<GsmFeatures>();
     }

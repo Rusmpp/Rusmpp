@@ -152,6 +152,17 @@ impl<const MIN: usize, const MAX: usize> Encode for OctetString<'_, MIN, MAX> {
     }
 }
 
+#[cfg(feature = "alloc")]
+impl<const MIN: usize, const MAX: usize> crate::encode::owned::Encode
+    for OctetString<'_, MIN, MAX>
+{
+    fn encode(&self, dst: &mut bytes::BytesMut) {
+        use bytes::BufMut;
+
+        dst.put_slice(self.bytes);
+    }
+}
+
 impl<'a, const MIN: usize, const MAX: usize> DecodeWithLength<'a> for OctetString<'a, MIN, MAX> {
     fn decode(src: &'a [u8], length: usize) -> Result<(Self, usize), DecodeError> {
         Self::_ASSERT_MIN_LESS_THAN_OR_EQUAL_TO_MAX;

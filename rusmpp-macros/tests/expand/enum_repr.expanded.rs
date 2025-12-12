@@ -38,11 +38,6 @@ impl crate::encode::Encode for DestFlag {
         u8::from(*self).encode(dst)
     }
 }
-impl crate::decode::owned::Decode for DestFlag {
-    fn decode(src: &[u8]) -> Result<(Self, usize), crate::decode::DecodeError> {
-        u8::decode(src).map(|(this, size)| (Self::from(this), size))
-    }
-}
 impl<'a> crate::decode::borrowed::Decode<'a> for DestFlag {
     fn decode(src: &'a [u8]) -> Result<(Self, usize), crate::decode::DecodeError> {
         u8::decode(src).map(|(this, size)| (Self::from(this), size))

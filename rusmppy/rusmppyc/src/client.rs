@@ -7,10 +7,10 @@
 //   client.response_timeout(...).submit_sm(...)
 //   client.no_response_timeout().submit_sm(...)
 
-use std::{str::FromStr, time::Duration};
+use std::time::Duration;
 
 use futures::StreamExt;
-use pyo3::{pyclass, pymethods, types::PyType, Bound, PyAny, PyObject, PyResult, Python};
+use pyo3::{pyclass, pymethods, types::PyType, Bound, Py, PyAny, PyResult, Python};
 use pyo3_async_runtimes::tokio::future_into_py;
 use rusmpp::{
     pdus::{BindReceiver, BindTransceiver, BindTransmitter, DeliverSmResp, SubmitSm},
@@ -78,8 +78,8 @@ impl Client {
     fn connected<'p>(
         _cls: &'p Bound<'p, PyType>,
         py: Python<'p>,
-        read: PyObject,
-        write: PyObject,
+        read: Py<PyAny>,
+        write: Py<PyAny>,
         enquire_link_interval: Option<u64>,
         enquire_link_response_timeout: u64,
         response_timeout: Option<u64>,
@@ -99,7 +99,7 @@ impl Client {
             let (client, events, connection) = builder.no_spawn().connected(read_write);
 
             // the read and write are python-futures, we spawn them with current locals
-            let task_locals = Python::with_gil(pyo3_async_runtimes::tokio::get_current_locals)?;
+            let task_locals = Python::attach(pyo3_async_runtimes::tokio::get_current_locals)?;
             tokio::spawn(pyo3_async_runtimes::tokio::scope(task_locals, connection));
 
             let events = Box::pin(events.map(Event::from));
@@ -129,13 +129,13 @@ impl Client {
         status: crate::generated::CommandStatus,
     ) -> PyResult<Bound<'p, PyAny>> {
         let pdu = BindTransmitter::builder()
-            .system_id(COctetString::from_str(&system_id).map_value_err("system_id")?)
-            .password(COctetString::from_str(&password).map_value_err("password")?)
-            .system_type(COctetString::from_str(&system_type).map_value_err("system_type")?)
+            .system_id(COctetString::from_string(system_id).map_value_err("system_id")?)
+            .password(COctetString::from_string(password).map_value_err("password")?)
+            .system_type(COctetString::from_string(system_type).map_value_err("system_type")?)
             .interface_version(interface_version.into())
             .addr_ton(addr_ton.into())
             .addr_npi(addr_npi.into())
-            .address_range(COctetString::from_str(&address_range).map_value_err("address_range")?)
+            .address_range(COctetString::from_string(address_range).map_value_err("address_range")?)
             .build();
 
         tracing::debug!(?pdu, "Built Pdu");
@@ -175,13 +175,13 @@ impl Client {
         status: crate::generated::CommandStatus,
     ) -> PyResult<Bound<'p, PyAny>> {
         let pdu = BindReceiver::builder()
-            .system_id(COctetString::from_str(&system_id).map_value_err("system_id")?)
-            .password(COctetString::from_str(&password).map_value_err("password")?)
-            .system_type(COctetString::from_str(&system_type).map_value_err("system_type")?)
+            .system_id(COctetString::from_string(system_id).map_value_err("system_id")?)
+            .password(COctetString::from_string(password).map_value_err("password")?)
+            .system_type(COctetString::from_string(system_type).map_value_err("system_type")?)
             .interface_version(interface_version.into())
             .addr_ton(addr_ton.into())
             .addr_npi(addr_npi.into())
-            .address_range(COctetString::from_str(&address_range).map_value_err("address_range")?)
+            .address_range(COctetString::from_string(address_range).map_value_err("address_range")?)
             .build();
 
         tracing::debug!(?pdu, "Built Pdu");
@@ -221,13 +221,13 @@ impl Client {
         status: crate::generated::CommandStatus,
     ) -> PyResult<Bound<'p, PyAny>> {
         let pdu = BindTransceiver::builder()
-            .system_id(COctetString::from_str(&system_id).map_value_err("system_id")?)
-            .password(COctetString::from_str(&password).map_value_err("password")?)
-            .system_type(COctetString::from_str(&system_type).map_value_err("system_type")?)
+            .system_id(COctetString::from_string(system_id).map_value_err("system_id")?)
+            .password(COctetString::from_string(password).map_value_err("password")?)
+            .system_type(COctetString::from_string(system_type).map_value_err("system_type")?)
             .interface_version(interface_version.into())
             .addr_ton(addr_ton.into())
             .addr_npi(addr_npi.into())
-            .address_range(COctetString::from_str(&address_range).map_value_err("address_range")?)
+            .address_range(COctetString::from_string(address_range).map_value_err("address_range")?)
             .build();
 
         tracing::debug!(?pdu, "Built Pdu");
@@ -290,32 +290,32 @@ impl Client {
     ) -> PyResult<Bound<'p, PyAny>> {
         let builder = SubmitSm::builder()
             .service_type(ServiceType::new(
-                COctetString::from_str(&service_type).map_value_err("service_type")?,
+                COctetString::from_string(service_type).map_value_err("service_type")?,
             ))
             .source_addr_ton(source_addr_ton.into())
             .source_addr_npi(source_addr_npi.into())
-            .source_addr(COctetString::from_str(&source_addr).map_value_err("source_addr")?)
+            .source_addr(COctetString::from_string(source_addr).map_value_err("source_addr")?)
             .dest_addr_ton(dest_addr_ton.into())
             .dest_addr_npi(dest_addr_npi.into())
             .destination_addr(
-                COctetString::from_str(&destination_addr).map_value_err("destination_addr")?,
+                COctetString::from_string(destination_addr).map_value_err("destination_addr")?,
             )
             .esm_class(esm_class.into())
             .protocol_id(protocol_id)
             .priority_flag(priority_flag.into())
             .schedule_delivery_time(
-                EmptyOrFullCOctetString::from_str(&schedule_delivery_time)
+                EmptyOrFullCOctetString::from_string(schedule_delivery_time)
                     .map_value_err("schedule_delivery_time")?,
             )
             .validity_period(
-                EmptyOrFullCOctetString::from_str(&validity_period)
+                EmptyOrFullCOctetString::from_string(validity_period)
                     .map_value_err("validity_period")?,
             )
             .registered_delivery(registered_delivery.into())
             .replace_if_present_flag(replace_if_present_flag.into())
             .data_coding(data_coding.into())
             .sm_default_msg_id(sm_default_msg_id)
-            .short_message(OctetString::new(short_message).map_value_err("short_message")?)
+            .short_message(OctetString::from_vec(short_message).map_value_err("short_message")?)
             .tlvs(
                 tlvs.into_iter()
                     .map(MessageSubmissionRequestTlvValue::try_from)
@@ -350,7 +350,7 @@ impl Client {
         status: crate::generated::CommandStatus,
     ) -> PyResult<Bound<'p, PyAny>> {
         let pdu = DeliverSmResp::builder()
-            .message_id(COctetString::from_str(&message_id).map_value_err("message_id")?)
+            .message_id(COctetString::from_string(message_id).map_value_err("message_id")?)
             .build();
 
         tracing::debug!(?pdu, "Built Pdu");

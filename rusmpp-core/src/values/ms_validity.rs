@@ -78,12 +78,16 @@ mod tests {
 
     #[test]
     fn encode_decode() {
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_with_length_test_instances::<MsValidity>();
         crate::tests::borrowed::encode_decode_with_length_test_instances::<MsValidity>();
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<MsValidityInformation>();
         crate::tests::borrowed::encode_decode_test_instances::<MsValidityInformation>();
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<MsValidityBehavior>();
         crate::tests::borrowed::encode_decode_test_instances::<MsValidityBehavior>();
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<UnitsOfTime>();
         crate::tests::borrowed::encode_decode_test_instances::<UnitsOfTime>();
     }

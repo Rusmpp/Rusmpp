@@ -12,6 +12,7 @@ keywords = ["smpp", "smsc", "messaging", "networking", "protocol"]
 
 [dependencies]
 rusmpp-macros = { path = "../rusmpp-macros", version = "0.1.3" }
+bytes = { version = "1", default-features = false, optional = true }
 heapless = { version = "0.9.1", default-features = false }
 arbitrary = { version = "1.4.2", default-features = false, features = [
     "derive_arbitrary",
@@ -39,16 +40,16 @@ embedded-io-adapters = { version = "0.6.2", default-features = false, features =
 [features]
 default = []
 # Enables the `alloc` crate.
-alloc = ["serde/alloc"]
+alloc = ["serde/alloc", "dep:bytes"]
 # Enables verbose DecodeError with DecodeErrorSource.
 verbose = ["alloc"]
 # Implements arbitrary's Arbitrary trait for fuzz testing.
 arbitrary = ["dep:arbitrary"]
 
 # Derives serde Serialize for all SMPP types.
-serde = ["dep:serde", "heapless/serde"]
+serde = ["dep:serde", "heapless/serde", "bytes/serde"]
 # Derives serde Deserialize for owned SMPP types. This will allow to create unchecked SMPP values from arbitrary serialized data, which may not be valid SMPP values.
-serde-deserialize-unchecked = ["dep:serde", "heapless/serde"]
+serde-deserialize-unchecked = ["dep:serde", "heapless/serde", "bytes/serde"]
 
 # Implements tokio's util codec Encoder/Decoder traits for the CommandCodec.
 tokio-codec = ["alloc", "dep:tokio-util"]

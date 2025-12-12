@@ -1,10 +1,11 @@
 #![allow(path_statements)]
 
 use alloc::{string::String, string::ToString, vec::Vec};
+use bytes::{BufMut, Bytes, BytesMut};
 
 use crate::{
     decode::{COctetStringDecodeError, DecodeError, owned::Decode},
-    encode::{Encode, Length},
+    encode::{Encode, Length, owned::Encode as BEncode},
     types::c_octet_string::Error,
 };
 
@@ -52,7 +53,7 @@ use crate::{
 /// # use rusmpp_core::types::owned::c_octet_string::COctetString;
 ///
 /// // does not compile
-/// let string = COctetString::<0, 6>::new(b"Hello\0");
+/// let string = COctetString::<0, 6>::from_static_slice(b"Hello\0");
 /// ```
 /// `MIN` must be less than or equal to `MAX`.
 ///
@@ -60,10 +61,9 @@ use crate::{
 /// # use rusmpp_core::types::owned::c_octet_string::COctetString;
 ///
 /// // does not compile
-/// let string = COctetString::<10, 6>::new(b"Hello\0");
+/// let string = COctetString::<10, 6>::from_static_slice(b"Hello\0");
 /// ```
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 #[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
 #[cfg_attr(
@@ -71,7 +71,18 @@ use crate::{
     serde(transparent)
 )]
 pub struct COctetString<const MIN: usize, const MAX: usize> {
-    bytes: Vec<u8>,
+    bytes: Bytes,
+}
+
+#[cfg(feature = "arbitrary")]
+impl<'a, const MIN: usize, const MAX: usize> ::arbitrary::Arbitrary<'a> for COctetString<MIN, MAX> {
+    fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
+        let bytes = Vec::<u8>::arbitrary(u)?;
+
+        Ok(Self {
+            bytes: Bytes::from_owner(bytes),
+        })
+    }
 }
 
 impl<const MIN: usize, const MAX: usize> COctetString<MIN, MAX> {
@@ -84,40 +95,63 @@ impl<const MIN: usize, const MAX: usize> COctetString<MIN, MAX> {
         Self::_ASSERT_MIN_LESS_THAN_OR_EQUAL_TO_MAX;
     };
 
-    /// Create a new empty [`COctetString`].
+    const EMPTY: [u8; MIN] = {
+        // Fill the buffer with (`MIN` - 1) `NOT` NULL octets
+        // And put a NULL octet at the end
+
+        let mut arr = [1u8; MIN];
+
+        arr[MIN - 1] = 0;
+
+        arr
+    };
+
+    /// Creates a new [`COctetString`] from a sequence of bytes.
+    #[inline]
+    #[deprecated(note = "use `from_bytes`, `from_slice` or `from_vec` instead")]
+    pub fn new(bytes: impl AsRef<[u8]>) -> Result<Self, Error> {
+        Self::_ASSERT_VALID;
+
+        Self::from_slice(bytes.as_ref())
+    }
+
+    /// Creates a new empty [`COctetString`].
     ///
     /// Equivalent to [`COctetString::empty`].
     #[inline]
     pub fn null() -> Self {
+        Self::_ASSERT_VALID;
+
         Self::empty()
     }
 
-    /// Create a new empty [`COctetString`].
+    /// Creates a new empty [`COctetString`].
     #[inline]
     pub fn empty() -> Self {
         Self::_ASSERT_VALID;
 
-        // Fill the buffer with (`MIN` - 1) `NOT` NULL octets
-        // And put a NULL octet at the end
-
-        let mut bytes = alloc::vec![1; MIN];
-
-        bytes[MIN - 1] = 0;
-
-        Self { bytes }
+        Self {
+            bytes: Bytes::from_static(&Self::EMPTY),
+        }
     }
 
-    /// Check if a [`COctetString`] is empty.
+    /// Returns the number of bytes contained in the [`COctetString`] including the null terminator.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.bytes.len()
+    }
+
+    /// Checks if the [`COctetString`] is empty.
     ///
     /// A [`COctetString`] is considered empty if it
     /// contains only a single NULL octet (0x00).
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.bytes.len() == 1
+        self.len() == 1
     }
 
-    /// Create a new [`COctetString`] from a sequence of bytes.
-    pub fn new(bytes: Vec<u8>) -> Result<Self, Error> {
+    /// Creates a new [`COctetString`] from [`Bytes`] including the null terminator.
+    pub fn from_bytes(bytes: Bytes) -> Result<Self, Error> {
         Self::_ASSERT_VALID;
 
         if bytes.len() < MIN {
@@ -151,37 +185,87 @@ impl<const MIN: usize, const MAX: usize> COctetString<MIN, MAX> {
         Ok(Self { bytes })
     }
 
-    /// Create a new [`COctetString`] from a sequence of bytes without checking the length and null termination.
-    #[inline]
-    pub(crate) fn new_unchecked(bytes: Vec<u8>) -> Self {
+    /// Creates a new [`COctetString`] from [`BytesMut`] including the null terminator.
+    pub fn from_bytes_mut(bytes: BytesMut) -> Result<Self, Error> {
         Self::_ASSERT_VALID;
 
-        Self { bytes }
+        Self::from_bytes(bytes.freeze())
     }
 
-    /// Convert a [`COctetString`] to a &[`str`].
+    /// Creates a new [`COctetString`] from `&[u8]` including the null terminator.
+    pub fn from_slice(bytes: &[u8]) -> Result<Self, Error> {
+        Self::_ASSERT_VALID;
+
+        Self::from_bytes(Bytes::copy_from_slice(bytes))
+    }
+
+    /// Creates a new [`COctetString`] from `&'static [u8]` including the null terminator.
+    ///
+    /// This function does not copy or allocate.
+    pub fn from_static_slice(bytes: &'static [u8]) -> Result<Self, Error> {
+        Self::_ASSERT_VALID;
+
+        Self::from_bytes(Bytes::from_static(bytes))
+    }
+
+    // XXX: there is no `from_static_str` because it would allocate (Null terminator).
+
+    /// Creates a new [`COctetString`] from [`Vec<u8>`] including the null terminator.
+    pub fn from_vec(bytes: Vec<u8>) -> Result<Self, Error> {
+        Self::_ASSERT_VALID;
+
+        Self::from_bytes(Bytes::from_owner(bytes))
+    }
+
+    /// Creates a new [`COctetString`] from [`String`] without the null terminator.
+    pub fn from_string(string: String) -> Result<Self, Error> {
+        Self::_ASSERT_VALID;
+
+        let mut bytes = string.into_bytes();
+        bytes.push(0);
+
+        Self::from_vec(bytes)
+    }
+
+    /// Creates a new [`COctetString`] from `&'static [u8]` without checking the length and the null terminator.
+    #[inline]
+    pub(crate) fn from_static_slice_unchecked(bytes: &'static [u8]) -> Self {
+        Self::_ASSERT_VALID;
+
+        Self {
+            bytes: Bytes::from_static(bytes),
+        }
+    }
+
+    /// Converts the [`COctetString`] into [`Bytes`] including the null terminator.
+    #[inline]
+    pub fn into_bytes(self) -> Bytes {
+        self.bytes
+    }
+
+    /// Converts the [`COctetString`] into [`Vec<u8>`] including the null terminator.
+    #[inline]
+    pub fn into_vec(self) -> Vec<u8> {
+        self.into_bytes().into()
+    }
+
+    /// Interprets the [`COctetString`] as &[`str`] without the null terminator.
     #[inline]
     pub fn as_str(&self) -> &str {
         core::str::from_utf8(&self.bytes[..self.bytes.len() - 1])
             .expect("COctetString is ascii by definition")
     }
+}
 
-    /// Get the bytes of a [`COctetString`].
-    #[inline]
-    pub fn bytes(&self) -> &[u8] {
-        &self.bytes
-    }
-
-    /// Convert a [`COctetString`] to a [`Vec`] of [`u8`].
-    #[inline]
-    pub fn into_bytes(self) -> Vec<u8> {
-        self.bytes
+impl<const MIN: usize, const MAX: usize> From<COctetString<MIN, MAX>> for Bytes {
+    fn from(value: COctetString<MIN, MAX>) -> Self {
+        value.into_bytes()
     }
 }
 
 impl<const MIN: usize, const MAX: usize> From<COctetString<MIN, MAX>> for Vec<u8> {
     fn from(value: COctetString<MIN, MAX>) -> Self {
-        value.bytes
+        value.into_vec()
     }
 }
 
@@ -206,68 +290,58 @@ impl<const MIN: usize, const MAX: usize> core::str::FromStr for COctetString<MIN
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Self::_ASSERT_VALID;
 
-        let bytes = s.as_bytes();
-
-        if bytes.len() + 1 < MIN {
-            return Err(Error::TooFewBytes {
-                actual: bytes.len() + 1,
-                min: MIN,
-            });
-        }
-
-        if bytes.len() + 1 > MAX {
-            return Err(Error::TooManyBytes {
-                actual: bytes.len() + 1,
-                max: MAX,
-            });
-        }
-
-        if bytes[..bytes.len()].contains(&0) {
-            return Err(Error::NullByteFound);
-        }
-
-        if !bytes.is_ascii() {
-            return Err(Error::NotAscii);
-        }
-
-        let mut bytes = bytes.to_vec();
-
-        bytes.push(0);
-
-        Ok(Self { bytes })
+        Self::from_string(String::from(s))
     }
 }
 
 impl<const MIN: usize, const MAX: usize> core::fmt::Display for COctetString<MIN, MAX> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.write_str(&String::from_utf8_lossy(
-            &self.bytes[..self.bytes.len() - 1],
-        ))
+        f.write_str(self.as_str())
     }
 }
 
-impl<const MIN: usize, const MAX: usize> AsRef<[u8]> for COctetString<MIN, MAX> {
+impl<const MIN: usize, const MAX: usize> core::convert::AsRef<[u8]> for COctetString<MIN, MAX> {
     fn as_ref(&self) -> &[u8] {
+        &self.bytes
+    }
+}
+
+impl<const MIN: usize, const MAX: usize> core::borrow::Borrow<[u8]> for COctetString<MIN, MAX> {
+    fn borrow(&self) -> &[u8] {
+        &self.bytes
+    }
+}
+
+impl<const MIN: usize, const MAX: usize> core::ops::Deref for COctetString<MIN, MAX> {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
         &self.bytes
     }
 }
 
 impl<const MIN: usize, const MAX: usize> Length for COctetString<MIN, MAX> {
     fn length(&self) -> usize {
-        self.bytes.len()
+        self.len()
     }
 }
 
 impl<const MIN: usize, const MAX: usize> Encode for COctetString<MIN, MAX> {
     fn encode(&self, dst: &mut [u8]) -> usize {
-        _ = &mut dst[..self.bytes.len()].copy_from_slice(&self.bytes);
+        _ = &mut dst[..self.len()].copy_from_slice(&self.bytes);
 
-        self.bytes.len()
+        self.len()
+    }
+}
+
+impl<const MIN: usize, const MAX: usize> BEncode for COctetString<MIN, MAX> {
+    fn encode(&self, dst: &mut BytesMut) {
+        dst.put(&self.bytes[..]);
     }
 }
 
 impl<const MIN: usize, const MAX: usize> Decode for COctetString<MIN, MAX> {
-    fn decode(src: &[u8]) -> Result<(Self, usize), DecodeError> {
+    fn decode(src: &mut BytesMut) -> Result<(Self, usize), DecodeError> {
         Self::_ASSERT_VALID;
 
         if src.len() < MIN {
@@ -279,21 +353,11 @@ impl<const MIN: usize, const MAX: usize> Decode for COctetString<MIN, MAX> {
             ));
         }
 
-        let mut bytes = Vec::with_capacity(MAX);
+        let index = src.iter().take(MAX).position(|&b| b == 0).ok_or_else(|| {
+            DecodeError::c_octet_string_decode_error(COctetStringDecodeError::NotNullTerminated)
+        })?;
 
-        for &byte in src.iter().take(MAX) {
-            bytes.push(byte);
-
-            if byte == 0 {
-                break;
-            }
-        }
-
-        if bytes.last() != Some(&0x00) {
-            return Err(DecodeError::c_octet_string_decode_error(
-                COctetStringDecodeError::NotNullTerminated,
-            ));
-        }
+        let bytes = src.split_to(index + 1).freeze();
 
         if !bytes.is_ascii() {
             return Err(DecodeError::c_octet_string_decode_error(
@@ -307,6 +371,46 @@ impl<const MIN: usize, const MAX: usize> Decode for COctetString<MIN, MAX> {
     }
 }
 
+impl<const MIN: usize, const MAX: usize> TryFrom<Bytes> for COctetString<MIN, MAX> {
+    type Error = Error;
+
+    fn try_from(bytes: Bytes) -> Result<Self, Self::Error> {
+        Self::from_bytes(bytes)
+    }
+}
+
+impl<const MIN: usize, const MAX: usize> TryFrom<BytesMut> for COctetString<MIN, MAX> {
+    type Error = Error;
+
+    fn try_from(bytes: BytesMut) -> Result<Self, Self::Error> {
+        Self::from_bytes_mut(bytes)
+    }
+}
+
+impl<'a, const MIN: usize, const MAX: usize> TryFrom<&'a [u8]> for COctetString<MIN, MAX> {
+    type Error = Error;
+
+    fn try_from(bytes: &'a [u8]) -> Result<Self, Self::Error> {
+        Self::from_slice(bytes)
+    }
+}
+
+impl<const MIN: usize, const MAX: usize> TryFrom<String> for COctetString<MIN, MAX> {
+    type Error = Error;
+
+    fn try_from(string: String) -> Result<Self, Self::Error> {
+        Self::from_string(string)
+    }
+}
+
+impl<const MIN: usize, const MAX: usize> TryFrom<Vec<u8>> for COctetString<MIN, MAX> {
+    type Error = Error;
+
+    fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
+        Self::from_vec(bytes)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -315,19 +419,19 @@ mod tests {
         fn instances() -> Vec<Self> {
             alloc::vec![
                 Self::empty(),
-                Self::new(
+                Self::from_vec(
                     core::iter::repeat_n(b'1', MIN - 1)
                         .chain(core::iter::once(b'\0'))
                         .collect::<Vec<_>>(),
                 )
                 .unwrap(),
-                Self::new(
+                Self::from_vec(
                     core::iter::repeat_n(b'1', ((MIN + MAX) / 2) - 1)
                         .chain(core::iter::once(b'\0'))
                         .collect::<Vec<_>>(),
                 )
                 .unwrap(),
-                Self::new(
+                Self::from_vec(
                     core::iter::repeat_n(b'1', MAX - 1)
                         .chain(core::iter::once(b'\0'))
                         .collect::<Vec<_>>(),
@@ -350,70 +454,70 @@ mod tests {
         #[test]
         fn empty_too_few_bytes() {
             let bytes = b"";
-            let error = COctetString::<1, 5>::new(bytes.to_vec()).unwrap_err();
+            let error = COctetString::<1, 5>::from_static_slice(bytes).unwrap_err();
             assert!(matches!(error, Error::TooFewBytes { actual: 0, min: 1 }));
         }
 
         #[test]
         fn too_many_bytes() {
             let bytes = b"Hello\0";
-            let error = COctetString::<1, 5>::new(bytes.to_vec()).unwrap_err();
+            let error = COctetString::<1, 5>::from_static_slice(bytes).unwrap_err();
             assert!(matches!(error, Error::TooManyBytes { actual: 6, max: 5 }));
         }
 
         #[test]
         fn too_few_bytes() {
             let bytes = b"Hello\0";
-            let error = COctetString::<10, 20>::new(bytes.to_vec()).unwrap_err();
+            let error = COctetString::<10, 20>::from_static_slice(bytes).unwrap_err();
             assert!(matches!(error, Error::TooFewBytes { actual: 6, min: 10 }));
         }
 
         #[test]
         fn not_null_terminated() {
             let bytes = b"Hello";
-            let error = COctetString::<1, 5>::new(bytes.to_vec()).unwrap_err();
+            let error = COctetString::<1, 5>::from_static_slice(bytes).unwrap_err();
             assert!(matches!(error, Error::NotNullTerminated));
         }
 
         #[test]
         fn not_ascii() {
             let bytes = b"Hell\xF0\0";
-            let error = COctetString::<1, 6>::new(bytes.to_vec()).unwrap_err();
+            let error = COctetString::<1, 6>::from_static_slice(bytes).unwrap_err();
             assert!(matches!(error, Error::NotAscii));
         }
 
         #[test]
         fn null_byte_found() {
             let bytes = b"Hel\0o\0";
-            let error = COctetString::<1, 6>::new(bytes.to_vec()).unwrap_err();
+            let error = COctetString::<1, 6>::from_static_slice(bytes).unwrap_err();
             assert!(matches!(error, Error::NullByteFound));
         }
 
         #[test]
         fn ok_min() {
             let bytes = b"\0";
-            let string = COctetString::<1, 6>::new(bytes.to_vec()).unwrap();
-            assert_eq!(string.bytes, bytes);
+            let string = COctetString::<1, 6>::from_static_slice(bytes).unwrap();
+            assert_eq!(string.as_ref(), bytes);
         }
 
         #[test]
         fn ok_max() {
             let bytes = b"Hello\0";
-            let string = COctetString::<1, 6>::new(bytes.to_vec()).unwrap();
-            assert_eq!(string.bytes, bytes);
+            let string = COctetString::<1, 6>::from_static_slice(bytes).unwrap();
+            assert_eq!(string.as_ref(), bytes);
         }
 
         #[test]
         fn ok_between_min_max() {
             let bytes = b"Hel\0";
-            let string = COctetString::<1, 6>::new(bytes.to_vec()).unwrap();
-            assert_eq!(string.bytes, bytes);
+            let string = COctetString::<1, 6>::from_static_slice(bytes).unwrap();
+            assert_eq!(string.as_ref(), bytes);
         }
 
         #[test]
         fn ok_len() {
             let bytes = b"Hello\0";
-            let string = COctetString::<1, 6>::new(bytes.to_vec()).unwrap();
+            let string = COctetString::<1, 6>::from_static_slice(bytes).unwrap();
             assert_eq!(string.bytes.len(), 6);
             assert_eq!(string.length(), 6);
         }
@@ -421,14 +525,14 @@ mod tests {
         #[test]
         fn ok_empty() {
             let bytes = b"\0";
-            let string = COctetString::<1, 6>::new(bytes.to_vec()).unwrap();
-            assert_eq!(string.bytes, bytes);
+            let string = COctetString::<1, 6>::from_static_slice(bytes).unwrap();
+            assert_eq!(string.as_ref(), bytes);
         }
 
         #[test]
         fn ok_empty_len() {
             let bytes = b"\0";
-            let string = COctetString::<1, 6>::new(bytes.to_vec()).unwrap();
+            let string = COctetString::<1, 6>::from_static_slice(bytes).unwrap();
             assert_eq!(string.bytes.len(), 1);
             assert_eq!(string.length(), 1);
         }
@@ -479,7 +583,7 @@ mod tests {
             let string = "";
             let bytes = b"\0";
             let string = COctetString::<1, 6>::from_str(string).unwrap();
-            assert_eq!(string.bytes, bytes);
+            assert_eq!(string.as_ref(), bytes);
         }
 
         #[test]
@@ -487,7 +591,7 @@ mod tests {
             let string = "Hello";
             let bytes = b"Hello\0";
             let string = COctetString::<1, 6>::from_str(string).unwrap();
-            assert_eq!(string.bytes, bytes);
+            assert_eq!(string.as_ref(), bytes);
         }
 
         #[test]
@@ -495,7 +599,7 @@ mod tests {
             let string = "Hel";
             let bytes = b"Hel\0";
             let string = COctetString::<1, 6>::from_str(string).unwrap();
-            assert_eq!(string.bytes, bytes);
+            assert_eq!(string.as_ref(), bytes);
         }
 
         #[test]
@@ -511,7 +615,7 @@ mod tests {
             let string = "";
             let bytes = b"\0";
             let string = COctetString::<1, 6>::from_str(string).unwrap();
-            assert_eq!(string.bytes, bytes);
+            assert_eq!(string.as_ref(), bytes);
         }
 
         #[test]
@@ -529,7 +633,7 @@ mod tests {
         #[test]
         fn ok() {
             let bytes = b"Hello\0";
-            let string = COctetString::<1, 6>::new(bytes.to_vec()).unwrap();
+            let string = COctetString::<1, 6>::from_static_slice(bytes).unwrap();
             assert_eq!(string.as_str(), "Hello");
             assert_eq!(string.to_string(), "Hello");
         }
@@ -542,8 +646,8 @@ mod tests {
 
         #[test]
         fn unexpected_eof_empty() {
-            let bytes = b"";
-            let error = COctetString::<1, 6>::decode(bytes).unwrap_err();
+            let mut buf = BytesMut::new();
+            let error = COctetString::<1, 6>::decode(&mut buf).unwrap_err();
 
             assert!(matches!(
                 error.kind(),
@@ -556,8 +660,8 @@ mod tests {
 
         #[test]
         fn not_null_terminated() {
-            let bytes = b"hi";
-            let error = COctetString::<1, 6>::decode(bytes).unwrap_err();
+            let mut buf = BytesMut::from(&b"hi"[..]);
+            let error = COctetString::<1, 6>::decode(&mut buf).unwrap_err();
 
             assert!(matches!(
                 error.kind(),
@@ -569,8 +673,8 @@ mod tests {
 
         #[test]
         fn too_many_bytes() {
-            let bytes = b"Hello\0";
-            let error = COctetString::<1, 5>::decode(bytes).unwrap_err();
+            let mut buf = BytesMut::from(&b"Hello\0"[..]);
+            let error = COctetString::<1, 5>::decode(&mut buf).unwrap_err();
 
             assert!(matches!(
                 error.kind(),
@@ -582,8 +686,8 @@ mod tests {
 
         #[test]
         fn too_few_bytes() {
-            let bytes = b"Hello\0";
-            let error = COctetString::<10, 20>::decode(bytes).unwrap_err();
+            let mut buf = BytesMut::from(&b"Hello\0"[..]);
+            let error = COctetString::<10, 20>::decode(&mut buf).unwrap_err();
 
             assert!(matches!(
                 error.kind(),
@@ -596,8 +700,8 @@ mod tests {
 
         #[test]
         fn not_ascii() {
-            let bytes = b"Hell\xF0\0";
-            let error = COctetString::<1, 6>::decode(bytes).unwrap_err();
+            let mut buf = BytesMut::from(&b"Hell\xF0\0"[..]);
+            let error = COctetString::<1, 6>::decode(&mut buf).unwrap_err();
 
             assert!(matches!(
                 error.kind(),
@@ -607,53 +711,57 @@ mod tests {
 
         #[test]
         fn ok_max() {
-            let bytes = b"Hello\0";
-            let (string, size) = COctetString::<1, 6>::decode(bytes).unwrap();
+            let mut buf = BytesMut::from(&b"Hello\0"[..]);
+            let (string, size) = COctetString::<1, 6>::decode(&mut buf).unwrap();
 
-            assert_eq!(string.bytes, b"Hello\0");
+            assert_eq!(string.as_ref(), b"Hello\0");
             assert_eq!(string.length(), 6);
             assert_eq!(size, 6);
+            assert!(buf.is_empty());
         }
 
         #[test]
         fn ok_not_max() {
-            let bytes = b"Hello\0";
-            let (string, size) = COctetString::<1, 25>::decode(bytes).unwrap();
+            let mut buf = BytesMut::from(&b"Hello\0"[..]);
+            let (string, size) = COctetString::<1, 25>::decode(&mut buf).unwrap();
 
-            assert_eq!(string.bytes, b"Hello\0");
+            assert_eq!(string.as_ref(), b"Hello\0");
             assert_eq!(string.length(), 6);
             assert_eq!(size, 6);
+            assert!(buf.is_empty());
         }
 
         #[test]
         fn ok_empty_max() {
-            let bytes = b"\0";
-            let (string, size) = COctetString::<1, 1>::decode(bytes).unwrap();
+            let mut buf = BytesMut::from(&b"\0"[..]);
+            let (string, size) = COctetString::<1, 1>::decode(&mut buf).unwrap();
 
-            assert_eq!(string.bytes, b"\0");
+            assert_eq!(string.as_ref(), b"\0");
             assert_eq!(string.length(), 1);
             assert_eq!(size, 1);
+            assert!(buf.is_empty());
         }
 
         #[test]
         fn ok_empty_not_max() {
-            let bytes = b"\0";
-            let (string, size) = COctetString::<1, 25>::decode(bytes).unwrap();
+            let mut buf = BytesMut::from(&b"\0"[..]);
+            let (string, size) = COctetString::<1, 25>::decode(&mut buf).unwrap();
 
-            assert_eq!(string.bytes, b"\0");
+            assert_eq!(string.as_ref(), b"\0");
             assert_eq!(string.length(), 1);
             assert_eq!(size, 1);
+            assert!(buf.is_empty());
         }
 
         #[test]
         fn ok_remaining() {
-            let bytes = b"Hello\0World!";
-            let (string, size) = COctetString::<1, 10>::decode(bytes).unwrap();
+            let mut buf = BytesMut::from(&b"Hello\0World!"[..]);
+            let (string, size) = COctetString::<1, 10>::decode(&mut buf).unwrap();
 
-            assert_eq!(string.bytes, b"Hello\0");
+            assert_eq!(string.as_ref(), b"Hello\0");
             assert_eq!(string.length(), 6);
             assert_eq!(size, 6);
-            assert_eq!(&bytes[size..], b"World!");
+            assert_eq!(&buf[..], b"World!");
         }
     }
 }

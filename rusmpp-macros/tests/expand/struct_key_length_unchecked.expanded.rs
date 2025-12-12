@@ -118,46 +118,6 @@ impl crate::encode::Encode for Command {
         size
     }
 }
-impl crate::decode::owned::DecodeWithLength for Command {
-    fn decode(
-        src: &[u8],
-        length: usize,
-    ) -> Result<(Self, usize), crate::decode::DecodeError> {
-        let size = 0;
-        let (id, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::owned::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::id,
-        )?;
-        let (command_status, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::owned::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::command_status,
-        )?;
-        let (sequence_number, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::owned::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::sequence_number,
-        )?;
-        let (pdu, size) = crate::decode::DecodeErrorExt::map_as_source(
-                crate::decode::owned::DecodeWithKeyOptionalExt::decode_move(
-                    id,
-                    src,
-                    length.saturating_sub(size),
-                    size,
-                ),
-                crate::fields::SmppField::pdu,
-            )?
-            .map(|(this, size)| (Some(this), size))
-            .unwrap_or((None, size));
-        Ok((
-            Self {
-                id,
-                command_status,
-                sequence_number,
-                pdu,
-            },
-            size,
-        ))
-    }
-}
 /// Docs
 ///
 /// More docs

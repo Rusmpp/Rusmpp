@@ -359,7 +359,7 @@ mod tests {
                     .validity_period(EmptyOrFullCOctetString::empty())
                     .registered_delivery(RegisteredDelivery::default())
                     .replace_if_present_flag(ReplaceIfPresentFlag::Replace)
-                    .short_message(OctetString::new(b"Short Message".to_vec()).unwrap())
+                    .short_message(OctetString::from_static_slice(b"Short Message").unwrap())
                     .build(),
                 Self::builder()
                     .source_addr_ton(Ton::International)
@@ -375,13 +375,13 @@ mod tests {
                     .replace_if_present_flag(ReplaceIfPresentFlag::Replace)
                     .data_coding(DataCoding::default())
                     .sm_default_msg_id(0)
-                    .short_message(OctetString::new(b"Short Message".to_vec()).unwrap())
+                    .short_message(OctetString::from_static_slice(b"Short Message").unwrap())
                     .tlvs(alloc::vec![
                         MessageDeliveryRequestTlvValue::MessagePayload(MessagePayload::new(
-                            AnyOctetString::new(b"Message Payload".to_vec()),
+                            AnyOctetString::from_static_slice(b"Message Payload"),
                         )),
                         MessageDeliveryRequestTlvValue::MessagePayload(MessagePayload::new(
-                            AnyOctetString::new(b"Message Payload 2".to_vec()),
+                            AnyOctetString::from_static_slice(b"Message Payload 2"),
                         )),
                         MessageDeliveryRequestTlvValue::CallbackNumPresInd(
                             CallbackNumPresInd::new(
@@ -397,12 +397,13 @@ mod tests {
 
     #[test]
     fn encode_decode() {
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_with_length_test_instances::<DeliverSm>();
     }
 
     #[test]
     fn short_message_length() {
-        let short_message = OctetString::new(b"Short Message".to_vec()).unwrap();
+        let short_message = OctetString::from_static_slice(b"Short Message").unwrap();
 
         let submit_sm = DeliverSm::builder()
             .short_message(short_message.clone())
@@ -414,8 +415,8 @@ mod tests {
 
     #[test]
     fn short_message_override() {
-        let short_message_1 = OctetString::new(b"Short Message 101".to_vec()).unwrap();
-        let short_message_2 = OctetString::new(b"Short Message 2".to_vec()).unwrap();
+        let short_message_1 = OctetString::from_static_slice(b"Short Message 101").unwrap();
+        let short_message_2 = OctetString::from_static_slice(b"Short Message 2").unwrap();
 
         let submit_sm = DeliverSm::builder()
             .short_message(short_message_1)
@@ -428,8 +429,9 @@ mod tests {
 
     #[test]
     fn message_payload_suppresses_short_message() {
-        let short_message = OctetString::new(b"Short Message".to_vec()).unwrap();
-        let message_payload = MessagePayload::new(AnyOctetString::new(b"Message Payload".to_vec()));
+        let short_message = OctetString::from_static_slice(b"Short Message").unwrap();
+        let message_payload =
+            MessagePayload::new(AnyOctetString::from_static_slice(b"Message Payload"));
 
         // Using push_tlv
         let deliver_sm = DeliverSm::builder()

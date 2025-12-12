@@ -128,7 +128,7 @@ where
 
         match concatenation {
             Concatenation::Single(bytes) => {
-                let short_message = OctetString::new(bytes)?;
+                let short_message = OctetString::from_vec(bytes)?;
 
                 let sm = self
                     .sm
@@ -168,7 +168,7 @@ where
                         payload.extend_from_slice(udh.udh_bytes().as_bytes());
                         payload.extend_from_slice(&part);
 
-                        let short_message = OctetString::new(payload)?;
+                        let short_message = OctetString::from_vec(payload)?;
 
                         let sm = self
                             .sm

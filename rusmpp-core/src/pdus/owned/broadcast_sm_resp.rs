@@ -137,7 +137,7 @@ mod tests {
                         BroadcastResponseTlvValue::BroadcastAreaIdentifier(
                             BroadcastAreaIdentifier::new(
                                 BroadcastAreaFormat::Polygon,
-                                AnyOctetString::new(b"Polygon Area".to_vec()),
+                                AnyOctetString::from_static_slice(b"Polygon Area"),
                             ),
                         ),
                     ])
@@ -148,6 +148,7 @@ mod tests {
 
     #[test]
     fn encode_decode() {
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_with_length_test_instances::<BroadcastSmResp>();
     }
 }

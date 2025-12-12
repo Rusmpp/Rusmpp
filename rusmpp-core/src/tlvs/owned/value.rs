@@ -1,10 +1,12 @@
+use bytes::BytesMut;
+
 use crate::{
     CommandStatus,
     decode::{
         DecodeError, DecodeResultExt,
         owned::{Decode, DecodeWithKey, DecodeWithLength},
     },
-    encode::{Encode, Length},
+    encode::Length,
     tlvs::TlvTag,
     types::owned::{AnyOctetString, COctetString, OctetString},
     values::{owned::*, *},
@@ -262,8 +264,80 @@ impl Length for TlvValue {
     }
 }
 
-impl Encode for TlvValue {
+impl crate::encode::Encode for TlvValue {
     fn encode(&self, dst: &mut [u8]) -> usize {
+        match self {
+            TlvValue::AdditionalStatusInfoText(value) => value.encode(dst),
+            TlvValue::AlertOnMessageDelivery(value) => value.encode(dst),
+            TlvValue::BillingIdentification(value) => value.encode(dst),
+            TlvValue::BroadcastAreaIdentifier(value) => value.encode(dst),
+            TlvValue::BroadcastAreaSuccess(value) => value.encode(dst),
+            TlvValue::BroadcastContentTypeInfo(value) => value.encode(dst),
+            TlvValue::BroadcastChannelIndicator(value) => value.encode(dst),
+            TlvValue::BroadcastContentType(value) => value.encode(dst),
+            TlvValue::BroadcastEndTime(value) => value.encode(dst),
+            TlvValue::BroadcastErrorStatus(value) => value.encode(dst),
+            TlvValue::BroadcastFrequencyInterval(value) => value.encode(dst),
+            TlvValue::BroadcastMessageClass(value) => value.encode(dst),
+            TlvValue::BroadcastRepNum(value) => value.encode(dst),
+            TlvValue::BroadcastServiceGroup(value) => value.encode(dst),
+            TlvValue::CallbackNum(value) => value.encode(dst),
+            TlvValue::CallbackNumAtag(value) => value.encode(dst),
+            TlvValue::CallbackNumPresInd(value) => value.encode(dst),
+            TlvValue::CongestionState(value) => value.encode(dst),
+            TlvValue::DeliveryFailureReason(value) => value.encode(dst),
+            TlvValue::DestAddrNpCountry(value) => value.encode(dst),
+            TlvValue::DestAddrNpInformation(value) => value.encode(dst),
+            TlvValue::DestAddrNpResolution(value) => value.encode(dst),
+            TlvValue::DestAddrSubunit(value) => value.encode(dst),
+            TlvValue::DestBearerType(value) => value.encode(dst),
+            TlvValue::DestNetworkId(value) => value.encode(dst),
+            TlvValue::DestNetworkType(value) => value.encode(dst),
+            TlvValue::DestNodeId(value) => value.encode(dst),
+            TlvValue::DestSubaddress(value) => value.encode(dst),
+            TlvValue::DestTelematicsId(value) => value.encode(dst),
+            TlvValue::DestPort(value) => value.encode(dst),
+            TlvValue::DisplayTime(value) => value.encode(dst),
+            TlvValue::DpfResult(value) => value.encode(dst),
+            TlvValue::ItsReplyType(value) => value.encode(dst),
+            TlvValue::ItsSessionInfo(value) => value.encode(dst),
+            TlvValue::LanguageIndicator(value) => value.encode(dst),
+            TlvValue::MessagePayload(value) => value.encode(dst),
+            TlvValue::MessageState(value) => value.encode(dst),
+            TlvValue::MoreMessagesToSend(value) => value.encode(dst),
+            TlvValue::MsAvailabilityStatus(value) => value.encode(dst),
+            TlvValue::MsMsgWaitFacilities(value) => value.encode(dst),
+            TlvValue::MsValidity(value) => value.encode(dst),
+            TlvValue::NetworkErrorCode(value) => value.encode(dst),
+            TlvValue::NumberOfMessages(value) => value.encode(dst),
+            TlvValue::PayloadType(value) => value.encode(dst),
+            TlvValue::PrivacyIndicator(value) => value.encode(dst),
+            TlvValue::QosTimeToLive(value) => value.encode(dst),
+            TlvValue::ReceiptedMessageId(value) => value.encode(dst),
+            TlvValue::SarMsgRefNum(value) => value.encode(dst),
+            TlvValue::SarSegmentSeqnum(value) => value.encode(dst),
+            TlvValue::SarTotalSegments(value) => value.encode(dst),
+            TlvValue::ScInterfaceVersion(value) => value.encode(dst),
+            TlvValue::SetDpf(value) => value.encode(dst),
+            TlvValue::SmsSignal(value) => value.encode(dst),
+            TlvValue::SourceAddrSubunit(value) => value.encode(dst),
+            TlvValue::SourceBearerType(value) => value.encode(dst),
+            TlvValue::SourceNetworkId(value) => value.encode(dst),
+            TlvValue::SourceNetworkType(value) => value.encode(dst),
+            TlvValue::SourceNodeId(value) => value.encode(dst),
+            TlvValue::SourcePort(value) => value.encode(dst),
+            TlvValue::SourceSubaddress(value) => value.encode(dst),
+            TlvValue::SourceTelematicsId(value) => value.encode(dst),
+            TlvValue::UserMessageReference(value) => value.encode(dst),
+            TlvValue::UserResponseCode(value) => value.encode(dst),
+            TlvValue::UssdServiceOp(value) => value.encode(dst),
+            TlvValue::Other { value, .. } => value.encode(dst),
+        }
+    }
+}
+
+impl crate::encode::owned::Encode for TlvValue {
+    fn encode(&self, dst: &mut bytes::BytesMut) {
         match self {
             TlvValue::AdditionalStatusInfoText(value) => value.encode(dst),
             TlvValue::AlertOnMessageDelivery(value) => value.encode(dst),
@@ -337,7 +411,11 @@ impl Encode for TlvValue {
 impl DecodeWithKey for TlvValue {
     type Key = TlvTag;
 
-    fn decode(key: Self::Key, src: &[u8], length: usize) -> Result<(Self, usize), DecodeError> {
+    fn decode(
+        key: Self::Key,
+        src: &mut BytesMut,
+        length: usize,
+    ) -> Result<(Self, usize), DecodeError> {
         let (value, size) = match key {
             TlvTag::AdditionalStatusInfoText => {
                 Decode::decode(src).map_decoded(Self::AdditionalStatusInfoText)?

@@ -269,14 +269,14 @@ mod tests {
                     .source_addr_npi(Npi::Isdn)
                     .source_addr(COctetString::from_str("Source Addr").unwrap())
                     .schedule_delivery_time(
-                        EmptyOrFullCOctetString::new(b"2023-10-01T12:00\0".to_vec()).unwrap(),
+                        EmptyOrFullCOctetString::from_static_slice(b"2023-10-01T12:00\0").unwrap(),
                     )
                     .validity_period(
-                        EmptyOrFullCOctetString::new(b"2023-10-01T12:00\0".to_vec()).unwrap()
+                        EmptyOrFullCOctetString::from_static_slice(b"2023-10-01T12:00\0").unwrap()
                     )
                     .registered_delivery(RegisteredDelivery::default())
                     .sm_default_msg_id(0)
-                    .short_message(OctetString::new(b"Short Message".to_vec()).unwrap())
+                    .short_message(OctetString::from_static_slice(b"Short Message").unwrap())
                     .build(),
                 Self::builder()
                     .message_id(COctetString::from_str("123456789012345678901234").unwrap())
@@ -284,25 +284,25 @@ mod tests {
                     .source_addr_npi(Npi::Isdn)
                     .source_addr(COctetString::from_str("Source Addr").unwrap())
                     .schedule_delivery_time(
-                        EmptyOrFullCOctetString::new(b"2023-10-01T12:00\0".to_vec()).unwrap(),
+                        EmptyOrFullCOctetString::from_static_slice(b"2023-10-01T12:00\0").unwrap(),
                     )
                     .validity_period(
-                        EmptyOrFullCOctetString::new(b"2023-10-01T12:00\0".to_vec()).unwrap()
+                        EmptyOrFullCOctetString::from_static_slice(b"2023-10-01T12:00\0").unwrap()
                     )
                     .registered_delivery(RegisteredDelivery::default())
                     .sm_default_msg_id(0)
-                    .message_payload(Some(MessagePayload::new(AnyOctetString::new(
-                        b"Message Payload".to_vec(),
-                    ))))
+                    .message_payload(Some(MessagePayload::new(
+                        AnyOctetString::from_static_slice(b"Message Payload",)
+                    )))
                     .build(),
                 Self::builder()
                     .validity_period(
-                        EmptyOrFullCOctetString::new(b"2023-10-01T12:00\0".to_vec()).unwrap()
+                        EmptyOrFullCOctetString::from_static_slice(b"2023-10-01T12:00\0").unwrap()
                     )
-                    .short_message(OctetString::new(b"Short Message".to_vec()).unwrap())
-                    .message_payload(Some(MessagePayload::new(AnyOctetString::new(
-                        b"Message Payload".to_vec(),
-                    ))))
+                    .short_message(OctetString::from_static_slice(b"Short Message").unwrap())
+                    .message_payload(Some(MessagePayload::new(
+                        AnyOctetString::from_static_slice(b"Message Payload",)
+                    )))
                     .build(),
             ]
         }
@@ -310,12 +310,13 @@ mod tests {
 
     #[test]
     fn encode_decode() {
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_with_length_test_instances::<ReplaceSm>();
     }
 
     #[test]
     fn short_message_length() {
-        let short_message = OctetString::new(b"Short Message".to_vec()).unwrap();
+        let short_message = OctetString::from_static_slice(b"Short Message").unwrap();
 
         let submit_sm = ReplaceSm::builder()
             .short_message(short_message.clone())
@@ -327,8 +328,8 @@ mod tests {
 
     #[test]
     fn short_message_override() {
-        let short_message_1 = OctetString::new(b"Short Message 101".to_vec()).unwrap();
-        let short_message_2 = OctetString::new(b"Short Message 2".to_vec()).unwrap();
+        let short_message_1 = OctetString::from_static_slice(b"Short Message 101").unwrap();
+        let short_message_2 = OctetString::from_static_slice(b"Short Message 2").unwrap();
 
         let submit_sm = ReplaceSm::builder()
             .short_message(short_message_1)
@@ -341,8 +342,9 @@ mod tests {
 
     #[test]
     fn message_payload_suppresses_short_message() {
-        let short_message = OctetString::new(b"Short Message".to_vec()).unwrap();
-        let message_payload = MessagePayload::new(AnyOctetString::new(b"Message Payload".to_vec()));
+        let short_message = OctetString::from_static_slice(b"Short Message").unwrap();
+        let message_payload =
+            MessagePayload::new(AnyOctetString::from_static_slice(b"Message Payload"));
 
         // Using push_tlv
         let replace_sm = ReplaceSm::builder()

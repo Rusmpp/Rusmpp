@@ -348,7 +348,7 @@ impl TryFrom<g::Subaddress> for Subaddress {
     fn try_from(value: g::Subaddress) -> Result<Self, Self::Error> {
         Ok(Self {
             tag: value.tag.into(),
-            addr: OctetString::new(value.addr).map_value_err("addr")?,
+            addr: OctetString::from_vec(value.addr).map_value_err("addr")?,
         })
     }
 }
@@ -573,30 +573,30 @@ impl TryFrom<g::MessageSubmissionRequestTlvValue> for MessageSubmissionRequestTl
         let value = match value {
             GValue::AlertOnMessageDelivery(value) => Self::AlertOnMessageDelivery(value.into()),
             GValue::BillingIdentification(value) => Self::BillingIdentification(
-                OctetString::new(value).map_value_err("billing_identification")?,
+                OctetString::from_vec(value).map_value_err("billing_identification")?,
             ),
             GValue::CallbackNum(value) => {
-                Self::CallbackNum(OctetString::new(value).map_value_err("callback_num")?)
+                Self::CallbackNum(OctetString::from_vec(value).map_value_err("callback_num")?)
             }
-            GValue::CallbackNumAtag(value) => {
-                Self::CallbackNumAtag(OctetString::new(value).map_value_err("callback_num_atag")?)
-            }
+            GValue::CallbackNumAtag(value) => Self::CallbackNumAtag(
+                OctetString::from_vec(value).map_value_err("callback_num_atag")?,
+            ),
             GValue::CallbackNumPresInd(value) => Self::CallbackNumPresInd(value.into()),
             GValue::DestAddrNpCountry(value) => Self::DestAddrNpCountry(
-                OctetString::new(value).map_value_err("dest_addr_np_country")?,
+                OctetString::from_vec(value).map_value_err("dest_addr_np_country")?,
             ),
             GValue::DestAddrNpInformation(value) => Self::DestAddrNpInformation(
-                OctetString::new(value).map_value_err("dest_addr_np_information")?,
+                OctetString::from_vec(value).map_value_err("dest_addr_np_information")?,
             ),
             GValue::DestAddrNpResolution(value) => Self::DestAddrNpResolution(value.into()),
             GValue::DestAddrSubunit(value) => Self::DestAddrSubunit(value.into()),
             GValue::DestBearerType(value) => Self::DestBearerType(value.into()),
             GValue::DestNetworkId(value) => {
-                Self::DestNetworkId(COctetString::new(value).map_value_err("dest_network_id")?)
+                Self::DestNetworkId(COctetString::from_vec(value).map_value_err("dest_network_id")?)
             }
             GValue::DestNetworkType(value) => Self::DestNetworkType(value.into()),
             GValue::DestNodeId(value) => {
-                Self::DestNodeId(OctetString::new(value).map_value_err("dest_node_id")?)
+                Self::DestNodeId(OctetString::from_vec(value).map_value_err("dest_node_id")?)
             }
             GValue::DestSubaddress(value) => {
                 Self::DestSubaddress(value.try_into().map_value_err("dest_subaddress")?)
@@ -622,12 +622,12 @@ impl TryFrom<g::MessageSubmissionRequestTlvValue> for MessageSubmissionRequestTl
             GValue::SmsSignal(value) => Self::SmsSignal(value),
             GValue::SourceAddrSubunit(value) => Self::SourceAddrSubunit(value.into()),
             GValue::SourceBearerType(value) => Self::SourceBearerType(value.into()),
-            GValue::SourceNetworkId(value) => {
-                Self::SourceNetworkId(COctetString::new(value).map_value_err("source_network_id")?)
-            }
+            GValue::SourceNetworkId(value) => Self::SourceNetworkId(
+                COctetString::from_vec(value).map_value_err("source_network_id")?,
+            ),
             GValue::SourceNetworkType(value) => Self::SourceNetworkType(value.into()),
             GValue::SourceNodeId(value) => {
-                Self::SourceNodeId(OctetString::new(value).map_value_err("source_node_id")?)
+                Self::SourceNodeId(OctetString::from_vec(value).map_value_err("source_node_id")?)
             }
             GValue::SourcePort(value) => Self::SourcePort(value),
             GValue::SourceSubaddress(value) => {

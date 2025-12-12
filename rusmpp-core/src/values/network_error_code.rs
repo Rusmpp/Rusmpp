@@ -42,8 +42,10 @@ mod tests {
 
     #[test]
     fn encode_decode() {
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<NetworkErrorCode>();
         crate::tests::borrowed::encode_decode_test_instances::<NetworkErrorCode>();
+        #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<ErrorCodeNetworkType>();
         crate::tests::borrowed::encode_decode_test_instances::<ErrorCodeNetworkType>();
     }
