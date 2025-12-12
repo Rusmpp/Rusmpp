@@ -1,6 +1,7 @@
 use rusmpp::{
-    tlvs::{MessageSubmissionRequestTlvValue, TlvTag},
-    types::{COctetString, OctetString},
+    pdus::SubmitSm,
+    tlvs::{MessageSubmissionRequestTlvValue, TlvTag, TlvValue},
+    types::{COctetString, EmptyOrFullCOctetString, OctetString},
     values::*,
     CommandStatus,
 };
@@ -564,6 +565,381 @@ impl From<g::UssdServiceOp> for UssdServiceOp {
     }
 }
 
+impl From<g::BroadcastAreaFormat> for BroadcastAreaFormat {
+    fn from(value: g::BroadcastAreaFormat) -> Self {
+        match value {
+            g::BroadcastAreaFormat::AliasName() => Self::AliasName,
+            g::BroadcastAreaFormat::EllipsoidArc() => Self::EllipsoidArc,
+            g::BroadcastAreaFormat::Polygon() => Self::Polygon,
+            g::BroadcastAreaFormat::Other(value) => Self::Other(value),
+        }
+    }
+}
+
+impl From<g::BroadcastAreaIdentifier> for BroadcastAreaIdentifier {
+    fn from(value: g::BroadcastAreaIdentifier) -> Self {
+        Self::new(value.format.into(), value.area.into())
+    }
+}
+
+impl From<g::BroadcastAreaSuccess> for BroadcastAreaSuccess {
+    fn from(value: g::BroadcastAreaSuccess) -> Self {
+        match value {
+            g::BroadcastAreaSuccess::InformationNotAvailable() => Self::InformationNotAvailable,
+            g::BroadcastAreaSuccess::ZeroToHundred(value) => Self::ZeroToHundred(value),
+            g::BroadcastAreaSuccess::Other(value) => Self::Other(value),
+        }
+    }
+}
+
+impl From<g::BroadcastChannelIndicator> for BroadcastChannelIndicator {
+    fn from(value: g::BroadcastChannelIndicator) -> Self {
+        match value {
+            g::BroadcastChannelIndicator::Basic() => Self::Basic,
+            g::BroadcastChannelIndicator::Extended() => Self::Extended,
+            g::BroadcastChannelIndicator::Other(value) => Self::Other(value),
+        }
+    }
+}
+
+impl From<g::TypeOfNetwork> for TypeOfNetwork {
+    fn from(value: g::TypeOfNetwork) -> Self {
+        match value {
+            g::TypeOfNetwork::Generic() => Self::Generic,
+            g::TypeOfNetwork::Gsm() => Self::Gsm,
+            g::TypeOfNetwork::Tdma() => Self::Tdma,
+            g::TypeOfNetwork::Cdma() => Self::Cdma,
+            g::TypeOfNetwork::Other(value) => Self::Other(value),
+        }
+    }
+}
+
+impl From<g::EncodingContentType> for EncodingContentType {
+    fn from(value: g::EncodingContentType) -> Self {
+        match value {
+            g::EncodingContentType::Index() => Self::Index,
+            g::EncodingContentType::EmergencyBroadcasts() => Self::EmergencyBroadcasts,
+            g::EncodingContentType::IrdbDownload() => Self::IrdbDownload,
+            g::EncodingContentType::NewsFlashes() => Self::NewsFlashes,
+            g::EncodingContentType::GeneralNewsLocal() => Self::GeneralNewsLocal,
+            g::EncodingContentType::GeneralNewsRegional() => Self::GeneralNewsRegional,
+            g::EncodingContentType::GeneralNewsNational() => Self::GeneralNewsNational,
+            g::EncodingContentType::GeneralNewsInternational() => Self::GeneralNewsInternational,
+            g::EncodingContentType::BusinessFinancialNewsLocal() => {
+                Self::BusinessFinancialNewsLocal
+            }
+            g::EncodingContentType::BusinessFinancialNewsRegional() => {
+                Self::BusinessFinancialNewsRegional
+            }
+            g::EncodingContentType::BusinessFinancialNewsNational() => {
+                Self::BusinessFinancialNewsNational
+            }
+            g::EncodingContentType::BusinessFinancialNewsInternational() => {
+                Self::BusinessFinancialNewsInternational
+            }
+            g::EncodingContentType::SportsNewsLocal() => Self::SportsNewsLocal,
+            g::EncodingContentType::SportsNewsRegional() => Self::SportsNewsRegional,
+            g::EncodingContentType::SportsNewsNational() => Self::SportsNewsNational,
+            g::EncodingContentType::SportsNewsInternational() => Self::SportsNewsInternational,
+            g::EncodingContentType::EntertainmentNewsLocal() => Self::EntertainmentNewsLocal,
+            g::EncodingContentType::EntertainmentNewsRegional() => Self::EntertainmentNewsRegional,
+            g::EncodingContentType::EntertainmentNewsNational() => Self::EntertainmentNewsNational,
+            g::EncodingContentType::EntertainmentNewsInternational() => {
+                Self::EntertainmentNewsInternational
+            }
+            g::EncodingContentType::MedicalHealthHospitals() => Self::MedicalHealthHospitals,
+            g::EncodingContentType::Doctors() => Self::Doctors,
+            g::EncodingContentType::Pharmacy() => Self::Pharmacy,
+            g::EncodingContentType::LocalTrafficRoadReports() => Self::LocalTrafficRoadReports,
+            g::EncodingContentType::LongDistanceTrafficRoadReports() => {
+                Self::LongDistanceTrafficRoadReports
+            }
+            g::EncodingContentType::Taxis() => Self::Taxis,
+            g::EncodingContentType::Weather() => Self::Weather,
+            g::EncodingContentType::LocalAirportFlightSchedules() => {
+                Self::LocalAirportFlightSchedules
+            }
+            g::EncodingContentType::Restaurants() => Self::Restaurants,
+            g::EncodingContentType::Lodgings() => Self::Lodgings,
+            g::EncodingContentType::RetailDirectory() => Self::RetailDirectory,
+            g::EncodingContentType::Advertisements() => Self::Advertisements,
+            g::EncodingContentType::StockQuotes() => Self::StockQuotes,
+            g::EncodingContentType::EmploymentOpportunities() => Self::EmploymentOpportunities,
+            g::EncodingContentType::TechnologyNews() => Self::TechnologyNews,
+            g::EncodingContentType::DistrictBaseStationInfo() => Self::DistrictBaseStationInfo,
+            g::EncodingContentType::NetworkInformation() => Self::NetworkInformation,
+            g::EncodingContentType::OperatorServices() => Self::OperatorServices,
+            g::EncodingContentType::DirectoryEnquiriesNational() => {
+                Self::DirectoryEnquiriesNational
+            }
+            g::EncodingContentType::DirectoryEnquiriesInternational() => {
+                Self::DirectoryEnquiriesInternational
+            }
+            g::EncodingContentType::CustomerCareNational() => Self::CustomerCareNational,
+            g::EncodingContentType::CustomerCareInternational() => Self::CustomerCareInternational,
+            g::EncodingContentType::LocalDateTimeTimeZone() => Self::LocalDateTimeTimeZone,
+            g::EncodingContentType::MultiCategoryServices() => Self::MultiCategoryServices,
+            g::EncodingContentType::Other(value) => Self::Other(value),
+        }
+    }
+}
+
+impl From<g::BroadcastContentType> for BroadcastContentType {
+    fn from(value: g::BroadcastContentType) -> Self {
+        Self::new(
+            value.type_of_network.into(),
+            value.encoding_content_type.into(),
+        )
+    }
+}
+
+impl From<g::UnitOfTime> for UnitOfTime {
+    fn from(value: g::UnitOfTime) -> Self {
+        match value {
+            g::UnitOfTime::AsFrequentlyAsPossible() => Self::AsFrequentlyAsPossible,
+            g::UnitOfTime::Seconds() => Self::Seconds,
+            g::UnitOfTime::Minutes() => Self::Minutes,
+            g::UnitOfTime::Hours() => Self::Hours,
+            g::UnitOfTime::Days() => Self::Days,
+            g::UnitOfTime::Weeks() => Self::Weeks,
+            g::UnitOfTime::Months() => Self::Months,
+            g::UnitOfTime::Years() => Self::Years,
+            g::UnitOfTime::Other(value) => Self::Other(value),
+        }
+    }
+}
+
+impl From<g::BroadcastFrequencyInterval> for BroadcastFrequencyInterval {
+    fn from(value: g::BroadcastFrequencyInterval) -> Self {
+        Self::new(value.unit.into(), value.value)
+    }
+}
+
+impl From<g::BroadcastMessageClass> for BroadcastMessageClass {
+    fn from(value: g::BroadcastMessageClass) -> Self {
+        match value {
+            g::BroadcastMessageClass::NoClassSpecified() => Self::NoClassSpecified,
+            g::BroadcastMessageClass::Class1() => Self::Class1,
+            g::BroadcastMessageClass::Class2() => Self::Class2,
+            g::BroadcastMessageClass::Class3() => Self::Class3,
+            g::BroadcastMessageClass::Other(value) => Self::Other(value),
+        }
+    }
+}
+
+impl From<g::BroadcastRepNum> for BroadcastRepNum {
+    fn from(value: g::BroadcastRepNum) -> Self {
+        Self::new(value.value)
+    }
+}
+
+impl From<g::CongestionState> for CongestionState {
+    fn from(value: g::CongestionState) -> Self {
+        match value {
+            g::CongestionState::Idle() => Self::Idle,
+            g::CongestionState::LowLoad(value) => Self::LowLoad(value),
+            g::CongestionState::MediumLoad(value) => Self::MediumLoad(value),
+            g::CongestionState::HighLoad(value) => Self::HighLoad(value),
+            g::CongestionState::OptimumLoad(value) => Self::OptimumLoad(value),
+            g::CongestionState::NearingCongestion(value) => Self::NearingCongestion(value),
+            g::CongestionState::Congested() => Self::Congested,
+            g::CongestionState::Other(value) => Self::Other(value),
+        }
+    }
+}
+
+impl From<g::DpfResult> for DpfResult {
+    fn from(value: g::DpfResult) -> Self {
+        match value {
+            g::DpfResult::NotSet() => Self::NotSet,
+            g::DpfResult::Set() => Self::Set,
+            g::DpfResult::Other(value) => Self::Other(value),
+        }
+    }
+}
+
+impl From<g::MessageState> for MessageState {
+    fn from(value: g::MessageState) -> Self {
+        match value {
+            g::MessageState::Scheduled() => Self::Scheduled,
+            g::MessageState::Enroute() => Self::Enroute,
+            g::MessageState::Delivered() => Self::Delivered,
+            g::MessageState::Expired() => Self::Expired,
+            g::MessageState::Deleted() => Self::Deleted,
+            g::MessageState::Undeliverable() => Self::Undeliverable,
+            g::MessageState::Accepted() => Self::Accepted,
+            g::MessageState::Unknown() => Self::Unknown,
+            g::MessageState::Rejected() => Self::Rejected,
+            g::MessageState::Skipped() => Self::Skipped,
+            g::MessageState::Other(value) => Self::Other(value),
+        }
+    }
+}
+
+impl From<g::DeliveryFailureReason> for DeliveryFailureReason {
+    fn from(value: g::DeliveryFailureReason) -> Self {
+        match value {
+            g::DeliveryFailureReason::DestinationUnavailable() => Self::DestinationUnavailable,
+            g::DeliveryFailureReason::DestinationAddressInvalid() => {
+                Self::DestinationAddressInvalid
+            }
+            g::DeliveryFailureReason::PermanentNetworkError() => Self::PermanentNetworkError,
+            g::DeliveryFailureReason::TemporaryNetworkError() => Self::TemporaryNetworkError,
+            g::DeliveryFailureReason::Other(value) => Self::Other(value),
+        }
+    }
+}
+
+impl From<g::MsAvailabilityStatus> for MsAvailabilityStatus {
+    fn from(value: g::MsAvailabilityStatus) -> Self {
+        match value {
+            g::MsAvailabilityStatus::Available() => Self::Available,
+            g::MsAvailabilityStatus::Denied() => Self::Denied,
+            g::MsAvailabilityStatus::Unavailable() => Self::Unavailable,
+            g::MsAvailabilityStatus::Other(value) => Self::Other(value),
+        }
+    }
+}
+
+impl From<g::ErrorCodeNetworkType> for ErrorCodeNetworkType {
+    fn from(value: g::ErrorCodeNetworkType) -> Self {
+        match value {
+            g::ErrorCodeNetworkType::Ansi136AccessDeniedReason() => Self::Ansi136AccessDeniedReason,
+            g::ErrorCodeNetworkType::Is95AccessDeniedReason() => Self::Is95AccessDeniedReason,
+            g::ErrorCodeNetworkType::Gsm() => Self::Gsm,
+            g::ErrorCodeNetworkType::Ansi136CauseCode() => Self::Ansi136CauseCode,
+            g::ErrorCodeNetworkType::Is95CauseCode() => Self::Is95CauseCode,
+            g::ErrorCodeNetworkType::Ansi41Error() => Self::Ansi41Error,
+            g::ErrorCodeNetworkType::SmppError() => Self::SmppError,
+            g::ErrorCodeNetworkType::MessageCenterSpecific() => Self::MessageCenterSpecific,
+            g::ErrorCodeNetworkType::Other(value) => Self::Other(value),
+        }
+    }
+}
+
+impl From<g::NetworkErrorCode> for NetworkErrorCode {
+    fn from(value: g::NetworkErrorCode) -> Self {
+        Self::new(value.network_type.into(), value.error_code)
+    }
+}
+
+impl TryFrom<g::TlvValue> for TlvValue {
+    type Error = Exception;
+
+    fn try_from(value: g::TlvValue) -> Result<Self, Self::Error> {
+        use g::TlvValue as GValue;
+
+        let value = match value {
+            GValue::AlertOnMessageDelivery(value) => Self::AlertOnMessageDelivery(value.into()),
+            GValue::BillingIdentification(value) => Self::BillingIdentification(
+                OctetString::from_vec(value).map_value_err("billing_identification")?,
+            ),
+            GValue::CallbackNum(value) => {
+                Self::CallbackNum(OctetString::from_vec(value).map_value_err("callback_num")?)
+            }
+            GValue::CallbackNumAtag(value) => Self::CallbackNumAtag(
+                OctetString::from_vec(value).map_value_err("callback_num_atag")?,
+            ),
+            GValue::CallbackNumPresInd(value) => Self::CallbackNumPresInd(value.into()),
+            GValue::DestAddrNpCountry(value) => Self::DestAddrNpCountry(
+                OctetString::from_vec(value).map_value_err("dest_addr_np_country")?,
+            ),
+            GValue::DestAddrNpInformation(value) => Self::DestAddrNpInformation(
+                OctetString::from_vec(value).map_value_err("dest_addr_np_information")?,
+            ),
+            GValue::DestAddrNpResolution(value) => Self::DestAddrNpResolution(value.into()),
+            GValue::DestAddrSubunit(value) => Self::DestAddrSubunit(value.into()),
+            GValue::DestBearerType(value) => Self::DestBearerType(value.into()),
+            GValue::DestNetworkId(value) => {
+                Self::DestNetworkId(COctetString::from_vec(value).map_value_err("dest_network_id")?)
+            }
+            GValue::DestNetworkType(value) => Self::DestNetworkType(value.into()),
+            GValue::DestNodeId(value) => {
+                Self::DestNodeId(OctetString::from_vec(value).map_value_err("dest_node_id")?)
+            }
+            GValue::DestSubaddress(value) => {
+                Self::DestSubaddress(value.try_into().map_value_err("dest_subaddress")?)
+            }
+            GValue::DestTelematicsId(value) => Self::DestTelematicsId(value),
+            GValue::DestPort(value) => Self::DestPort(value),
+            GValue::DisplayTime(value) => Self::DisplayTime(value.into()),
+            GValue::ItsReplyType(value) => Self::ItsReplyType(value.into()),
+            GValue::ItsSessionInfo(value) => Self::ItsSessionInfo(value.into()),
+            GValue::LanguageIndicator(value) => Self::LanguageIndicator(value.into()),
+            GValue::MessagePayload(value) => Self::MessagePayload(value.into()),
+            GValue::MoreMessagesToSend(value) => Self::MoreMessagesToSend(value.into()),
+            GValue::MsMsgWaitFacilities(value) => Self::MsMsgWaitFacilities(value.into()),
+            GValue::MsValidity(value) => Self::MsValidity(value.into()),
+            GValue::NumberOfMessages(value) => Self::NumberOfMessages(value.into()),
+            GValue::PayloadType(value) => Self::PayloadType(value.into()),
+            GValue::PrivacyIndicator(value) => Self::PrivacyIndicator(value.into()),
+            GValue::QosTimeToLive(value) => Self::QosTimeToLive(value),
+            GValue::SarMsgRefNum(value) => Self::SarMsgRefNum(value),
+            GValue::SarSegmentSeqnum(value) => Self::SarSegmentSeqnum(value),
+            GValue::SarTotalSegments(value) => Self::SarTotalSegments(value),
+            GValue::SetDpf(value) => Self::SetDpf(value.into()),
+            GValue::SmsSignal(value) => Self::SmsSignal(value),
+            GValue::SourceAddrSubunit(value) => Self::SourceAddrSubunit(value.into()),
+            GValue::SourceBearerType(value) => Self::SourceBearerType(value.into()),
+            GValue::SourceNetworkId(value) => Self::SourceNetworkId(
+                COctetString::from_vec(value).map_value_err("source_network_id")?,
+            ),
+            GValue::SourceNetworkType(value) => Self::SourceNetworkType(value.into()),
+            GValue::SourceNodeId(value) => {
+                Self::SourceNodeId(OctetString::from_vec(value).map_value_err("source_node_id")?)
+            }
+            GValue::SourcePort(value) => Self::SourcePort(value),
+            GValue::SourceSubaddress(value) => {
+                Self::SourceSubaddress(value.try_into().map_value_err("source_subaddress")?)
+            }
+            GValue::SourceTelematicsId(value) => Self::SourceTelematicsId(value),
+            GValue::UserMessageReference(value) => Self::UserMessageReference(value.into()),
+            GValue::UserResponseCode(value) => Self::UserResponseCode(value),
+            GValue::UssdServiceOp(value) => Self::UssdServiceOp(value.into()),
+            GValue::AdditionalStatusInfoText(value) => Self::AdditionalStatusInfoText(
+                COctetString::from_vec(value).map_value_err("additional_status_info_text")?,
+            ),
+            GValue::BroadcastAreaIdentifier(value) => Self::BroadcastAreaIdentifier(value.into()),
+            GValue::BroadcastAreaSuccess(value) => Self::BroadcastAreaSuccess(value.into()),
+            GValue::BroadcastContentTypeInfo(value) => Self::BroadcastContentTypeInfo(
+                OctetString::from_vec(value).map_value_err("broadcast_content_type_info")?,
+            ),
+            GValue::BroadcastChannelIndicator(value) => {
+                Self::BroadcastChannelIndicator(value.into())
+            }
+            GValue::BroadcastContentType(value) => Self::BroadcastContentType(value.into()),
+            GValue::BroadcastEndTime(value) => Self::BroadcastEndTime(
+                OctetString::from_vec(value).map_value_err("broadcast_end_time")?,
+            ),
+            GValue::BroadcastErrorStatus(value) => Self::BroadcastErrorStatus(value.into()),
+            GValue::BroadcastFrequencyInterval(value) => {
+                Self::BroadcastFrequencyInterval(value.into())
+            }
+            GValue::BroadcastMessageClass(value) => Self::BroadcastMessageClass(value.into()),
+            GValue::BroadcastRepNum(value) => Self::BroadcastRepNum(value.into()),
+            GValue::BroadcastServiceGroup(value) => Self::BroadcastServiceGroup(
+                OctetString::from_vec(value).map_value_err("broadcast_service_group")?,
+            ),
+            GValue::CongestionState(value) => Self::CongestionState(value.into()),
+            GValue::DeliveryFailureReason(value) => Self::DeliveryFailureReason(value.into()),
+            GValue::DpfResult(value) => Self::DpfResult(value.into()),
+            GValue::MessageState(value) => Self::MessageState(value.into()),
+            GValue::MsAvailabilityStatus(value) => Self::MsAvailabilityStatus(value.into()),
+            GValue::NetworkErrorCode(value) => Self::NetworkErrorCode(value.into()),
+            GValue::ReceiptedMessageId(value) => Self::ReceiptedMessageId(
+                COctetString::from_vec(value).map_value_err("receipted_message_id")?,
+            ),
+            GValue::ScInterfaceVersion(value) => Self::ScInterfaceVersion(value.into()),
+            GValue::Other { tag, value } => Self::Other {
+                tag: tag.into(),
+                value: value.into(),
+            },
+        };
+
+        Ok(value)
+    }
+}
+
 impl TryFrom<g::MessageSubmissionRequestTlvValue> for MessageSubmissionRequestTlvValue {
     type Error = Exception;
 
@@ -778,5 +1154,90 @@ impl From<g::IntermediateNotification> for IntermediateNotification {
             }
             g::IntermediateNotification::Other(value) => Self::Other(value),
         }
+    }
+}
+
+impl TryFrom<g::ServiceType> for ServiceType {
+    type Error = Exception;
+
+    fn try_from(value: g::ServiceType) -> Result<Self, Self::Error> {
+        Ok(Self::new(
+            COctetString::from_vec(value.value).map_value_err("value")?,
+        ))
+    }
+}
+
+impl From<g::PriorityFlag> for PriorityFlag {
+    fn from(value: g::PriorityFlag) -> Self {
+        Self::new(value.value)
+    }
+}
+
+impl TryFrom<g::Tlv> for MessageSubmissionRequestTlvValue {
+    type Error = Exception;
+
+    fn try_from(value: g::Tlv) -> Result<Self, Self::Error> {
+        let value = match value.value {
+            Some(value) => {
+                let value = TlvValue::try_from(value).map_value_err("tlv.value")?;
+
+                match MessageSubmissionRequestTlvValue::from_tlv_value(value) {
+                    Some(value) => value,
+                    None => {
+                        return Err(Exception::Value {
+                            name: String::from("tlv.value"),
+                            error: String::from(
+                                "TLV value is not valid for MessageSubmissionRequestTlvValue",
+                            ),
+                        })
+                    }
+                }
+            }
+            None => {
+                return Err(Exception::Value {
+                    name: String::from("tlv.value"),
+                    error: String::from("TLV value is missing"),
+                })
+            }
+        };
+
+        Ok(value)
+    }
+}
+
+impl TryFrom<g::SubmitSm> for SubmitSm {
+    type Error = Exception;
+
+    fn try_from(value: g::SubmitSm) -> Result<Self, Self::Error> {
+        Ok(Self::new(
+            value
+                .service_type
+                .try_into()
+                .map_value_err("service_type")?,
+            value.source_addr_ton.into(),
+            value.source_addr_npi.into(),
+            COctetString::from_vec(value.source_addr).map_value_err("source_addr")?,
+            value.dest_addr_ton.into(),
+            value.dest_addr_npi.into(),
+            COctetString::from_vec(value.destination_addr).map_value_err("destination_addr")?,
+            value.esm_class.into(),
+            value.protocol_id,
+            value.priority_flag.into(),
+            EmptyOrFullCOctetString::from_vec(value.schedule_delivery_time)
+                .map_value_err("schedule_delivery_time")?,
+            EmptyOrFullCOctetString::from_vec(value.validity_period)
+                .map_value_err("validity_period")?,
+            value.registered_delivery.into(),
+            value.replace_if_present_flag.into(),
+            value.data_coding.into(),
+            value.sm_default_msg_id,
+            OctetString::from_vec(value.short_message).map_value_err("short_message")?,
+            value
+                .tlvs
+                .into_iter()
+                .map(MessageSubmissionRequestTlvValue::try_from)
+                .collect::<Result<Vec<_>, _>>()
+                .map_value_err("tlvs")?,
+        ))
     }
 }

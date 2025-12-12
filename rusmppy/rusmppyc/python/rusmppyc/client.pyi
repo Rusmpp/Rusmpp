@@ -1,6 +1,6 @@
 import asyncio
 import builtins
-from typing import Optional
+from typing import Optional, List, overload
 
 from .events import Events
 from .rusmppyc import (
@@ -13,6 +13,7 @@ from .rusmppyc import (
     InterfaceVersion,
     MessageSubmissionRequestTlvValue,
     Npi,
+    SubmitSm,
     SubmitSmResp,
     Ton,
     ReplaceIfPresentFlag,
@@ -106,6 +107,7 @@ class Client:
         ...     client, events = await Client.connect("smpps://localhost:2775")
         """
         ...
+
     @classmethod
     async def connected(
         cls,
@@ -157,6 +159,7 @@ class Client:
             A tuple containing the connected client object and the event stream.
         """
         ...
+
     async def bind_transmitter(
         self,
         system_id: builtins.str = "",
@@ -201,6 +204,7 @@ class Client:
         RusmppycException
         """
         ...
+
     async def bind_receiver(
         self,
         system_id: builtins.str = "",
@@ -245,6 +249,7 @@ class Client:
         RusmppycException
         """
         ...
+
     async def bind_transceiver(
         self,
         system_id: builtins.str = "",
@@ -289,8 +294,11 @@ class Client:
         RusmppycException
         """
         ...
+
+    @overload
     async def submit_sm(
         self,
+        *,
         service_type: builtins.str = "",
         source_addr_ton: Ton = Ton.Unknown(),
         source_addr_npi: Npi = Npi.Unknown(),
@@ -365,6 +373,17 @@ class Client:
         RusmppycException
         """
         ...
+
+    # TODO: docs
+    @overload
+    async def submit_sm(
+        self,
+        submit_sm: SubmitSm,
+        status: CommandStatus = CommandStatus.EsmeRok(),
+    ) -> SubmitSmResp:
+        """"""
+        ...
+
     async def deliver_sm_resp(
         self,
         sequence_number: builtins.int,
@@ -394,6 +413,7 @@ class Client:
         RusmppycException
         """
         ...
+
     async def unbind(self) -> None:
         """
         Sends an ``Unbind`` command to the server and wait for a successful ``UnbindResp``.
@@ -407,6 +427,7 @@ class Client:
         RusmppycException
         """
         ...
+
     async def unbind_resp(
         self,
         sequence_number: builtins.int,
@@ -432,6 +453,7 @@ class Client:
         RusmppycException
         """
         ...
+
     async def generic_nack(
         self,
         sequence_number: builtins.int,
@@ -473,6 +495,7 @@ class Client:
             If an error occurs while closing the connection.
         """
         ...
+
     async def closed(self) -> None:
         """
         Waits until the connection to the SMPP server is fully closed.
@@ -482,6 +505,7 @@ class Client:
         associated resources.
         """
         ...
+
     def is_closed(self) -> bool:
         """
         Checks whether the connection to the SMPP server is closed.
@@ -501,6 +525,7 @@ class Client:
         is_active : Check if the connection is currently active.
         """
         ...
+
     def is_active(self) -> bool:
         """
         Checks whether the connection to the SMPP server is active.
@@ -525,4 +550,31 @@ class Client:
         --------
         is_closed : Check if the connection is fully closed.
         """
+        ...
+
+    # TODO: docs, short_message is str and not optional. there is no data coding or esm class
+    def submit_sm_multipart(
+        cls,
+        short_message: builtins.str,
+        max_short_message_size: builtins.int = 140,
+        reference: builtins.int = 0,
+        service_type: builtins.str = "",
+        source_addr_ton: Ton = Ton.Unknown(),
+        source_addr_npi: Npi = Npi.Unknown(),
+        source_addr: builtins.str = "",
+        dest_addr_ton: Ton = Ton.Unknown(),
+        dest_addr_npi: Npi = Npi.Unknown(),
+        destination_addr: builtins.str = "",
+        esm_class: EsmClass = EsmClass.default(),
+        protocol_id: builtins.int = 0,
+        priority_flag: builtins.int = 0,
+        schedule_delivery_time: builtins.str = "",
+        validity_period: builtins.str = "",
+        registered_delivery: RegisteredDelivery = RegisteredDelivery.default(),
+        replace_if_present_flag: ReplaceIfPresentFlag = ReplaceIfPresentFlag.DoNotReplace(),
+        data_coding: DataCoding = DataCoding.McSpecific(),
+        sm_default_msg_id: builtins.int = 0,
+        tlvs: builtins.list[MessageSubmissionRequestTlvValue] = [],
+    ) -> List[SubmitSm]:
+        """"""
         ...
