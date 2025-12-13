@@ -18,6 +18,8 @@ from .rusmppyc import (
     Ton,
     ReplaceIfPresentFlag,
     RegisteredDelivery,
+    Encoder,
+    Gsm7BitUnpacked,
 )
 
 __all__ = ["Client"]
@@ -553,11 +555,13 @@ class Client:
         ...
 
     # TODO: docs, short_message is str and not optional. there is no data coding
+    @classmethod
     def submit_sm_multipart(
         cls,
         short_message: builtins.str,
         max_short_message_size: builtins.int = 140,
         reference: builtins.int = 0,
+        encoder: Encoder = Encoder.Gsm7BitUnpacked(Gsm7BitUnpacked.default()),
         service_type: builtins.str = "",
         source_addr_ton: Ton = Ton.Unknown(),
         source_addr_npi: Npi = Npi.Unknown(),
@@ -575,5 +579,31 @@ class Client:
         sm_default_msg_id: builtins.int = 0,
         tlvs: builtins.list[MessageSubmissionRequestTlvValue] = [],
     ) -> List[SubmitSm]:
+        """"""
+        ...
+
+    # TODO: docs, short_message is str and not optional. there is no data coding
+    @classmethod
+    def submit_sm_encode(
+        cls,
+        short_message: builtins.str,
+        encoder: Encoder = Encoder.Gsm7BitUnpacked(Gsm7BitUnpacked.default()),
+        service_type: builtins.str = "",
+        source_addr_ton: Ton = Ton.Unknown(),
+        source_addr_npi: Npi = Npi.Unknown(),
+        source_addr: builtins.str = "",
+        dest_addr_ton: Ton = Ton.Unknown(),
+        dest_addr_npi: Npi = Npi.Unknown(),
+        destination_addr: builtins.str = "",
+        esm_class: EsmClass = EsmClass.default(),
+        protocol_id: builtins.int = 0,
+        priority_flag: builtins.int = 0,
+        schedule_delivery_time: builtins.str = "",
+        validity_period: builtins.str = "",
+        registered_delivery: RegisteredDelivery = RegisteredDelivery.default(),
+        replace_if_present_flag: ReplaceIfPresentFlag = ReplaceIfPresentFlag.DoNotReplace(),
+        sm_default_msg_id: builtins.int = 0,
+        tlvs: builtins.list[MessageSubmissionRequestTlvValue] = [],
+    ) -> SubmitSm:
         """"""
         ...

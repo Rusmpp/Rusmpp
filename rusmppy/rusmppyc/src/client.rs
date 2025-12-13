@@ -13,7 +13,7 @@ use futures::StreamExt;
 use pyo3::{pyclass, pymethods, types::PyType, Bound, Py, PyAny, PyResult, Python};
 use pyo3_async_runtimes::tokio::future_into_py;
 use rusmpp::{
-    extra::concatenation::SubmitSmMultipartExt,
+    extra::{concatenation::SubmitSmMultipartExt, encoding::EncodedSubmitSmExt},
     pdus::{BindReceiver, BindTransceiver, BindTransmitter, DeliverSmResp, SubmitSm},
     tlvs::MessageSubmissionRequestTlvValue,
     types::{COctetString, EmptyOrFullCOctetString, OctetString},
@@ -22,6 +22,7 @@ use rusmpp::{
 use rusmppc::ConnectionBuilder;
 
 use crate::{
+    encoder::{Encoder, Gsm7BitUnpacked},
     event::{Event, Events},
     exception::{Exception, ValueExceptionExt},
     io::IO,
@@ -486,6 +487,7 @@ impl Client {
         short_message=String::new(),
         max_short_message_size=140,
         reference=0,
+        encoder=Encoder::Gsm7BitUnpacked(Gsm7BitUnpacked::default_()),
         service_type=String::new(),
         source_addr_ton=crate::generated::Ton::Unknown(),
         source_addr_npi=crate::generated::Npi::Unknown(),
@@ -507,6 +509,7 @@ impl Client {
         short_message: String,
         max_short_message_size: usize,
         reference: u8,
+        encoder: Encoder,
         service_type: String,
         source_addr_ton: crate::generated::Ton,
         source_addr_npi: crate::generated::Npi,
@@ -563,10 +566,10 @@ impl Client {
 
         let multipart = pdu
             .multipart(&short_message)
-            .reference_u8(reference)
             .max_short_message_size(max_short_message_size)
+            .reference_u8(reference)
+            .encoder(encoder)
             .build()
-            // TODO: the encoder and the encoder exception
             // TODO: handle error properly
             .expect("TODO: remove this. Failed to create multipart")
             .into_iter()
@@ -574,5 +577,94 @@ impl Client {
             .collect();
 
         Ok(multipart)
+    }
+
+    #[classmethod]
+    #[pyo3(signature=(
+        short_message=String::new(),
+        encoder=Encoder::Gsm7BitUnpacked(Gsm7BitUnpacked::default_()),
+        service_type=String::new(),
+        source_addr_ton=crate::generated::Ton::Unknown(),
+        source_addr_npi=crate::generated::Npi::Unknown(),
+        source_addr=String::new(),
+        dest_addr_ton=crate::generated::Ton::Unknown(),
+        dest_addr_npi=crate::generated::Npi::Unknown(),
+        destination_addr=String::new(),
+        esm_class=crate::generated::EsmClass::default_(),
+        protocol_id=u8::default(),
+        priority_flag=u8::default(),
+        schedule_delivery_time=String::new(),
+        validity_period=String::new(),
+        registered_delivery=crate::generated::RegisteredDelivery::default_(),
+        replace_if_present_flag=crate::generated::ReplaceIfPresentFlag::DoNotReplace(),
+        sm_default_msg_id=u8::default(),
+        tlvs=Vec::new()))]
+    fn submit_sm_encode<'p>(
+        _cls: &'p Bound<'p, PyType>,
+        short_message: String,
+        encoder: Encoder,
+        service_type: String,
+        source_addr_ton: crate::generated::Ton,
+        source_addr_npi: crate::generated::Npi,
+        source_addr: String,
+        dest_addr_ton: crate::generated::Ton,
+        dest_addr_npi: crate::generated::Npi,
+        destination_addr: String,
+        esm_class: crate::generated::EsmClass,
+        protocol_id: u8,
+        priority_flag: u8,
+        schedule_delivery_time: String,
+        validity_period: String,
+        registered_delivery: crate::generated::RegisteredDelivery,
+        replace_if_present_flag: crate::generated::ReplaceIfPresentFlag,
+        sm_default_msg_id: u8,
+        tlvs: Vec<crate::generated::MessageSubmissionRequestTlvValue>,
+    ) -> PyResult<crate::generated::SubmitSm> {
+        let builder = SubmitSm::builder()
+            .service_type(ServiceType::new(
+                COctetString::from_string(service_type).map_value_err("service_type")?,
+            ))
+            .source_addr_ton(source_addr_ton.into())
+            .source_addr_npi(source_addr_npi.into())
+            .source_addr(COctetString::from_string(source_addr).map_value_err("source_addr")?)
+            .dest_addr_ton(dest_addr_ton.into())
+            .dest_addr_npi(dest_addr_npi.into())
+            .destination_addr(
+                COctetString::from_string(destination_addr).map_value_err("destination_addr")?,
+            )
+            .esm_class(esm_class.into())
+            .protocol_id(protocol_id)
+            .priority_flag(priority_flag.into())
+            .schedule_delivery_time(
+                EmptyOrFullCOctetString::from_string(schedule_delivery_time)
+                    .map_value_err("schedule_delivery_time")?,
+            )
+            .validity_period(
+                EmptyOrFullCOctetString::from_string(validity_period)
+                    .map_value_err("validity_period")?,
+            )
+            .registered_delivery(registered_delivery.into())
+            .replace_if_present_flag(replace_if_present_flag.into())
+            .sm_default_msg_id(sm_default_msg_id)
+            .tlvs(
+                tlvs.into_iter()
+                    .map(MessageSubmissionRequestTlvValue::try_from)
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_value_err("tlvs")?,
+            );
+
+        let pdu = builder.build();
+
+        tracing::debug!(?pdu, "Built Pdu");
+
+        let encoded = pdu
+            .encode(&short_message)
+            .encoder(encoder)
+            .build()
+            .map(From::from)
+            // TODO: handle error properly
+            .expect("TODO: remove this. Failed to encode message");
+
+        Ok(encoded)
     }
 }

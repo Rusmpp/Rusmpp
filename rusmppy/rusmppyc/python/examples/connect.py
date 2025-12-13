@@ -83,7 +83,7 @@ async def main():
             dest_addr_ton=Ton.International(),
             dest_addr_npi=Npi.National(),
             destination_addr="0987654321",
-            data_coding=DataCoding.Ucs2(),
+            data_coding=DataCoding.McSpecific(),
             esm_class=EsmClass(
                 message_type=MessageType.ShortMessageContainsMCDeliveryReceipt(),
                 gsm_features=GsmFeatures.NotSelected(),

@@ -9,8 +9,11 @@ from rusmppyc import (
     Event,
     Events,
     SubmitSmResp,
+    Gsm7BitAlphabet,
+    Gsm7BitUnpacked,
     Encoder,
-    Ucs2,
+    Ton,
+    Npi,
 )
 from rusmppyc.exceptions import RusmppycException
 
@@ -50,20 +53,29 @@ async def main():
 
         await client.bind_transceiver(system_id="test", password="test")
 
-        multipart: list[SubmitSm] = client.submit_sm_multipart(
-            short_message="Hi how are you?" * 20,
-            encoder=Encoder.Ucs2(Ucs2()),
+        # c-spell: disable
+        short_message = r"""Hello world!
+            @£$¥èéùìòÇØøÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà
+            ^{}\[~]|€"""
+        # c-spell: enable
+
+        # If the encoded message exceeds 140 bytes, the SubmitSm will not be split into multiple parts automatically.
+        # For this use case, use `submit_sm_multipart` method instead.
+        submit_sm: SubmitSm = client.submit_sm_encode(
+            short_message=short_message,
+            encoder=Encoder.Gsm7BitUnpacked(
+                Gsm7BitUnpacked(alphabet=Gsm7BitAlphabet.default())
+            ),
+            source_addr_ton=Ton.International(),
+            source_addr_npi=Npi.National(),
             registered_delivery=RegisteredDelivery.request_all(),
         )
 
-        logging.info(f"Multipart: {multipart}")
+        logging.info(f"Encoded SubmitSm: {submit_sm}")
 
-        for i, submit_sm in enumerate(multipart):
-            logging.info(f"Sending part {i + 1} of {len(multipart)}: {submit_sm}")
+        submit_sm_response: SubmitSmResp = await client.submit_sm(submit_sm)
 
-            submit_sm_resp: SubmitSmResp = await client.submit_sm(submit_sm)
-
-            logging.info(f"SubmitSm Response {i + 1}: {submit_sm_resp}")
+        logging.info(f"SubmitSm response: {submit_sm_response}")
 
         await asyncio.sleep(5)
 
