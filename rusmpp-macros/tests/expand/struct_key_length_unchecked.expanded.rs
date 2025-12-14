@@ -80,6 +80,7 @@ impl CommandParts {
     }
 }
 impl Command {
+    /// Converts [`Self`] into its parts.
     #[inline]
     pub fn into_parts(self) -> CommandParts {
         CommandParts {
@@ -87,6 +88,20 @@ impl Command {
             command_status: self.command_status,
             sequence_number: self.sequence_number,
             pdu: self.pdu,
+        }
+    }
+    /// Creates a new instance of [`Self`] from its parts.
+    ///
+    /// # Note
+    ///
+    /// This may create invalid instances. It's up to the caller to ensure that the parts are valid.
+    #[inline]
+    pub fn from_parts(parts: CommandParts) -> Self {
+        Self {
+            id: parts.id,
+            command_status: parts.command_status,
+            sequence_number: parts.sequence_number,
+            pdu: parts.pdu,
         }
     }
 }
@@ -200,6 +215,7 @@ impl<'a, const N: usize> CommandParts<'a, N> {
     }
 }
 impl<'a, const N: usize> Command<'a, N> {
+    /// Converts [`Self`] into its parts.
     #[inline]
     pub fn into_parts(self) -> CommandParts<'a, N> {
         CommandParts {
@@ -207,6 +223,20 @@ impl<'a, const N: usize> Command<'a, N> {
             command_status: self.command_status,
             sequence_number: self.sequence_number,
             pdu: self.pdu,
+        }
+    }
+    /// Creates a new instance of [`Self`] from its parts.
+    ///
+    /// # Note
+    ///
+    /// This may create invalid instances. It's up to the caller to ensure that the parts are valid.
+    #[inline]
+    pub fn from_parts(parts: CommandParts<'a, N>) -> Self {
+        Self {
+            id: parts.id,
+            command_status: parts.command_status,
+            sequence_number: parts.sequence_number,
+            pdu: parts.pdu,
         }
     }
 }

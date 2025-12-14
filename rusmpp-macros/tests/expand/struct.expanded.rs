@@ -68,12 +68,26 @@ impl CancelSmParts {
     }
 }
 impl CancelSm {
+    /// Converts [`Self`] into its parts.
     #[inline]
     pub fn into_parts(self) -> CancelSmParts {
         CancelSmParts {
             service_type: self.service_type,
             message_id: self.message_id,
             other: self.other,
+        }
+    }
+    /// Creates a new instance of [`Self`] from its parts.
+    ///
+    /// # Note
+    ///
+    /// This may create invalid instances. It's up to the caller to ensure that the parts are valid.
+    #[inline]
+    pub fn from_parts(parts: CancelSmParts) -> Self {
+        Self {
+            service_type: parts.service_type,
+            message_id: parts.message_id,
+            other: parts.other,
         }
     }
 }
@@ -165,12 +179,26 @@ impl<'a> CancelSmParts<'a> {
     }
 }
 impl<'a> CancelSm<'a> {
+    /// Converts [`Self`] into its parts.
     #[inline]
     pub fn into_parts(self) -> CancelSmParts<'a> {
         CancelSmParts {
             service_type: self.service_type,
             message_id: self.message_id,
             other: self.other,
+        }
+    }
+    /// Creates a new instance of [`Self`] from its parts.
+    ///
+    /// # Note
+    ///
+    /// This may create invalid instances. It's up to the caller to ensure that the parts are valid.
+    #[inline]
+    pub fn from_parts(parts: CancelSmParts<'a>) -> Self {
+        Self {
+            service_type: parts.service_type,
+            message_id: parts.message_id,
+            other: parts.other,
         }
     }
 }

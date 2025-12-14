@@ -13,7 +13,7 @@ mod repr;
 mod structs;
 
 /// Implements `Length`, `Encode`, `Decode` and `TestInstance` with one default value for structs and enums.
-/// And creates parts structs for structs with `new` and `raw` methods and adds `into_parts` method to the original struct.
+/// And creates parts structs for structs with `new` and `raw` methods and adds `into_parts` and `from_parts` methods to the original struct.
 ///
 /// # Enums
 ///

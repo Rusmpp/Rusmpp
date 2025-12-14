@@ -72,12 +72,26 @@ impl SubmitSmParts {
     }
 }
 impl SubmitSm {
+    /// Converts [`Self`] into its parts.
     #[inline]
     pub fn into_parts(self) -> SubmitSmParts {
         SubmitSmParts {
             other: self.other,
             sm_length: self.sm_length,
             short_message: self.short_message,
+        }
+    }
+    /// Creates a new instance of [`Self`] from its parts.
+    ///
+    /// # Note
+    ///
+    /// This may create invalid instances. It's up to the caller to ensure that the parts are valid.
+    #[inline]
+    pub fn from_parts(parts: SubmitSmParts) -> Self {
+        Self {
+            other: parts.other,
+            sm_length: parts.sm_length,
+            short_message: parts.short_message,
         }
     }
 }
@@ -173,12 +187,26 @@ impl<'a, const N: usize> SubmitSmParts<'a, N> {
     }
 }
 impl<'a, const N: usize> SubmitSm<'a, N> {
+    /// Converts [`Self`] into its parts.
     #[inline]
     pub fn into_parts(self) -> SubmitSmParts<'a, N> {
         SubmitSmParts {
             other: self.other,
             sm_length: self.sm_length,
             short_message: self.short_message,
+        }
+    }
+    /// Creates a new instance of [`Self`] from its parts.
+    ///
+    /// # Note
+    ///
+    /// This may create invalid instances. It's up to the caller to ensure that the parts are valid.
+    #[inline]
+    pub fn from_parts(parts: SubmitSmParts<'a, N>) -> Self {
+        Self {
+            other: parts.other,
+            sm_length: parts.sm_length,
+            short_message: parts.short_message,
         }
     }
 }

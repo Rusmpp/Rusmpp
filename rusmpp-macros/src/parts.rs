@@ -29,6 +29,7 @@ pub fn quote_parts(input: &DeriveInput, fields_named: &FieldsNamed) -> TokenStre
         .map(|(ident, _)| ident);
 
     let parts_struct_field_names_clone = parts_struct_field_names.clone();
+    let parts_struct_field_names_clone_2 = parts_struct_field_names.clone();
 
     let parts_struct_field_types = parts_struct_field_names_and_types.clone().map(|(_, ty)| ty);
 
@@ -61,10 +62,23 @@ pub fn quote_parts(input: &DeriveInput, fields_named: &FieldsNamed) -> TokenStre
         }
 
         impl #impl_generics #name #ty_generics #where_clause {
+            /// Converts [`Self`] into its parts.
             #[inline]
             pub fn into_parts(self) -> #parts_struct_name #ty_generics #where_clause {
                 #parts_struct_name {
                     #(#parts_struct_field_names_self_names),*
+                }
+            }
+
+            /// Creates a new instance of [`Self`] from its parts.
+            ///
+            /// # Note
+            ///
+            /// This may create invalid instances. It's up to the caller to ensure that the parts are valid.
+            #[inline]
+            pub fn from_parts(parts: #parts_struct_name #ty_generics) -> Self #where_clause {
+                Self {
+                    #(#parts_struct_field_names_clone_2: parts.#parts_struct_field_names_clone_2),*
                 }
             }
         }

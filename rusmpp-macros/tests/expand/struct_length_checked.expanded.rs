@@ -63,11 +63,24 @@ impl MsValidityParts {
     }
 }
 impl MsValidity {
+    /// Converts [`Self`] into its parts.
     #[inline]
     pub fn into_parts(self) -> MsValidityParts {
         MsValidityParts {
             validity_behavior: self.validity_behavior,
             validity_information: self.validity_information,
+        }
+    }
+    /// Creates a new instance of [`Self`] from its parts.
+    ///
+    /// # Note
+    ///
+    /// This may create invalid instances. It's up to the caller to ensure that the parts are valid.
+    #[inline]
+    pub fn from_parts(parts: MsValidityParts) -> Self {
+        Self {
+            validity_behavior: parts.validity_behavior,
+            validity_information: parts.validity_information,
         }
     }
 }

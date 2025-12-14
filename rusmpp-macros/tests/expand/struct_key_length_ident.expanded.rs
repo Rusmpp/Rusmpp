@@ -64,12 +64,26 @@ impl TlvParts {
     }
 }
 impl Tlv {
+    /// Converts [`Self`] into its parts.
     #[inline]
     pub fn into_parts(self) -> TlvParts {
         TlvParts {
             tag: self.tag,
             value_length: self.value_length,
             value: self.value,
+        }
+    }
+    /// Creates a new instance of [`Self`] from its parts.
+    ///
+    /// # Note
+    ///
+    /// This may create invalid instances. It's up to the caller to ensure that the parts are valid.
+    #[inline]
+    pub fn from_parts(parts: TlvParts) -> Self {
+        Self {
+            tag: parts.tag,
+            value_length: parts.value_length,
+            value: parts.value,
         }
     }
 }
@@ -161,12 +175,26 @@ impl<'a> TlvParts<'a> {
     }
 }
 impl<'a> Tlv<'a> {
+    /// Converts [`Self`] into its parts.
     #[inline]
     pub fn into_parts(self) -> TlvParts<'a> {
         TlvParts {
             tag: self.tag,
             value_length: self.value_length,
             value: self.value,
+        }
+    }
+    /// Creates a new instance of [`Self`] from its parts.
+    ///
+    /// # Note
+    ///
+    /// This may create invalid instances. It's up to the caller to ensure that the parts are valid.
+    #[inline]
+    pub fn from_parts(parts: TlvParts<'a>) -> Self {
+        Self {
+            tag: parts.tag,
+            value_length: parts.value_length,
+            value: parts.value,
         }
     }
 }

@@ -72,12 +72,26 @@ impl SubmitMultiParts {
     }
 }
 impl SubmitMulti {
+    /// Converts [`Self`] into its parts.
     #[inline]
     pub fn into_parts(self) -> SubmitMultiParts {
         SubmitMultiParts {
             other: self.other,
             number_of_dests: self.number_of_dests,
             dest_address: self.dest_address,
+        }
+    }
+    /// Creates a new instance of [`Self`] from its parts.
+    ///
+    /// # Note
+    ///
+    /// This may create invalid instances. It's up to the caller to ensure that the parts are valid.
+    #[inline]
+    pub fn from_parts(parts: SubmitMultiParts) -> Self {
+        Self {
+            other: parts.other,
+            number_of_dests: parts.number_of_dests,
+            dest_address: parts.dest_address,
         }
     }
 }
@@ -177,12 +191,26 @@ impl<'a, const N: usize> SubmitMultiParts<'a, N> {
     }
 }
 impl<'a, const N: usize> SubmitMulti<'a, N> {
+    /// Converts [`Self`] into its parts.
     #[inline]
     pub fn into_parts(self) -> SubmitMultiParts<'a, N> {
         SubmitMultiParts {
             other: self.other,
             number_of_dests: self.number_of_dests,
             dest_address: self.dest_address,
+        }
+    }
+    /// Creates a new instance of [`Self`] from its parts.
+    ///
+    /// # Note
+    ///
+    /// This may create invalid instances. It's up to the caller to ensure that the parts are valid.
+    #[inline]
+    pub fn from_parts(parts: SubmitMultiParts<'a, N>) -> Self {
+        Self {
+            other: parts.other,
+            number_of_dests: parts.number_of_dests,
+            dest_address: parts.dest_address,
         }
     }
 }

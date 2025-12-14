@@ -54,11 +54,24 @@ impl CallbackNumPresIndParts {
     }
 }
 impl CallbackNumPresInd {
+    /// Converts [`Self`] into its parts.
     #[inline]
     pub fn into_parts(self) -> CallbackNumPresIndParts {
         CallbackNumPresIndParts {
             presentation: self.presentation,
             screening: self.screening,
+        }
+    }
+    /// Creates a new instance of [`Self`] from its parts.
+    ///
+    /// # Note
+    ///
+    /// This may create invalid instances. It's up to the caller to ensure that the parts are valid.
+    #[inline]
+    pub fn from_parts(parts: CallbackNumPresIndParts) -> Self {
+        Self {
+            presentation: parts.presentation,
+            screening: parts.screening,
         }
     }
 }

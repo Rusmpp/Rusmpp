@@ -58,11 +58,24 @@ impl BroadcastAreaIdentifierParts {
     }
 }
 impl BroadcastAreaIdentifier {
+    /// Converts [`Self`] into its parts.
     #[inline]
     pub fn into_parts(self) -> BroadcastAreaIdentifierParts {
         BroadcastAreaIdentifierParts {
             format: self.format,
             area: self.area,
+        }
+    }
+    /// Creates a new instance of [`Self`] from its parts.
+    ///
+    /// # Note
+    ///
+    /// This may create invalid instances. It's up to the caller to ensure that the parts are valid.
+    #[inline]
+    pub fn from_parts(parts: BroadcastAreaIdentifierParts) -> Self {
+        Self {
+            format: parts.format,
+            area: parts.area,
         }
     }
 }
@@ -142,11 +155,24 @@ impl<'a> BroadcastAreaIdentifierParts<'a> {
     }
 }
 impl<'a> BroadcastAreaIdentifier<'a> {
+    /// Converts [`Self`] into its parts.
     #[inline]
     pub fn into_parts(self) -> BroadcastAreaIdentifierParts<'a> {
         BroadcastAreaIdentifierParts {
             format: self.format,
             area: self.area,
+        }
+    }
+    /// Creates a new instance of [`Self`] from its parts.
+    ///
+    /// # Note
+    ///
+    /// This may create invalid instances. It's up to the caller to ensure that the parts are valid.
+    #[inline]
+    pub fn from_parts(parts: BroadcastAreaIdentifierParts<'a>) -> Self {
+        Self {
+            format: parts.format,
+            area: parts.area,
         }
     }
 }

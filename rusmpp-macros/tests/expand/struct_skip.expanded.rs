@@ -48,11 +48,21 @@ impl DistributionListNameParts {
     }
 }
 impl DistributionListName {
+    /// Converts [`Self`] into its parts.
     #[inline]
     pub fn into_parts(self) -> DistributionListNameParts {
         DistributionListNameParts {
             dest_flag: self.dest_flag,
         }
+    }
+    /// Creates a new instance of [`Self`] from its parts.
+    ///
+    /// # Note
+    ///
+    /// This may create invalid instances. It's up to the caller to ensure that the parts are valid.
+    #[inline]
+    pub fn from_parts(parts: DistributionListNameParts) -> Self {
+        Self { dest_flag: parts.dest_flag }
     }
 }
 impl crate::encode::Length for DistributionListName {

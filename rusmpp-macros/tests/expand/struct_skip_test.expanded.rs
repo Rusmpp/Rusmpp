@@ -48,10 +48,22 @@ impl SubmitSmRespParts {
     }
 }
 impl SubmitSmResp {
+    /// Converts [`Self`] into its parts.
     #[inline]
     pub fn into_parts(self) -> SubmitSmRespParts {
         SubmitSmRespParts {
             message_id: self.message_id,
+        }
+    }
+    /// Creates a new instance of [`Self`] from its parts.
+    ///
+    /// # Note
+    ///
+    /// This may create invalid instances. It's up to the caller to ensure that the parts are valid.
+    #[inline]
+    pub fn from_parts(parts: SubmitSmRespParts) -> Self {
+        Self {
+            message_id: parts.message_id,
         }
     }
 }
@@ -119,10 +131,22 @@ impl<'a> SubmitSmRespParts<'a> {
     }
 }
 impl<'a> SubmitSmResp<'a> {
+    /// Converts [`Self`] into its parts.
     #[inline]
     pub fn into_parts(self) -> SubmitSmRespParts<'a> {
         SubmitSmRespParts {
             message_id: self.message_id,
+        }
+    }
+    /// Creates a new instance of [`Self`] from its parts.
+    ///
+    /// # Note
+    ///
+    /// This may create invalid instances. It's up to the caller to ensure that the parts are valid.
+    #[inline]
+    pub fn from_parts(parts: SubmitSmRespParts<'a>) -> Self {
+        Self {
+            message_id: parts.message_id,
         }
     }
 }

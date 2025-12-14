@@ -116,21 +116,6 @@ impl Command {
     pub fn builder() -> CommandStatusBuilder {
         Default::default()
     }
-
-    /// Creates a new command from it's parts.
-    ///
-    /// # Note
-    ///
-    /// This may create invalid commands. It's up to the caller to ensure that the [`CommandId`] and [`Pdu`] match.
-    #[inline]
-    pub fn from_parts(parts: CommandParts) -> Self {
-        Self {
-            id: parts.id,
-            status: parts.status,
-            sequence_number: parts.sequence_number,
-            pdu: parts.pdu,
-        }
-    }
 }
 
 #[derive(Debug, Default)]
