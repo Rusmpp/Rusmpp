@@ -14,6 +14,7 @@ from rusmppyc import (
     Encoder,
     Ton,
     Npi,
+    MessageSubmissionRequestTlvValue,
 )
 from rusmppyc.exceptions import RusmppycException
 
@@ -69,6 +70,7 @@ async def main():
             source_addr_ton=Ton.International(),
             source_addr_npi=Npi.National(),
             registered_delivery=RegisteredDelivery.request_all(),
+            tlvs=[MessageSubmissionRequestTlvValue.BillingIdentification(b"bytes")],
         )
 
         logging.info(f"Encoded SubmitSm: {submit_sm}")

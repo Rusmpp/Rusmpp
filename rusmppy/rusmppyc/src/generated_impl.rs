@@ -1,6 +1,6 @@
 use rusmpp::{
-    pdus::SubmitSm,
-    tlvs::{MessageSubmissionRequestTlvValue, TlvTag, TlvValue},
+    pdus::{parts::SubmitSmParts, SubmitSm},
+    tlvs::{MessageSubmissionRequestTlvValue, Tlv, TlvParts, TlvTag, TlvValue},
     types::{COctetString, EmptyOrFullCOctetString, OctetString},
     values::*,
     CommandStatus,
@@ -83,6 +83,24 @@ impl From<g::CommandStatus> for CommandStatus {
             g::CommandStatus::EsmeRinvbcastchanind() => Self::EsmeRinvbcastchanind,
             g::CommandStatus::Other(value) => Self::Other(value),
         }
+    }
+}
+
+impl TryFrom<g::Tlv> for Tlv {
+    type Error = Exception;
+
+    fn try_from(value: g::Tlv) -> Result<Self, Self::Error> {
+        let parts = TlvParts {
+            tag: value.tag.into(),
+            value_length: value.value_length,
+            value: value
+                .value
+                .map(|value| value.try_into())
+                .transpose()
+                .map_value_err("value")?,
+        };
+
+        Ok(Self::from_parts(parts))
     }
 }
 
@@ -1173,43 +1191,11 @@ impl From<g::PriorityFlag> for PriorityFlag {
     }
 }
 
-impl TryFrom<g::Tlv> for MessageSubmissionRequestTlvValue {
-    type Error = Exception;
-
-    fn try_from(value: g::Tlv) -> Result<Self, Self::Error> {
-        let value = match value.value {
-            Some(value) => {
-                let value = TlvValue::try_from(value).map_value_err("tlv.value")?;
-
-                match MessageSubmissionRequestTlvValue::from_tlv_value(value) {
-                    Some(value) => value,
-                    None => {
-                        return Err(Exception::Value {
-                            name: String::from("tlv.value"),
-                            error: String::from(
-                                "TLV value is not valid for MessageSubmissionRequestTlvValue",
-                            ),
-                        })
-                    }
-                }
-            }
-            None => {
-                return Err(Exception::Value {
-                    name: String::from("tlv.value"),
-                    error: String::from("TLV value is missing"),
-                })
-            }
-        };
-
-        Ok(value)
-    }
-}
-
 impl TryFrom<g::SubmitSm> for SubmitSm {
     type Error = Exception;
 
     fn try_from(value: g::SubmitSm) -> Result<Self, Self::Error> {
-        Ok(Self::new(
+        let parts = SubmitSmParts::new(
             value
                 .service_type
                 .try_into()
@@ -1231,13 +1217,16 @@ impl TryFrom<g::SubmitSm> for SubmitSm {
             value.replace_if_present_flag.into(),
             value.data_coding.into(),
             value.sm_default_msg_id,
+            value.sm_length,
             OctetString::from_vec(value.short_message).map_value_err("short_message")?,
             value
                 .tlvs
                 .into_iter()
-                .map(MessageSubmissionRequestTlvValue::try_from)
+                .map(Tlv::try_from)
                 .collect::<Result<Vec<_>, _>>()
                 .map_value_err("tlvs")?,
-        ))
+        );
+
+        Ok(Self::from_parts(parts))
     }
 }
