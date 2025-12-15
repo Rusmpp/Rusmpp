@@ -9,8 +9,6 @@ from rusmppyc import (
     Event,
     Events,
     InterfaceVersion,
-    MessagePayload,
-    MessageSubmissionRequestTlvValue,
     Npi,
     SubmitSmResp,
     Ton,
@@ -98,12 +96,6 @@ async def main():
             # This is equivalent to the above but more convenient
             # registered_delivery=RegisteredDelivery.request_all(),
             short_message=b"Hello, World!",
-            tlvs=[
-                # The message payload will override the short message
-                MessageSubmissionRequestTlvValue.MessagePayload(
-                    MessagePayload(b"Big Message" * 10)
-                )
-            ],
             # Omitted fields use default values
         )
 

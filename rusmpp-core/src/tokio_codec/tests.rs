@@ -299,17 +299,9 @@ async fn do_codec() {
             .replace_if_present_flag(ReplaceIfPresentFlag::default())
             .data_coding(DataCoding::default())
             .short_message(
-                OctetString::from_str("Hi, I am a short message. I will be overridden :(")
+                OctetString::from_str("Hi, I am a short message.")
                     .expect("Failed to create short message"),
             )
-            .push_tlv(MessageSubmissionRequestTlvValue::MessagePayload(
-                MessagePayload::new(
-                    AnyOctetString::from_str(
-                        "Hi, I am a very long message that will override the short message :D",
-                    )
-                    .expect("Failed to create message_payload"),
-                ),
-            ))
             .build(),
     );
 

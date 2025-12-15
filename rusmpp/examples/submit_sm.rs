@@ -11,12 +11,10 @@ use futures::{SinkExt, StreamExt};
 use rusmpp::{
     Command, CommandId, CommandStatus, Pdu,
     pdus::{BindTransceiver, SubmitSm},
-    tlvs::{MessageSubmissionRequestTlvValue, TlvTag},
+    tlvs::TlvTag,
     tokio_codec::CommandCodec,
-    types::{AnyOctetString, COctetString, OctetString},
-    values::{
-        EsmClass, InterfaceVersion, MessagePayload, Npi, RegisteredDelivery, ServiceType, Ton,
-    },
+    types::{COctetString, OctetString},
+    values::{EsmClass, InterfaceVersion, Npi, RegisteredDelivery, ServiceType, Ton},
 };
 use std::str::FromStr;
 use tokio::net::TcpStream;
@@ -77,14 +75,7 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
                 .destination_addr(COctetString::from_str("491701234567")?)
                 .esm_class(EsmClass::default())
                 .registered_delivery(RegisteredDelivery::request_all())
-                .short_message(OctetString::from_str(
-                    "Hi, I am a short message. I will be overridden :(",
-                )?)
-                .push_tlv(MessageSubmissionRequestTlvValue::MessagePayload(
-                    MessagePayload::new(AnyOctetString::from_str(
-                        "Hi, I am a very long message. I will override the short message :D",
-                    )?),
-                ))
+                .short_message(OctetString::from_str("Hi, I am a short message.")?)
                 .build(),
         );
 
