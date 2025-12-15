@@ -1,5 +1,3 @@
-// TODO: We have to deal MessagePayload if set instead of ShortMessage. Do we override? or we ignore it?
-
 use alloc::vec::Vec;
 use rusmpp_core::{
     pdus::owned::SubmitSm, types::owned::OctetString,
