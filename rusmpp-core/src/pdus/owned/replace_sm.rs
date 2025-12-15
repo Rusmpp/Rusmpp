@@ -122,6 +122,17 @@ impl ReplaceSm {
         &self.short_message
     }
 
+    /// Sets the `short_message` and `sm_length`.
+    ///
+    /// # Note
+    ///
+    /// `short_message` is superceded by [`TlvValue::MessagePayload`](crate::tlvs::owned::TlvValue::MessagePayload) and should only be used if
+    /// [`TlvValue::MessagePayload`](crate::tlvs::owned::TlvValue::MessagePayload) is not present.
+    pub fn set_short_message(&mut self, short_message: OctetString<0, 255>) {
+        self.short_message = short_message;
+        self.sm_length = self.short_message.length() as u8;
+    }
+
     pub const fn message_payload_tlv(&self) -> Option<&Tlv> {
         self.message_payload.as_ref()
     }
@@ -132,21 +143,6 @@ impl ReplaceSm {
                 Some(TlvValue::MessagePayload(value)) => Some(value),
                 _ => None,
             })
-    }
-
-    pub fn builder() -> ReplaceSmBuilder {
-        ReplaceSmBuilder::new()
-    }
-
-    /// Sets the `short_message` and `sm_length`.
-    ///
-    /// # Note
-    ///
-    /// `short_message` is superceded by [`TlvValue::MessagePayload`](crate::tlvs::owned::TlvValue::MessagePayload) and should only be used if
-    /// [`TlvValue::MessagePayload`](crate::tlvs::owned::TlvValue::MessagePayload) is not present.
-    pub fn set_short_message(&mut self, short_message: OctetString<0, 255>) {
-        self.short_message = short_message;
-        self.sm_length = self.short_message.length() as u8;
     }
 
     /// Sets the `message_payload` TLV.
@@ -161,10 +157,8 @@ impl ReplaceSm {
             .map(From::from);
     }
 
-    /// Clears the `short_message` and sets the `sm_length` to `0`.
-    pub fn clear_short_message(&mut self) {
-        self.short_message = OctetString::empty();
-        self.sm_length = 0;
+    pub fn builder() -> ReplaceSmBuilder {
+        ReplaceSmBuilder::new()
     }
 }
 

@@ -180,12 +180,6 @@ impl SubmitSm {
         self.sm_length = self.short_message.length() as u8;
     }
 
-    /// Clears the `short_message` and sets the `sm_length` to `0`.
-    pub fn clear_short_message(&mut self) {
-        self.short_message = OctetString::empty();
-        self.sm_length = 0;
-    }
-
     pub fn tlvs(&self) -> &[Tlv] {
         &self.tlvs
     }

@@ -98,7 +98,7 @@ impl<'a> ReplaceSm<'a> {
 
         let sm_length = short_message.length() as u8;
 
-        let mut replace_sm = Self {
+        Self {
             message_id,
             source_addr_ton,
             source_addr_npi,
@@ -110,11 +110,7 @@ impl<'a> ReplaceSm<'a> {
             sm_length,
             short_message,
             message_payload,
-        };
-
-        replace_sm.clear_short_message_if_message_payload_exists();
-
-        replace_sm
+        }
     }
 
     pub const fn sm_length(&self) -> u8 {
@@ -125,15 +121,15 @@ impl<'a> ReplaceSm<'a> {
         &self.short_message
     }
 
-    /// Sets the short message and short message length.
-    /// Updates the short message and short message length accordingly.
-    /// Has no effect if the message payload is set.
-    /// Returns true if the short message and short message length were set.
-    pub fn set_short_message(&mut self, short_message: OctetString<'a, 0, 255>) -> bool {
-        self.sm_length = short_message.length() as u8;
+    /// Sets the `short_message` and `sm_length`.
+    ///
+    /// # Note
+    ///
+    /// `short_message` is superceded by [`TlvValue::MessagePayload`](crate::tlvs::borrowed::TlvValue::MessagePayload) and should only be used if
+    /// [`TlvValue::MessagePayload`](crate::tlvs::borrowed::TlvValue::MessagePayload) is not present.
+    pub fn set_short_message(&mut self, short_message: OctetString<'a, 0, 255>) {
         self.short_message = short_message;
-
-        !self.clear_short_message_if_message_payload_exists()
+        self.sm_length = self.short_message.length() as u8;
     }
 
     pub const fn message_payload_tlv(&'_ self) -> Option<&'_ Tlv<'_>> {
@@ -148,27 +144,16 @@ impl<'a> ReplaceSm<'a> {
             })
     }
 
-    /// Sets the message payload.
-    /// Updates the short message and short message length accordingly.
+    /// Sets the `message_payload` TLV.
+    ///
+    /// # Note
+    ///
+    /// `short_message` is superceded by [`TlvValue::MessagePayload`](crate::tlvs::borrowed::TlvValue::MessagePayload) and should only be used if
+    /// [`TlvValue::MessagePayload`](crate::tlvs::borrowed::TlvValue::MessagePayload) is not present.
     pub fn set_message_payload(&mut self, message_payload: Option<MessagePayload<'a>>) {
         self.message_payload = message_payload
             .map(TlvValue::MessagePayload)
             .map(From::from);
-
-        self.clear_short_message_if_message_payload_exists();
-    }
-
-    /// Clears the short message and short message length if the message payload is set.
-    /// Returns true if the short message and short message length were cleared.
-    fn clear_short_message_if_message_payload_exists(&mut self) -> bool {
-        if self.message_payload.is_some() {
-            self.short_message = OctetString::empty();
-            self.sm_length = 0;
-
-            return true;
-        };
-
-        false
     }
 
     pub fn builder() -> ReplaceSmBuilder<'a> {
@@ -309,55 +294,6 @@ mod tests {
         let short_message = OctetString::new(b"Short Message").unwrap();
 
         let submit_sm = ReplaceSm::builder()
-            .short_message(short_message.clone())
-            .build();
-
-        assert_eq!(submit_sm.short_message(), &short_message);
-        assert_eq!(submit_sm.sm_length(), short_message.length() as u8);
-    }
-
-    #[test]
-    fn short_message_override() {
-        let short_message_1 = OctetString::new(b"Short Message 101").unwrap();
-        let short_message_2 = OctetString::new(b"Short Message 2").unwrap();
-
-        let submit_sm = ReplaceSm::builder()
-            .short_message(short_message_1)
-            .short_message(short_message_2.clone())
-            .build();
-
-        assert_eq!(submit_sm.short_message(), &short_message_2);
-        assert_eq!(submit_sm.sm_length(), short_message_2.length() as u8);
-    }
-
-    #[test]
-    fn message_payload_suppresses_short_message() {
-        let short_message = OctetString::new(b"Short Message").unwrap();
-        let message_payload = MessagePayload::new(AnyOctetString::new(b"Message Payload"));
-
-        // Using push_tlv
-        let replace_sm = ReplaceSm::builder()
-            .short_message(short_message.clone())
-            .message_payload(Some(message_payload.clone()))
-            .build();
-
-        assert_eq!(replace_sm.short_message(), &OctetString::empty());
-        assert_eq!(replace_sm.sm_length(), 0);
-
-        // Even setting the short message after the message payload should not set the short message
-        let submit_sm = ReplaceSm::builder()
-            .short_message(short_message.clone())
-            .message_payload(Some(message_payload.clone()))
-            .short_message(short_message.clone())
-            .build();
-
-        assert_eq!(submit_sm.short_message(), &OctetString::empty());
-        assert_eq!(submit_sm.sm_length(), 0);
-
-        // Removing the message payload and then setting the short message should set the short message
-        let submit_sm = ReplaceSm::builder()
-            .message_payload(Some(message_payload.clone()))
-            .message_payload(None)
             .short_message(short_message.clone())
             .build();
 
