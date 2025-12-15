@@ -10,7 +10,7 @@ pub struct FallbackError<T, U> {
 
 impl<T, U> FallbackError<T, U> {
     /// Creates a new [`FallbackError`].
-    pub(crate) const fn new(first: T, second: U) -> Self {
+    pub const fn new(first: T, second: U) -> Self {
         Self { first, second }
     }
 }
@@ -18,8 +18,8 @@ impl<T, U> FallbackError<T, U> {
 /// A wrapper that tries the first operation, and if it fails, tries the second.
 #[derive(Debug)]
 pub struct Fallback<T, U> {
-    pub(crate) first: T,
-    pub(crate) second: U,
+    pub first: T,
+    pub second: U,
 }
 
 impl<T, U> Fallback<T, U> {
