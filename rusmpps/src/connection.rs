@@ -3,7 +3,7 @@ use std::{str::FromStr, sync::Arc, time::Duration};
 use futures::{SinkExt, StreamExt, TryStreamExt, future};
 use rusmpp::{
     Command, CommandId, CommandStatus, Pdu,
-    pdus::{BindReceiverResp, BindTransceiverResp, SubmitSmResp},
+    pdus::{BindReceiverResp, BindTransceiverResp, BindTransmitterResp, SubmitSmResp},
     tokio_codec::CommandCodec,
     types::COctetString,
     values::InterfaceVersion,
@@ -132,7 +132,7 @@ impl Connection {
         let sc_interface_version = Some(InterfaceVersion::Smpp5_0);
 
         let pdu: Pdu = match bind_mode {
-            BindMode::Tx => BindTransceiverResp::builder()
+            BindMode::Tx => BindTransmitterResp::builder()
                 .system_id(mc_system_id)
                 .sc_interface_version(sc_interface_version)
                 .build()
