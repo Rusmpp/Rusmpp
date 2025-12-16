@@ -30,7 +30,9 @@ pub mod builders {
 
 pub mod parts {
     pub use super::alert_notification::AlertNotificationParts;
-    pub use super::bind::{BindReceiverParts, BindTransceiverParts, BindTransmitterParts};
+    pub use super::bind::{
+        BindAnyParts, BindReceiverParts, BindTransceiverParts, BindTransmitterParts,
+    };
     pub use super::bind_resp::{
         BindReceiverRespParts, BindTransceiverRespParts, BindTransmitterRespParts,
     };
@@ -57,7 +59,7 @@ mod alert_notification;
 pub use alert_notification::AlertNotification;
 
 mod bind;
-pub use bind::{BindReceiver, BindTransceiver, BindTransmitter};
+pub use bind::{BindAny, BindReceiver, BindTransceiver, BindTransmitter};
 
 mod bind_resp;
 pub use bind_resp::{BindReceiverResp, BindTransceiverResp, BindTransmitterResp};

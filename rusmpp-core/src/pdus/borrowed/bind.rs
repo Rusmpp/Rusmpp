@@ -130,6 +130,8 @@ bind!(BindTransmitter);
 bind!(BindReceiver);
 bind!(BindTransceiver);
 
+bind!(BindAny);
+
 impl<'a, const N: usize> From<BindTransmitter<'a>> for Pdu<'a, N> {
     fn from(value: BindTransmitter<'a>) -> Self {
         Self::BindTransmitter(value)
@@ -145,6 +147,48 @@ impl<'a, const N: usize> From<BindReceiver<'a>> for Pdu<'a, N> {
 impl<'a, const N: usize> From<BindTransceiver<'a>> for Pdu<'a, N> {
     fn from(value: BindTransceiver<'a>) -> Self {
         Self::BindTransceiver(value)
+    }
+}
+
+impl<'a> From<BindAny<'a>> for BindTransmitter<'a> {
+    fn from(value: BindAny<'a>) -> Self {
+        Self {
+            system_id: value.system_id,
+            password: value.password,
+            system_type: value.system_type,
+            interface_version: value.interface_version,
+            addr_ton: value.addr_ton,
+            addr_npi: value.addr_npi,
+            address_range: value.address_range,
+        }
+    }
+}
+
+impl<'a> From<BindAny<'a>> for BindReceiver<'a> {
+    fn from(value: BindAny<'a>) -> Self {
+        Self {
+            system_id: value.system_id,
+            password: value.password,
+            system_type: value.system_type,
+            interface_version: value.interface_version,
+            addr_ton: value.addr_ton,
+            addr_npi: value.addr_npi,
+            address_range: value.address_range,
+        }
+    }
+}
+
+impl<'a> From<BindAny<'a>> for BindTransceiver<'a> {
+    fn from(value: BindAny<'a>) -> Self {
+        Self {
+            system_id: value.system_id,
+            password: value.password,
+            system_type: value.system_type,
+            interface_version: value.interface_version,
+            addr_ton: value.addr_ton,
+            addr_npi: value.addr_npi,
+            address_range: value.address_range,
+        }
     }
 }
 
