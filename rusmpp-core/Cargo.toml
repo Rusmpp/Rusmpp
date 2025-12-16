@@ -1,6 +1,6 @@
 [package]
 name = "rusmpp-core"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 rust-version = "1.86.0"
 description = "A Rust SMPP library."
@@ -11,7 +11,7 @@ readme = "Readme.md"
 keywords = ["smpp", "smsc", "messaging", "networking", "protocol"]
 
 [dependencies]
-rusmpp-macros = { path = "../rusmpp-macros" }
+rusmpp-macros = { path = "../rusmpp-macros", version = "0.2.0" }
 bytes = { version = "1", default-features = false, optional = true }
 heapless = { version = "0.9.1", default-features = false }
 arbitrary = { version = "1.4.2", default-features = false, features = [

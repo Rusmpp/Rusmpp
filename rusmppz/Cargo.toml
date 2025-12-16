@@ -11,7 +11,7 @@ readme = "Readme.md"
 keywords = ["smpp", "smsc", "messaging", "networking", "protocol"]
 
 [dependencies]
-rusmpp-core = { path = "../rusmpp-core", version = "0.3.0", default-features = false, features = [
+rusmpp-core = { path = "../rusmpp-core", version = "0.4.0", default-features = false, features = [
     "framez",
 ] }
 
