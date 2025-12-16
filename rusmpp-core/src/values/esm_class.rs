@@ -183,6 +183,9 @@ mod tests {
         crate::tests::borrowed::encode_decode_test_instances::<MessageType>();
         #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<Ansi41Specific>();
+        crate::tests::borrowed::encode_decode_test_instances::<Ansi41Specific>();
+        #[cfg(feature = "alloc")]
+        crate::tests::owned::encode_decode_test_instances::<GsmFeatures>();
         crate::tests::borrowed::encode_decode_test_instances::<GsmFeatures>();
     }
 }
