@@ -12,7 +12,8 @@ use rusmpp::{
     pdus::{
         BindReceiver, BindReceiverResp, BindTransceiver, BindTransceiverResp, BindTransmitter,
         BindTransmitterResp, BroadcastSm, BroadcastSmResp, CancelBroadcastSm, CancelSm, DataSm,
-        DataSmResp, DeliverSmResp, QueryBroadcastSm, QueryBroadcastSmResp, SubmitSm, SubmitSmResp,
+        DataSmResp, DeliverSmResp, QueryBroadcastSm, QueryBroadcastSmResp, QuerySm, QuerySmResp,
+        SubmitSm, SubmitSmResp,
     },
     values::InterfaceVersion,
 };
@@ -147,6 +148,11 @@ impl Client {
         self.registered_request()
             .query_broadcast_sm(query_broadcast_sm)
             .await
+    }
+
+    /// Sends a [`QuerySm`] command to the server and waits for a successful [`QuerySmResp`].
+    pub async fn query_sm(&self, query_sm: impl Into<QuerySm>) -> Result<QuerySmResp, Error> {
+        self.registered_request().query_sm(query_sm).await
     }
 
     /// Sends a [`SubmitSm`] command to the server and waits for a successful [`SubmitSmResp`].
@@ -492,6 +498,11 @@ impl<'a> UnregisteredRequestBuilder<'a> {
             .await
     }
 
+    /// Sends a [`QuerySm`] command to the server and waits for a successful [`QuerySmResp`].
+    pub async fn query_sm(&self, query_sm: impl Into<QuerySm>) -> Result<QuerySmResp, Error> {
+        self.registered_request().query_sm(query_sm).await
+    }
+
     /// Sends a [`SubmitSm`] command to the server and waits for a successful [`SubmitSmResp`].
     pub async fn submit_sm(&self, submit_sm: impl Into<SubmitSm>) -> Result<SubmitSmResp, Error> {
         self.registered_request().submit_sm(submit_sm).await
@@ -722,6 +733,15 @@ impl<'a> RegisteredRequestBuilder<'a> {
         .await
     }
 
+    /// Sends a [`QuerySm`] command to the server and waits for a successful [`QuerySmResp`].
+    pub async fn query_sm(&self, query_sm: impl Into<QuerySm>) -> Result<QuerySmResp, Error> {
+        self.request_extract(query_sm.into(), |pdu| match pdu {
+            Pdu::QuerySmResp(response) => Ok(response),
+            _ => Err(pdu),
+        })
+        .await
+    }
+
     /// Sends a [`SubmitSm`] command to the server and waits for a successful [`SubmitSmResp`].
     pub async fn submit_sm(&self, submit_sm: impl Into<SubmitSm>) -> Result<SubmitSmResp, Error> {
         self.request_extract(submit_sm.into(), |pdu| match pdu {
@@ -817,7 +837,7 @@ impl<'a> NoWaitRequestBuilder<'a> {
         Ok(sequence_number)
     }
 
-    /// Sends a [`QueryBroadcastSm`] command to the server  without waiting for the response.
+    /// Sends a [`QueryBroadcastSm`] command to the server without waiting for the response.
     pub async fn query_broadcast_sm(
         &self,
         query_broadcast_sm: impl Into<QueryBroadcastSm>,
@@ -826,6 +846,17 @@ impl<'a> NoWaitRequestBuilder<'a> {
 
         self.unregistered_request()
             .unregistered_request(query_broadcast_sm.into(), sequence_number)
+            .await?;
+
+        Ok(sequence_number)
+    }
+
+    /// Sends a [`QuerySm`] command to the server without waiting for the response.
+    pub async fn query_sm(&self, query_sm: impl Into<QuerySm>) -> Result<u32, Error> {
+        let sequence_number = self.client.inner.next_sequence_number();
+
+        self.unregistered_request()
+            .unregistered_request(query_sm.into(), sequence_number)
             .await?;
 
         Ok(sequence_number)
