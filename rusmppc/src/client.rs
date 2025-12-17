@@ -11,7 +11,8 @@ use rusmpp::{
     command::CommandParts,
     pdus::{
         BindReceiver, BindReceiverResp, BindTransceiver, BindTransceiverResp, BindTransmitter,
-        BindTransmitterResp, BroadcastSm, BroadcastSmResp, DeliverSmResp, SubmitSm, SubmitSmResp,
+        BindTransmitterResp, BroadcastSm, BroadcastSmResp, CancelBroadcastSm, DeliverSmResp,
+        SubmitSm, SubmitSmResp,
     },
     values::InterfaceVersion,
 };
@@ -94,6 +95,16 @@ impl Client {
         broadcast_sm: impl Into<BroadcastSm>,
     ) -> Result<BroadcastSmResp, Error> {
         self.registered_request().broadcast_sm(broadcast_sm).await
+    }
+
+    /// Sends a [`CancelBroadcastSm`] command to the server and waits for a successful [`CancelBroadcastSmResp`](Pdu::CancelBroadcastSmResp).
+    pub async fn cancel_broadcast_sm(
+        &self,
+        cancel_broadcast_sm: impl Into<CancelBroadcastSm>,
+    ) -> Result<(), Error> {
+        self.registered_request()
+            .cancel_broadcast_sm(cancel_broadcast_sm)
+            .await
     }
 
     /// Sends a [`SubmitSm`] command to the server and waits for a successful [`SubmitSmResp`].
@@ -410,6 +421,16 @@ impl<'a> UnregisteredRequestBuilder<'a> {
         self.registered_request().broadcast_sm(broadcast_sm).await
     }
 
+    /// Sends a [`CancelBroadcastSm`] command to the server and waits for a successful [`CancelBroadcastSmResp`](Pdu::CancelBroadcastSmResp).
+    pub async fn cancel_broadcast_sm(
+        &self,
+        cancel_broadcast_sm: impl Into<CancelBroadcastSm>,
+    ) -> Result<(), Error> {
+        self.registered_request()
+            .cancel_broadcast_sm(cancel_broadcast_sm)
+            .await
+    }
+
     /// Sends a [`SubmitSm`] command to the server and waits for a successful [`SubmitSmResp`].
     pub async fn submit_sm(&self, submit_sm: impl Into<SubmitSm>) -> Result<SubmitSmResp, Error> {
         self.registered_request().submit_sm(submit_sm).await
@@ -598,6 +619,18 @@ impl<'a> RegisteredRequestBuilder<'a> {
         .await
     }
 
+    /// Sends a [`CancelBroadcastSm`] command to the server and waits for a successful [`CancelBroadcastSmResp`](Pdu::CancelBroadcastSmResp).
+    pub async fn cancel_broadcast_sm(
+        &self,
+        cancel_broadcast_sm: impl Into<CancelBroadcastSm>,
+    ) -> Result<(), Error> {
+        self.request(cancel_broadcast_sm.into())
+            .await?
+            .ok_and_matches(CommandId::CancelBroadcastSmResp)
+            .map(|_| ())
+            .map_err(Error::unexpected_response)
+    }
+
     /// Sends a [`SubmitSm`] command to the server and waits for a successful [`SubmitSmResp`].
     pub async fn submit_sm(&self, submit_sm: impl Into<SubmitSm>) -> Result<SubmitSmResp, Error> {
         self.request_extract(submit_sm.into(), |pdu| match pdu {
@@ -652,6 +685,20 @@ impl<'a> NoWaitRequestBuilder<'a> {
 
         self.unregistered_request()
             .unregistered_request(broadcast_sm.into(), sequence_number)
+            .await?;
+
+        Ok(sequence_number)
+    }
+
+    /// Sends a [`CancelBroadcastSm`] command to the server without waiting for the response.
+    pub async fn cancel_broadcast_sm(
+        &self,
+        cancel_broadcast_sm: impl Into<CancelBroadcastSm>,
+    ) -> Result<u32, Error> {
+        let sequence_number = self.client.inner.next_sequence_number();
+
+        self.unregistered_request()
+            .unregistered_request(cancel_broadcast_sm.into(), sequence_number)
             .await?;
 
         Ok(sequence_number)
