@@ -9,7 +9,7 @@ use crate::{
     types::owned::AnyOctetString,
     udhs::{
         UdhId,
-        owned::concatenation::{ConcatenatedShortMessage8Bit, ConcatenatedShortMessage16Bit},
+        concatenation::{ConcatenatedShortMessage8Bit, ConcatenatedShortMessage16Bit},
     },
 };
 

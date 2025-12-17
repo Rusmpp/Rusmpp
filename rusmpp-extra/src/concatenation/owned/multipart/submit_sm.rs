@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 use rusmpp_core::{
     pdus::owned::SubmitSm, types::owned::OctetString,
-    udhs::owned::concatenation::ConcatenatedShortMessageType,
+    udhs::concatenation::ConcatenatedShortMessageType,
 };
 
 use crate::{
