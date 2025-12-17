@@ -13,7 +13,7 @@ use rusmpp::{
         BindReceiver, BindReceiverResp, BindTransceiver, BindTransceiverResp, BindTransmitter,
         BindTransmitterResp, BroadcastSm, BroadcastSmResp, CancelBroadcastSm, CancelSm, DataSm,
         DataSmResp, DeliverSmResp, QueryBroadcastSm, QueryBroadcastSmResp, QuerySm, QuerySmResp,
-        SubmitSm, SubmitSmResp,
+        ReplaceSm, SubmitSm, SubmitSmResp,
     },
     values::InterfaceVersion,
 };
@@ -153,6 +153,11 @@ impl Client {
     /// Sends a [`QuerySm`] command to the server and waits for a successful [`QuerySmResp`].
     pub async fn query_sm(&self, query_sm: impl Into<QuerySm>) -> Result<QuerySmResp, Error> {
         self.registered_request().query_sm(query_sm).await
+    }
+
+    /// Sends a [`ReplaceSm`] command to the server and waits for a successful [`ReplaceSmResp`](Pdu::ReplaceSmResp).
+    pub async fn replace_sm(&self, replace_sm: impl Into<ReplaceSm>) -> Result<(), Error> {
+        self.registered_request().replace_sm(replace_sm).await
     }
 
     /// Sends a [`SubmitSm`] command to the server and waits for a successful [`SubmitSmResp`].
@@ -503,6 +508,11 @@ impl<'a> UnregisteredRequestBuilder<'a> {
         self.registered_request().query_sm(query_sm).await
     }
 
+    /// Sends a [`ReplaceSm`] command to the server and waits for a successful [`ReplaceSmResp`](Pdu::ReplaceSmResp).
+    pub async fn replace_sm(&self, replace_sm: impl Into<ReplaceSm>) -> Result<(), Error> {
+        self.registered_request().replace_sm(replace_sm).await
+    }
+
     /// Sends a [`SubmitSm`] command to the server and waits for a successful [`SubmitSmResp`].
     pub async fn submit_sm(&self, submit_sm: impl Into<SubmitSm>) -> Result<SubmitSmResp, Error> {
         self.registered_request().submit_sm(submit_sm).await
@@ -742,6 +752,15 @@ impl<'a> RegisteredRequestBuilder<'a> {
         .await
     }
 
+    /// Sends a [`ReplaceSm`] command to the server and waits for a successful [`ReplaceSmResp`](Pdu::ReplaceSmResp).
+    pub async fn replace_sm(&self, replace_sm: impl Into<ReplaceSm>) -> Result<(), Error> {
+        self.request(replace_sm.into())
+            .await?
+            .ok_and_matches(CommandId::ReplaceSmResp)
+            .map(|_| ())
+            .map_err(Error::unexpected_response)
+    }
+
     /// Sends a [`SubmitSm`] command to the server and waits for a successful [`SubmitSmResp`].
     pub async fn submit_sm(&self, submit_sm: impl Into<SubmitSm>) -> Result<SubmitSmResp, Error> {
         self.request_extract(submit_sm.into(), |pdu| match pdu {
@@ -857,6 +876,17 @@ impl<'a> NoWaitRequestBuilder<'a> {
 
         self.unregistered_request()
             .unregistered_request(query_sm.into(), sequence_number)
+            .await?;
+
+        Ok(sequence_number)
+    }
+
+    /// Sends a [`ReplaceSm`] command to the server without waiting for the response.
+    pub async fn replace_sm(&self, replace_sm: impl Into<ReplaceSm>) -> Result<u32, Error> {
+        let sequence_number = self.client.inner.next_sequence_number();
+
+        self.unregistered_request()
+            .unregistered_request(replace_sm.into(), sequence_number)
             .await?;
 
         Ok(sequence_number)
