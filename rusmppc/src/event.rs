@@ -97,7 +97,11 @@ impl EventChannel for DefaultEventChannel {
 }
 
 /// An [`EventChannel`] implementation that discards all events.
-pub struct DiscardEventChannel;
+pub struct DiscardEventChannel {
+    // even if we don't use it, we should keep it alive to avoid closing the event stream
+    // closing the event stream is associated with the connection being closed/dropped
+    _sender: tokio::sync::mpsc::UnboundedSender<()>,
+}
 
 impl Debug for DiscardEventChannel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -108,8 +112,8 @@ impl Debug for DiscardEventChannel {
 impl EventChannel for DiscardEventChannel {
     type Event = ();
 
-    fn new(_sender: tokio::sync::mpsc::UnboundedSender<Self::Event>) -> Self {
-        Self
+    fn new(sender: tokio::sync::mpsc::UnboundedSender<Self::Event>) -> Self {
+        Self { _sender: sender }
     }
 
     fn send_error(&self, _error: Error) -> Result<(), SendError<Self::Event>> {
