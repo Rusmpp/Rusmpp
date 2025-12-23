@@ -87,6 +87,11 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [[example]]
+name = "insights"
+path = "examples/insights.rs"
+required-features = []
+
+[[example]]
 name = "manual_reconnect"
 path = "examples/manual_reconnect.rs"
 required-features = []

@@ -25,7 +25,7 @@ use rusmpp::{
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::codec::Framed;
 
-use crate::{ConnectionBuilder, Event, error::Error, mock::io::MockIo};
+use crate::{ConnectionBuilder, Event, Insight, InsightEvent, error::Error, mock::io::MockIo};
 
 #[derive(Debug)]
 pub struct Server {
@@ -834,4 +834,100 @@ async fn stream_shutdown_should_be_called() {
         shutdown_called.load(Ordering::SeqCst),
         "Stream shutdown was not called"
     );
+}
+
+#[tokio::test]
+async fn sent_enquire_link_and_received_enquire_link_response_should_be_sent_through_events() {
+    init_tracing();
+
+    let (server, client) = tokio::io::duplex(1024);
+
+    tokio::spawn(async move {
+        Server::new()
+            .enquire_link_delay(Duration::from_millis(0))
+            .run(server)
+            .await;
+    });
+
+    let (client, events) = ConnectionBuilder::new()
+        .enquire_link_interval(Duration::from_millis(1))
+        .events()
+        .insights()
+        .connected(client);
+
+    tokio::time::sleep(Duration::from_millis(10)).await;
+
+    client.close().await.expect("Failed to close connection");
+
+    let events = events
+        .filter_map(|event| async {
+            match event {
+                InsightEvent::Insight(insight) => Some(insight),
+                _ => None,
+            }
+        })
+        .take(2)
+        .collect::<Vec<_>>()
+        .await;
+
+    let expected_events = vec![
+        Insight::SentEnquireLink(2),
+        Insight::ReceivedEnquireLinkResp(2),
+    ];
+
+    assert_eq!(events, expected_events);
+}
+
+#[tokio::test]
+async fn received_enquire_link_and_sent_enquire_link_response_should_be_sent_through_events() {
+    init_tracing();
+
+    let (server, client) = tokio::io::duplex(1024);
+
+    // Keep the server (framed) alive, otherwise the connection will fail on sending the response
+    let handle = tokio::spawn(async move {
+        let mut framed = Framed::new(server, CommandCodec::new());
+
+        framed
+            .send(
+                Command::builder()
+                    .status(CommandStatus::EsmeRok)
+                    .sequence_number(1)
+                    .pdu(Pdu::EnquireLink),
+            )
+            .await
+            .expect("Failed to send EnquireLink");
+
+        framed
+    });
+
+    let (client, events) = ConnectionBuilder::new()
+        .no_enquire_link_interval()
+        .events()
+        .insights()
+        .connected(client);
+
+    tokio::time::sleep(Duration::from_millis(10)).await;
+
+    client.close().await.expect("Failed to close connection");
+
+    let events = events
+        .filter_map(|event| async {
+            match event {
+                InsightEvent::Insight(insight) => Some(insight),
+                _ => None,
+            }
+        })
+        .take(2)
+        .collect::<Vec<_>>()
+        .await;
+
+    let _ = handle.await.expect("Failed await server handle");
+
+    let expected_events = vec![
+        Insight::ReceivedEnquireLink(1),
+        Insight::SentEnquireLinkResp(1),
+    ];
+
+    assert_eq!(events, expected_events);
 }

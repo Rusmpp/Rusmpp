@@ -109,7 +109,7 @@ mod builder;
 pub use builder::ConnectionBuilder;
 
 mod event;
-pub use event::Event;
+pub use event::{Event, Insight, InsightEvent};
 
 mod request;
 pub(crate) use request::{CloseRequest, RegisteredRequest, Request, UnregisteredRequest};

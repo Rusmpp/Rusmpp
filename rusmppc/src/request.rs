@@ -13,6 +13,10 @@ pub enum Request {
     ///
     /// These requests are `not` stored in the connection's pending requests map.
     Unregistered(UnregisteredRequest),
+    /// Request issued by the connection itself to send a command to the server.
+    ///
+    /// These requests are `not` stored in the connection's pending requests map and are not acknowledged.
+    Obligated(ObligatedRequest),
 }
 
 impl Request {
@@ -20,6 +24,7 @@ impl Request {
         match self {
             Request::Registered(request) => &request.command,
             Request::Unregistered(request) => &request.command,
+            Request::Obligated(request) => &request.command,
         }
     }
 
@@ -27,6 +32,7 @@ impl Request {
         match self {
             Request::Registered(request) => request.ack.send(ack),
             Request::Unregistered(request) => request.ack.send(ack),
+            Request::Obligated(_) => Ok(()),
         }
     }
 }
@@ -78,6 +84,17 @@ impl UnregisteredRequest {
         let (ack, rx) = oneshot::channel();
 
         (Self { command, ack }, rx)
+    }
+}
+
+#[derive(Debug)]
+pub struct ObligatedRequest {
+    pub command: Command,
+}
+
+impl ObligatedRequest {
+    pub const fn new(command: Command) -> Self {
+        Self { command }
     }
 }
 

@@ -23,7 +23,7 @@ use rusmppc::{ConnectionBuilder, Event};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn core::error::Error>> {
     tracing_subscriber::fmt()
-        .with_env_filter("rusmppc_submit_sm=info,rusmpp=debug,rusmppc=debug")
+        .with_env_filter("rusmppc_submit_sm_multipart=info,rusmpp=debug,rusmppc=debug")
         .init();
 
     let (client, mut events) = ConnectionBuilder::new()

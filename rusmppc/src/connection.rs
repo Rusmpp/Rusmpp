@@ -6,8 +6,12 @@ use std::{
 };
 
 use crate::{
-    Action, Client, Event, Request, Timer, UnregisteredRequest, builder::NoSpawnConnectionBuilder,
-    delay::Delay, error::Error,
+    Action, Client, Request, Timer,
+    builder::NoSpawnConnectionBuilder,
+    delay::Delay,
+    error::Error,
+    event::{EventChannel, Insight},
+    request::ObligatedRequest,
 };
 use futures::{FutureExt, Sink, SinkExt, Stream};
 use pin_project_lite::pin_project;
@@ -42,7 +46,7 @@ enum State {
 // Actions will not be queued and the client would wait forever until the Connection is dropped.
 // We rely on this mechanism to work, to report correct and predictable errors.
 pin_project! {
-    pub struct Connection<F, D1: Delay, D2: Delay> {
+    pub struct Connection<F, D1: Delay, D2: Delay, E> {
         state: State,
         sequence_number: u32,
         requests: VecDeque<Request>,
@@ -53,7 +57,7 @@ pin_project! {
         last_enquire_link_sequence_number: Option<u32>,
         enquire_link_response_timeout: Duration,
         auto_enquire_link_response: bool,
-        events: UnboundedSender<Event>,
+        events: E,
         // Used to let the client wait for the connection to be closed
         _watch: watch::Receiver<()>,
         #[pin]
@@ -67,7 +71,7 @@ pin_project! {
     }
 }
 
-impl<D1: Delay, D2: Delay> Connection<(), D1, D2> {
+impl<D1: Delay, D2: Delay, E: EventChannel> Connection<(), D1, D2, E> {
     pub fn new(
         enquire_link_interval: Option<Duration>,
         enquire_link_response_timeout: Duration,
@@ -78,9 +82,11 @@ impl<D1: Delay, D2: Delay> Connection<(), D1, D2> {
         Self,
         watch::Sender<()>,
         UnboundedSender<Action>,
-        UnboundedReceiverStream<Event>,
+        UnboundedReceiverStream<E::Event>,
     ) {
-        let (events_tx, events_rx) = mpsc::unbounded_channel::<Event>();
+        let (events_tx, events_rx) = mpsc::unbounded_channel::<E::Event>();
+        let events = E::new(events_tx);
+
         let (actions_tx, actions_rx) = mpsc::unbounded_channel::<Action>();
         let (watch_tx, watch_rx) = watch::channel(());
 
@@ -100,7 +106,7 @@ impl<D1: Delay, D2: Delay> Connection<(), D1, D2> {
                     .unwrap_or_default(),
                 enquire_link_response_timer: Timer::inactive(enquire_link_response_timer_delay),
                 _watch: watch_rx,
-                events: events_tx,
+                events,
                 framed: (),
                 actions: UnboundedReceiverStream::new(actions_rx),
             },
@@ -110,7 +116,7 @@ impl<D1: Delay, D2: Delay> Connection<(), D1, D2> {
         )
     }
 
-    pub fn with_framed<F>(self, framed: F) -> Connection<F, D1, D2> {
+    pub fn with_framed<F>(self, framed: F) -> Connection<F, D1, D2, E> {
         Connection {
             state: self.state,
             sequence_number: self.sequence_number,
@@ -131,9 +137,10 @@ impl<D1: Delay, D2: Delay> Connection<(), D1, D2> {
     }
 }
 
-impl<F, D1: Delay, D2: Delay> Connection<F, D1, D2>
+impl<F, D1: Delay, D2: Delay, E> Connection<F, D1, D2, E>
 where
     F: Stream<Item = Result<Command, DecodeError>> + for<'a> Sink<&'a Command, Error = EncodeError>,
+    E: EventChannel,
 {
     fn insert_response(
         self: Pin<&mut Self>,
@@ -225,9 +232,10 @@ where
     }
 }
 
-impl<F, D1: Delay, D2: Delay> Future for Connection<F, D1, D2>
+impl<F, D1: Delay, D2: Delay, E> Future for Connection<F, D1, D2, E>
 where
     F: Stream<Item = Result<Command, DecodeError>> + for<'a> Sink<&'a Command, Error = EncodeError>,
+    E: EventChannel,
 {
     type Output = ();
 
@@ -253,7 +261,7 @@ where
                         let _ = self
                             .as_mut()
                             .events
-                            .send(Event::error(Error::EnquireLinkTimeout { timeout }));
+                            .send_error(Error::EnquireLinkTimeout { timeout });
 
                         return Poll::Ready(());
                     }
@@ -271,10 +279,10 @@ where
                             .sequence_number(sequence_number)
                             .pdu(Pdu::EnquireLink);
 
-                        let (request, _) = UnregisteredRequest::new(command);
+                        let request = ObligatedRequest::new(command);
 
                         self.as_mut()
-                            .requests_push_front(Request::Unregistered(request));
+                            .requests_push_front(Request::Obligated(request));
 
                         self.as_mut()
                             .set_last_enquire_link_sequence_number(sequence_number);
@@ -401,6 +409,24 @@ where
                                         Request::Unregistered(request) => {
                                             let _ = request.ack.send(Ok(()));
                                         }
+                                        Request::Obligated(_) => {
+                                            // No ack for obligated requests
+                                            match id {
+                                                CommandId::EnquireLink => {
+                                                    let _ = self.as_mut().events.send_insight(
+                                                        Insight::SentEnquireLink(sequence_number),
+                                                    );
+                                                }
+                                                CommandId::EnquireLinkResp => {
+                                                    let _ = self.as_mut().events.send_insight(
+                                                        Insight::SentEnquireLinkResp(
+                                                            sequence_number,
+                                                        ),
+                                                    );
+                                                }
+                                                _ => {}
+                                            }
+                                        }
                                     }
 
                                     continue 'sink;
@@ -417,7 +443,7 @@ where
                                         Err(Err(err)) => {
                                             // Client not waiting
 
-                                            let _ = self.as_mut().events.send(Event::error(err));
+                                            let _ = self.as_mut().events.send_error(err);
 
                                             return Poll::Ready(());
                                         }
@@ -462,8 +488,7 @@ where
                                                 return Poll::Ready(());
                                             }
                                             Err(Err(err)) => {
-                                                let _ =
-                                                    self.as_mut().events.send(Event::error(err));
+                                                let _ = self.as_mut().events.send_error(err);
 
                                                 return Poll::Ready(());
                                             }
@@ -491,7 +516,7 @@ where
                                         Err(Err(err)) => {
                                             // Client not waiting
 
-                                            let _ = self.as_mut().events.send(Event::error(err));
+                                            let _ = self.as_mut().events.send_error(err);
 
                                             return Poll::Ready(());
                                         }
@@ -562,10 +587,15 @@ where
                                     .sequence_number(command.sequence_number())
                                     .pdu(Pdu::EnquireLinkResp);
 
-                                let (request, _) = UnregisteredRequest::new(response);
+                                let request = ObligatedRequest::new(response);
 
                                 self.as_mut()
-                                    .requests_push_front(Request::Unregistered(request));
+                                    .requests_push_front(Request::Obligated(request));
+
+                                let _ = self
+                                    .as_mut()
+                                    .events
+                                    .send_insight(Insight::ReceivedEnquireLink(sequence_number));
 
                                 continue 'main;
                             }
@@ -584,6 +614,10 @@ where
                                             // Poll the enquire_link_timer again to register the waker
                                             let _ =
                                                 self.as_mut().project().enquire_link_timer.poll(cx);
+
+                                            let _ = self.as_mut().events.send_insight(
+                                                Insight::ReceivedEnquireLinkResp(sequence_number),
+                                            );
 
                                             continue 'stream;
                                         }
@@ -605,10 +639,7 @@ where
 
                                                 tracing::trace!(target: CONN, sequence_number, ?status, ?id, "Client not waiting");
 
-                                                let _ = self
-                                                    .as_mut()
-                                                    .events
-                                                    .send(Event::incoming(command));
+                                                let _ = self.as_mut().events.send_incoming(command);
                                             }
                                         }
                                     }
@@ -617,7 +648,7 @@ where
 
                                         // The client might have cancelled the request or it timed out.
                                         // In this case we just send the command as an incoming event.
-                                        let _ = self.as_mut().events.send(Event::incoming(command));
+                                        let _ = self.as_mut().events.send_incoming(command);
                                     }
                                 }
 
@@ -625,14 +656,14 @@ where
                             }
 
                             // Command is an operation from the server.
-                            let _ = self.as_mut().events.send(Event::incoming(command));
+                            let _ = self.as_mut().events.send_incoming(command);
                         }
                         Poll::Ready(Some(Err(err))) => {
                             tracing::error!(target: CONN, ?err);
 
                             self.as_mut().set_state(State::Errored);
 
-                            let _ = self.as_mut().events.send(Event::error(Error::from(err)));
+                            let _ = self.as_mut().events.send_error(Error::from(err));
 
                             return Poll::Ready(());
                         }
@@ -644,7 +675,7 @@ where
                             let _ = self
                                 .as_mut()
                                 .events
-                                .send(Event::error(Error::ConnectionClosedByPeer));
+                                .send_error(Error::ConnectionClosedByPeer);
 
                             return Poll::Ready(());
                         }
@@ -662,7 +693,7 @@ where
     }
 }
 
-impl NoSpawnConnectionBuilder {
+impl<E: EventChannel> NoSpawnConnectionBuilder<E> {
     /// Consumes the builder and creates a new [`Client`] along with the connection future and event stream (from raw parts).
     pub(crate) fn raw<F, D1, D2>(
         self,
@@ -671,7 +702,7 @@ impl NoSpawnConnectionBuilder {
         enquire_link_response_timer_delay: D2,
     ) -> (
         Client,
-        impl Stream<Item = Event> + Unpin + 'static,
+        impl Stream<Item = E::Event> + Unpin + 'static,
         impl Future<Output = ()>,
     )
     where
@@ -680,7 +711,7 @@ impl NoSpawnConnectionBuilder {
         F: Stream<Item = Result<Command, DecodeError>>
             + for<'a> Sink<&'a Command, Error = EncodeError>,
     {
-        let (connection, watch, actions, events) = Connection::new(
+        let (connection, watch, actions, events) = Connection::<_, _, _, E>::new(
             self.builder.enquire_link_interval,
             self.builder.enquire_link_response_timeout,
             self.builder.auto_enquire_link_response,
