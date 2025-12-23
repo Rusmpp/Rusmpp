@@ -958,7 +958,7 @@ impl<'a> RawRegisteredRequestBuilder<'a> {
         self
     }
 
-    /// Sends a raw [`Pdu`] to the server and returns the sent [`Command`] and a future resolving to a successful response [`Command`].
+    /// Sends a raw [`Pdu`] to the server and returns the sent `sequence number` and a future resolving to a successful response [`Command`].
     ///
     /// # Notes
     ///
@@ -968,7 +968,7 @@ impl<'a> RawRegisteredRequestBuilder<'a> {
     pub fn send(
         self,
         pdu: impl Into<Pdu>,
-    ) -> impl Future<Output = Result<(Command, impl Future<Output = Result<Command, Error>>), Error>>
+    ) -> impl Future<Output = Result<(u32, impl Future<Output = Result<Command, Error>>), Error>>
     {
         let sequence_number = self.client.inner.next_sequence_number();
 
@@ -977,17 +977,16 @@ impl<'a> RawRegisteredRequestBuilder<'a> {
             .sequence_number(sequence_number)
             .pdu(pdu.into());
 
-        let sequence_number = command.sequence_number();
         let id = command.id();
 
         let future = self
             .client
             .inner
-            .send_registered(command.clone())
-            .and_then(|response| futures::future::ok((command, response)));
+            .send_registered(command)
+            .and_then(move |response| futures::future::ok((sequence_number, response)));
 
         async move {
-            let (command, response) =
+            let (sequence_number, response) =
                 RequestFutureGuard::new(&self.client.inner.actions, sequence_number, future)
                     .await?;
 
@@ -1004,7 +1003,7 @@ impl<'a> RawRegisteredRequestBuilder<'a> {
                 });
 
             Ok((
-                command,
+                sequence_number,
                 RequestFutureGuard::new(&self.client.inner.actions, sequence_number, future),
             ))
         }

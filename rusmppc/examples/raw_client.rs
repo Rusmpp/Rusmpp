@@ -33,10 +33,9 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
     });
 
     // Create a raw client that can send any command.
-
-    // `send` method sends the command and returns a tuple of the sent command and a future
+    // The `send` method sends the command and returns a tuple of the sent sequence number and a future
     // that resolves to the response command.
-    let (command, response) = client
+    let (sequence_number, response) = client
         .raw()
         .send(
             BindTransceiver::builder()
@@ -46,7 +45,7 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
         )
         .await?;
 
-    tracing::info!(?command, "Sent BindTransceiver command successfully");
+    tracing::info!(?sequence_number, "Sent BindTransceiver successfully");
 
     // Manually await the response.
     let response = response.await?;
@@ -54,13 +53,13 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
     tracing::info!(?response, "Bound successfully");
 
     // If you are not expecting any responses, you should drop the response future as it will never resolve with a response.
-    let (command, _) = client
+    let (sequence_number, _) = client
         .raw()
         .status(CommandStatus::EsmeRunknownerr)
         .send(Pdu::GenericNack)
         .await?;
 
-    tracing::info!(?command, "Sent GenericNack command successfully");
+    tracing::info!(?sequence_number, "Sent GenericNack successfully");
 
     // Wait a little bit to see the incoming events.
 
