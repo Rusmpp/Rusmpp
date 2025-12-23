@@ -17,7 +17,7 @@ use rusmpp::{
     },
     values::InterfaceVersion,
 };
-use tokio::sync::{mpsc::UnboundedSender, watch};
+use tokio::sync::{mpsc::UnboundedSender, oneshot, watch};
 
 use crate::{
     Action, CloseRequest, CommandExt, ConnectionBuilder, PendingResponses, RegisteredRequest,
@@ -290,6 +290,11 @@ impl Client {
         self.no_wait_request()
     }
 
+    /// Sends a raw request to the server.
+    pub fn raw(&'_ self) -> RawRegisteredRequestBuilder<'_> {
+        self.raw_request()
+    }
+
     const fn unregistered_request(&'_ self) -> UnregisteredRequestBuilder<'_> {
         UnregisteredRequestBuilder::new(self, CommandStatus::EsmeRok)
     }
@@ -300,6 +305,10 @@ impl Client {
 
     const fn no_wait_request(&'_ self) -> NoWaitRequestBuilder<'_> {
         NoWaitRequestBuilder::new(self, CommandStatus::EsmeRok)
+    }
+
+    fn raw_request(&'_ self) -> RawRegisteredRequestBuilder<'_> {
+        RawRegisteredRequestBuilder::new(self, CommandStatus::EsmeRok)
     }
 }
 
@@ -887,5 +896,111 @@ impl<'a> NoWaitRequestBuilder<'a> {
     /// Sends an [`EnquireLink`](Pdu::EnquireLink) command to the server without waiting for the response.
     pub async fn enquire_link(&self) -> Result<u32, Error> {
         self.send(Pdu::EnquireLink).await
+    }
+}
+
+#[derive(Debug)]
+pub struct RawRegisteredRequestBuilder<'a> {
+    client: &'a Client,
+    status: CommandStatus,
+    response_timeout: Option<Duration>,
+}
+
+impl<'a> RawRegisteredRequestBuilder<'a> {
+    fn new(client: &'a Client, status: CommandStatus) -> Self {
+        Self {
+            client,
+            status,
+            response_timeout: client.inner.response_timeout,
+        }
+    }
+
+    pub const fn status(mut self, status: CommandStatus) -> Self {
+        self.status = status;
+        self
+    }
+
+    pub fn response_timeout(mut self, timeout: Duration) -> Self {
+        self.response_timeout = Some(timeout);
+        self
+    }
+
+    pub fn no_response_timeout(mut self) -> Self {
+        self.response_timeout = None;
+        self
+    }
+
+    /// Sends a raw [`Pdu`] to the server and returns the sent [`Command`] and a future resolving to the response [`Command`] with a success status.
+    ///
+    /// The response future does not perform any checks on the response `Pdu`.
+    /// It is the caller's responsibility to handle the response appropriately.
+    ///
+    /// # Notes
+    ///
+    /// - The response timeout is started when the response future is awaited.
+    pub fn send(
+        &self,
+        pdu: impl Into<Pdu>,
+    ) -> impl Future<Output = Result<(Command, impl Future<Output = Result<Command, Error>>), Error>>
+    {
+        let sequence_number = self.client.inner.next_sequence_number();
+
+        let command = Command::builder()
+            .status(self.status)
+            .sequence_number(sequence_number)
+            .pdu(pdu.into());
+
+        let sequence_number = command.sequence_number();
+        let status = command.status();
+        let id = command.id();
+
+        let future = async move {
+            tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Sending request");
+
+            let (request, ack, response) = RegisteredRequest::new(command.clone());
+
+            self.client
+                .inner
+                .actions
+                .send(Action::registered_request(request))
+                .map_err(|_| Error::ConnectionClosed)?;
+
+            tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Waiting for ack");
+
+            ack.await.map_err(|_| Error::ConnectionClosed)??;
+
+            Ok::<(Command, oneshot::Receiver<Command>), Error>((command, response))
+        };
+
+        async move {
+            let (command, response) =
+                RequestFutureGuard::new(&self.client.inner.actions, sequence_number, future)
+                    .await?;
+
+            let future = async move {
+                tracing::trace!(target: TARGET, sequence_number, ?status, ?id, response_timeout = ?self.client.inner.response_timeout, "Starting response timer");
+
+                match self.client.inner.response_timeout {
+                    None => response.await.map_err(|_| Error::ConnectionClosed),
+                    Some(timeout) => tokio::time::timeout(timeout, response)
+                        .await
+                        .inspect_err(|_| {
+                            self.client
+                                .inner
+                                .actions
+                                .send(Action::Remove(sequence_number))
+                                .ok();
+                        })
+                        .map_err(|_| Error::response_timeout(sequence_number, timeout))?
+                        .map_err(|_| Error::ConnectionClosed),
+                }
+                .and_then(|command| command.ok().map_err(Error::unexpected_response))
+            };
+
+            Ok((
+                command,
+                RequestFutureGuard::new(&self.client.inner.actions, sequence_number, future),
+            ))
+        }
     }
 }
