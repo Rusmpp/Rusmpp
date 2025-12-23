@@ -33,11 +33,11 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
     });
 
     // Create a raw client that can send any command.
-    let raw = client.raw();
 
     // `send` method sends the command and returns a tuple of the sent command and a future
     // that resolves to the response command.
-    let (command, response) = raw
+    let (command, response) = client
+        .raw()
         .send(
             BindTransceiver::builder()
                 .system_id(COctetString::from_str("NfDfddEKVI0NCxO")?)
@@ -54,7 +54,8 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
     tracing::info!(?response, "Bound successfully");
 
     // If you are not expecting any responses, you should drop the response future as it will never resolve with a response.
-    let (command, _) = raw
+    let (command, _) = client
+        .raw()
         .status(CommandStatus::EsmeRunknownerr)
         .send(Pdu::GenericNack)
         .await?;

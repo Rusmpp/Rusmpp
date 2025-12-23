@@ -966,7 +966,7 @@ impl<'a> RawRegisteredRequestBuilder<'a> {
     /// - The response timeout is started when the response future is awaited.
     /// - No interface version check is performed.
     pub fn send(
-        &self,
+        self,
         pdu: impl Into<Pdu>,
     ) -> impl Future<Output = Result<(Command, impl Future<Output = Result<Command, Error>>), Error>>
     {
