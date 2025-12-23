@@ -995,7 +995,7 @@ impl<'a> RawRegisteredRequestBuilder<'a> {
                 .and_then(|command| {
                     command
                         // XXX: it is ok to match against responses only, as this is a registered request
-                        // If the request does not have a matching response, the use should not be awaiting it here anyway
+                        // If the request does not have a matching response, the user should not be awaiting it here anyway
                         .ok_and_matches(id.matching_response())
                         .map_err(Error::unexpected_response)
                 })
