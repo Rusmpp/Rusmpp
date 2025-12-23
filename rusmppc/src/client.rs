@@ -930,13 +930,11 @@ impl<'a> RawRegisteredRequestBuilder<'a> {
         self
     }
 
-    /// Sends a raw [`Pdu`] to the server and returns the sent [`Command`] and a future resolving to the response [`Command`] with a success status.
-    ///
-    /// The response future does not perform any checks on the response `Pdu`.
-    /// It is the caller's responsibility to handle the response appropriately.
+    /// Sends a raw [`Pdu`] to the server and returns the sent [`Command`] and a future resolving to a successful response [`Command`].
     ///
     /// # Notes
     ///
+    /// - If the sent command is not an operation expecting a response, the response future will never resolve and should be dropped.
     /// - The response timeout is started when the response future is awaited.
     pub fn send(
         &self,
@@ -994,7 +992,13 @@ impl<'a> RawRegisteredRequestBuilder<'a> {
                         .map_err(|_| Error::response_timeout(sequence_number, timeout))?
                         .map_err(|_| Error::ConnectionClosed),
                 }
-                .and_then(|command| command.ok().map_err(Error::unexpected_response))
+                .and_then(|command| {
+                    command
+                        // XXX: it is ok to match against responses only, as this is a registered request
+                        // If the request does not have a matching response, the use should not be awaiting it here anyway
+                        .ok_and_matches(id.matching_response())
+                        .map_err(Error::unexpected_response)
+                })
             };
 
             Ok((

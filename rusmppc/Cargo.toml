@@ -97,6 +97,11 @@ path = "examples/manual_reconnect.rs"
 required-features = []
 
 [[example]]
+name = "raw_client"
+path = "examples/raw_client.rs"
+required-features = []
+
+[[example]]
 name = "rusmppc_submit_sm"
 path = "examples/rusmppc_submit_sm.rs"
 required-features = []
