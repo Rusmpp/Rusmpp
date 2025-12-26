@@ -22,7 +22,7 @@ use tokio::sync::{mpsc::UnboundedSender, oneshot, watch};
 
 use crate::{
     Action, CloseRequest, CommandExt, ConnectionBuilder, PendingResponses, RegisteredRequest,
-    RequestFutureGuard, UnregisteredRequest, error::Error,
+    RequestFutureGuard, UnregisteredRequest, error::Error, runtime,
 };
 
 const TARGET: &str = "rusmppc::client";
@@ -390,7 +390,7 @@ impl ClientInner {
     ) -> Result<Command, Error> {
         match self.response_timeout {
             None => response.await.map_err(|_| Error::ConnectionClosed),
-            Some(timeout) => tokio::time::timeout(timeout, response)
+            Some(timeout) => runtime::timeout(timeout, response)
                 .await
                 .inspect_err(|_| {
                     self.actions.send(Action::Remove(sequence_number)).ok();

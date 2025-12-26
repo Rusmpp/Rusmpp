@@ -133,10 +133,14 @@ pub(crate) use futures::RequestFutureGuard;
 mod response;
 pub(crate) use response::PendingResponses;
 
+#[cfg(not(target_arch = "wasm32"))]
 mod tcp_stream;
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) use tcp_stream::MaybeTlsStream;
 
 mod delay;
+
+mod runtime;
 
 #[cfg(test)]
 mod tests;

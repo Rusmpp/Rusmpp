@@ -28,23 +28,33 @@ thiserror = { version = "2.0.17", default-features = false }
 pin-project-lite = { version = "0.2.16", default-features = false }
 url = { version = "2.5.7", default-features = false }
 
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio = { version = "1.48.0", default-features = false, features = [
+    "sync",
+    "rt",
+    "time",
+    "net",
+] }
 rustls = { version = "0.23.34", default-features = false, features = [
     "tls12",
 ], optional = true }
 tokio-rustls = { version = "0.26.4", default-features = false, features = [
     "tls12",
 ], optional = true }
-
 rustls-pki-types = { version = "1.12.0", default-features = false, optional = true }
 rustls-native-certs = { version = "0.8.2", default-features = false, optional = true }
 webpki-roots = { version = "1.0.3", default-features = false, optional = true }
-
 native-tls = { version = "0.2.14", default-features = false, optional = true }
 tokio-native-tls = { version = "0.3.1", default-features = false, optional = true }
-
 hickory-resolver = { version = "0.25.2", default-features = false, features = [
     "tokio",
     "system-config",
+] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen-futures = "0.4.56"
+gloo-timers = { version = "0.3.0", default-features = false, features = [
+    "futures",
 ] }
 
 [dev-dependencies]

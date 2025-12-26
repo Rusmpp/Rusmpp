@@ -1,19 +1,18 @@
-use std::{net::SocketAddr, time::Duration};
+use std::time::Duration;
 
 use futures::Stream;
 use rusmpp::tokio_codec::CommandCodec;
-use tokio::{
-    io::{AsyncRead, AsyncWrite},
-    net::TcpStream,
-};
+use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::codec::Framed;
 
 use crate::{
-    Client, MaybeTlsStream,
-    delay::TokioDelay,
-    error::Error,
+    Client,
     event::{DefaultEventChannel, DiscardEventChannel, EventChannel, InsightEventChannel},
+    runtime::{self, RuntimeDelay},
 };
+
+#[cfg(not(target_arch = "wasm32"))]
+use crate::error::Error;
 
 /// Connection builder that discards all events.
 pub type DiscardConnectionBuilder = ConnectionBuilder<DiscardEventChannel>;
@@ -37,10 +36,10 @@ pub struct ConnectionBuilder<E = DefaultEventChannel> {
     pub(crate) response_timeout: Option<Duration>,
     pub(crate) check_interface_version: bool,
     /// TLS configurations provided by the user. If None, default configurations will be used.
-    #[cfg(feature = "rustls")]
+    #[cfg(all(feature = "rustls", not(target_arch = "wasm32")))]
     rustls_config: Option<rustls::ClientConfig>,
     /// Native TLS connector provided by the user. If None, default connector will be used.
-    #[cfg(feature = "native-tls")]
+    #[cfg(all(feature = "native-tls", not(target_arch = "wasm32")))]
     native_tls_connector: Option<native_tls::TlsConnector>,
     _phantom: std::marker::PhantomData<E>,
 }
@@ -71,9 +70,9 @@ impl DefaultConnectionBuilder {
             auto_enquire_link_response: true,
             response_timeout: Some(Duration::from_secs(5)),
             check_interface_version: true,
-            #[cfg(feature = "rustls")]
+            #[cfg(all(feature = "rustls", not(target_arch = "wasm32")))]
             rustls_config: None,
-            #[cfg(feature = "native-tls")]
+            #[cfg(all(feature = "native-tls", not(target_arch = "wasm32")))]
             native_tls_connector: None,
             _phantom: std::marker::PhantomData,
         }
@@ -147,13 +146,14 @@ impl<E: EventChannel> ConnectionBuilder<E> {
     /// - If the connection to the server fails.
     /// - If TLS is enabled (when using `ssmpp` or `smpps` schemes) but the `rustls` or `native-tls` features are not enabled.
     /// - If TLS handshake fails.
+    #[cfg(not(target_arch = "wasm32"))]
     pub async fn connect(
         self,
         url: impl AsRef<str>,
     ) -> Result<(Client, impl Stream<Item = E::Event> + Unpin + 'static), Error> {
         let (client, events, connection) = self.no_spawn().connect(url).await?;
 
-        tokio::spawn(connection);
+        runtime::spawn(connection);
 
         Ok((client, events))
     }
@@ -170,7 +170,7 @@ impl<E: EventChannel> ConnectionBuilder<E> {
     {
         let (client, events, connection) = self.no_spawn().connected(stream);
 
-        tokio::spawn(connection);
+        runtime::spawn(connection);
 
         (client, events)
     }
@@ -306,7 +306,7 @@ impl DefaultConnectionBuilder {
     /// If not set, a default configuration will be used.
     ///  - If the `rustls-tls-native-roots` feature is enabled, native root certificates are used.
     ///  - If the `rustls-tls-webpki-roots` feature is enabled, webpki root certificates are used.
-    #[cfg(feature = "rustls")]
+    #[cfg(all(feature = "rustls", not(target_arch = "wasm32")))]
     pub fn rustls_config(mut self, config: rustls::ClientConfig) -> Self {
         self.rustls_config = Some(config);
         self
@@ -315,7 +315,7 @@ impl DefaultConnectionBuilder {
     /// Sets a custom `native-tls` connector.
     ///
     /// If not set, a default connector will be used.
-    #[cfg(feature = "native-tls")]
+    #[cfg(all(feature = "native-tls", not(target_arch = "wasm32")))]
     pub fn native_tls_connector(mut self, connector: native_tls::TlsConnector) -> Self {
         self.native_tls_connector = Some(connector);
         self
@@ -343,6 +343,7 @@ impl<E: EventChannel> NoSpawnConnectionBuilder<E> {
     /// - If TLS is enabled (when using `ssmpp` or `smpps` schemes) but the `rustls` or `native-tls` features are not enabled.
     /// - If TLS handshake fails.
     #[allow(unused_mut)]
+    #[cfg(not(target_arch = "wasm32"))]
     pub async fn connect(
         mut self,
         url: impl AsRef<str>,
@@ -354,6 +355,12 @@ impl<E: EventChannel> NoSpawnConnectionBuilder<E> {
         ),
         Error,
     > {
+        use std::net::SocketAddr;
+
+        use tokio::net::TcpStream;
+
+        use crate::MaybeTlsStream;
+
         enum Scheme {
             Smpp,
             Ssmpp,
@@ -478,7 +485,7 @@ impl<E: EventChannel> NoSpawnConnectionBuilder<E> {
             CommandCodec::new().with_max_length(self.builder.max_command_length),
         );
 
-        self.raw(framed, TokioDelay::new(), TokioDelay::new())
+        self.raw(framed, RuntimeDelay::new(), RuntimeDelay::new())
     }
 }
 
@@ -498,9 +505,9 @@ impl<E> EventsConnectionBuilder<E> {
             auto_enquire_link_response: self.builder.auto_enquire_link_response,
             response_timeout: self.builder.response_timeout,
             check_interface_version: self.builder.check_interface_version,
-            #[cfg(feature = "rustls")]
+            #[cfg(all(feature = "rustls", not(target_arch = "wasm32")))]
             rustls_config: self.builder.rustls_config,
-            #[cfg(feature = "native-tls")]
+            #[cfg(all(feature = "native-tls", not(target_arch = "wasm32")))]
             native_tls_connector: self.builder.native_tls_connector,
             _phantom: std::marker::PhantomData,
         }
@@ -515,9 +522,9 @@ impl<E> EventsConnectionBuilder<E> {
             auto_enquire_link_response: self.builder.auto_enquire_link_response,
             response_timeout: self.builder.response_timeout,
             check_interface_version: self.builder.check_interface_version,
-            #[cfg(feature = "rustls")]
+            #[cfg(all(feature = "rustls", not(target_arch = "wasm32")))]
             rustls_config: self.builder.rustls_config,
-            #[cfg(feature = "native-tls")]
+            #[cfg(all(feature = "native-tls", not(target_arch = "wasm32")))]
             native_tls_connector: self.builder.native_tls_connector,
             _phantom: std::marker::PhantomData,
         }
