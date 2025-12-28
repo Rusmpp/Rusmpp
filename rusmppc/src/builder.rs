@@ -164,9 +164,28 @@ impl<E: EventChannel> ConnectionBuilder<E> {
     ///
     /// - The client is used as a handle to communicate with the server through the managed connection.
     /// - The event stream is used to receive events from the server, such as incoming messages or errors.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn connected<S>(self, stream: S) -> (Client, impl Stream<Item = E::Event> + Unpin + 'static)
     where
         S: AsyncRead + AsyncWrite + Send + 'static,
+    {
+        let (client, events, connection) = self.no_spawn().connected(stream);
+
+        runtime::spawn(connection);
+
+        (client, events)
+    }
+
+    /// Creates a client from an existing connection.
+    ///
+    /// Manages a connection in the background and returns a client and an event stream.
+    ///
+    /// - The client is used as a handle to communicate with the server through the managed connection.
+    /// - The event stream is used to receive events from the server, such as incoming messages or errors.
+    #[cfg(target_arch = "wasm32")]
+    pub fn connected<S>(self, stream: S) -> (Client, impl Stream<Item = E::Event> + Unpin + 'static)
+    where
+        S: AsyncRead + AsyncWrite + 'static,
     {
         let (client, events, connection) = self.no_spawn().connected(stream);
 
@@ -478,7 +497,7 @@ impl<E: EventChannel> NoSpawnConnectionBuilder<E> {
         impl Future<Output = ()>,
     )
     where
-        S: AsyncRead + AsyncWrite + Send + 'static,
+        S: AsyncRead + AsyncWrite + 'static,
     {
         let framed = Framed::new(
             stream,
