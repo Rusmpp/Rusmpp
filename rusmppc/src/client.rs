@@ -6,6 +6,7 @@ use std::{
     time::Duration,
 };
 
+use futures::TryFutureExt;
 use rusmpp::{
     Command, CommandId, CommandStatus, Pdu,
     command::CommandParts,
@@ -17,7 +18,7 @@ use rusmpp::{
     },
     values::InterfaceVersion,
 };
-use tokio::sync::{mpsc::UnboundedSender, watch};
+use tokio::sync::{mpsc::UnboundedSender, oneshot, watch};
 
 use crate::{
     Action, CloseRequest, CommandExt, ConnectionBuilder, PendingResponses, RegisteredRequest,
@@ -290,6 +291,11 @@ impl Client {
         self.no_wait_request()
     }
 
+    /// Sends a raw request to the server.
+    pub fn raw(&'_ self) -> RawRegisteredRequestBuilder<'_> {
+        self.raw_request()
+    }
+
     const fn unregistered_request(&'_ self) -> UnregisteredRequestBuilder<'_> {
         UnregisteredRequestBuilder::new(self, CommandStatus::EsmeRok)
     }
@@ -300,6 +306,10 @@ impl Client {
 
     const fn no_wait_request(&'_ self) -> NoWaitRequestBuilder<'_> {
         NoWaitRequestBuilder::new(self, CommandStatus::EsmeRok)
+    }
+
+    fn raw_request(&'_ self) -> RawRegisteredRequestBuilder<'_> {
+        RawRegisteredRequestBuilder::new(self, CommandStatus::EsmeRok)
     }
 }
 
@@ -327,9 +337,7 @@ impl ClientInner {
             watch,
         }
     }
-}
 
-impl ClientInner {
     fn next_sequence_number(&self) -> u32 {
         self.sequence_number.fetch_add(2, Ordering::Relaxed)
     }
@@ -342,6 +350,67 @@ impl ClientInner {
             .map_err(|_| Error::ConnectionClosed)?;
 
         ack.await.map_err(|_| Error::ConnectionClosed)
+    }
+
+    /// Sends a [`Command`] to the server and returns a receiver for the response.
+    ///
+    /// # Note
+    ///
+    /// This function does not use the [`RequestFutureGuard`] to remove the pending response on drop.
+    /// The caller is responsible for handling that.
+    async fn send_registered(&self, command: Command) -> Result<oneshot::Receiver<Command>, Error> {
+        let sequence_number = command.sequence_number();
+        let status = command.status();
+        let id = command.id();
+
+        tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Sending request");
+
+        let (request, ack, response) = RegisteredRequest::new(command);
+
+        self.actions
+            .send(Action::registered_request(request))
+            .map_err(|_| Error::ConnectionClosed)?;
+
+        tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Waiting for ack");
+
+        ack.await.map_err(|_| Error::ConnectionClosed)??;
+
+        Ok(response)
+    }
+
+    /// Awaits a response for a sent command.
+    ///
+    /// # Note
+    ///
+    /// This function does not perform any validation on the response.
+    async fn await_response(
+        &self,
+        response: oneshot::Receiver<Command>,
+        sequence_number: u32,
+    ) -> Result<Command, Error> {
+        match self.response_timeout {
+            None => response.await.map_err(|_| Error::ConnectionClosed),
+            Some(timeout) => tokio::time::timeout(timeout, response)
+                .await
+                .inspect_err(|_| {
+                    self.actions.send(Action::Remove(sequence_number)).ok();
+                })
+                .map_err(|_| Error::response_timeout(sequence_number, timeout))?
+                .map_err(|_| Error::ConnectionClosed),
+        }
+    }
+
+    /// See [`Self::send_registered`] and [`Self::await_response`].
+    async fn send_registered_and_await_response(&self, command: Command) -> Result<Command, Error> {
+        let sequence_number = command.sequence_number();
+        let status = command.status();
+        let id = command.id();
+
+        let response = self.send_registered(command).await?;
+
+        tracing::trace!(target: TARGET, sequence_number, ?status, ?id, response_timeout = ?self.response_timeout, "Starting response timer");
+
+        self.await_response(response, sequence_number).await
     }
 }
 
@@ -599,47 +668,15 @@ impl<'a> RegisteredRequestBuilder<'a> {
     fn request(&self, pdu: impl Into<Pdu>) -> impl Future<Output = Result<Command, Error>> {
         let sequence_number = self.client.inner.next_sequence_number();
 
-        let future = async move {
-            let command = Command::builder()
-                .status(self.status)
-                .sequence_number(sequence_number)
-                .pdu(pdu.into());
+        let command = Command::builder()
+            .status(self.status)
+            .sequence_number(sequence_number)
+            .pdu(pdu.into());
 
-            let sequence_number = command.sequence_number();
-            let status = command.status();
-            let id = command.id();
-
-            tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Sending request");
-
-            let (request, ack, response) = RegisteredRequest::new(command);
-
-            self.client
-                .inner
-                .actions
-                .send(Action::registered_request(request))
-                .map_err(|_| Error::ConnectionClosed)?;
-
-            tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Waiting for ack");
-
-            ack.await.map_err(|_| Error::ConnectionClosed)??;
-
-            tracing::trace!(target: TARGET, sequence_number, ?status, ?id, response_timeout = ?self.client.inner.response_timeout, "Starting response timer");
-
-            match self.client.inner.response_timeout {
-                None => response.await.map_err(|_| Error::ConnectionClosed),
-                Some(timeout) => tokio::time::timeout(timeout, response)
-                    .await
-                    .inspect_err(|_| {
-                        self.client
-                            .inner
-                            .actions
-                            .send(Action::Remove(sequence_number))
-                            .ok();
-                    })
-                    .map_err(|_| Error::response_timeout(sequence_number, timeout))?
-                    .map_err(|_| Error::ConnectionClosed),
-            }
-        };
+        let future = self
+            .client
+            .inner
+            .send_registered_and_await_response(command);
 
         RequestFutureGuard::new(&self.client.inner.actions, sequence_number, future)
     }
@@ -887,5 +924,88 @@ impl<'a> NoWaitRequestBuilder<'a> {
     /// Sends an [`EnquireLink`](Pdu::EnquireLink) command to the server without waiting for the response.
     pub async fn enquire_link(&self) -> Result<u32, Error> {
         self.send(Pdu::EnquireLink).await
+    }
+}
+
+#[derive(Debug)]
+pub struct RawRegisteredRequestBuilder<'a> {
+    client: &'a Client,
+    status: CommandStatus,
+    response_timeout: Option<Duration>,
+}
+
+impl<'a> RawRegisteredRequestBuilder<'a> {
+    fn new(client: &'a Client, status: CommandStatus) -> Self {
+        Self {
+            client,
+            status,
+            response_timeout: client.inner.response_timeout,
+        }
+    }
+
+    pub const fn status(mut self, status: CommandStatus) -> Self {
+        self.status = status;
+        self
+    }
+
+    pub fn response_timeout(mut self, timeout: Duration) -> Self {
+        self.response_timeout = Some(timeout);
+        self
+    }
+
+    pub fn no_response_timeout(mut self) -> Self {
+        self.response_timeout = None;
+        self
+    }
+
+    /// Sends a raw [`Pdu`] to the server and returns the sent `sequence number` and a future resolving to a successful response [`Command`].
+    ///
+    /// # Notes
+    ///
+    /// - If the sent command is not an operation expecting a response, the response future will never resolve and should be dropped.
+    /// - The response timeout is started when the response future is awaited.
+    /// - No interface version check is performed.
+    pub fn send(
+        self,
+        pdu: impl Into<Pdu>,
+    ) -> impl Future<Output = Result<(u32, impl Future<Output = Result<Command, Error>>), Error>>
+    {
+        let sequence_number = self.client.inner.next_sequence_number();
+
+        let command = Command::builder()
+            .status(self.status)
+            .sequence_number(sequence_number)
+            .pdu(pdu.into());
+
+        let id = command.id();
+
+        let future = self
+            .client
+            .inner
+            .send_registered(command)
+            .and_then(move |response| futures::future::ok((sequence_number, response)));
+
+        async move {
+            let (sequence_number, response) =
+                RequestFutureGuard::new(&self.client.inner.actions, sequence_number, future)
+                    .await?;
+
+            let future = self
+                .client
+                .inner
+                .await_response(response, sequence_number)
+                .and_then(move |command| async move {
+                    // XXX: it is ok to match against responses only, as this is a registered request
+                    // If the request does not have a matching response, the user should not be awaiting it here anyway
+                    command
+                        .ok_and_matches(id.matching_response())
+                        .map_err(Error::unexpected_response)
+                });
+
+            Ok((
+                sequence_number,
+                RequestFutureGuard::new(&self.client.inner.actions, sequence_number, future),
+            ))
+        }
     }
 }

@@ -931,3 +931,7 @@ async fn received_enquire_link_and_sent_enquire_link_response_should_be_sent_thr
 
     assert_eq!(events, expected_events);
 }
+
+// TODO: sent_enquire_link_and_received_enquire_link_response_should_be_sent_through_events and received_enquire_link_and_sent_enquire_link_response_should_be_sent_through_events
+// are time based and not so reliable. Consider adding a way to mock time in the connection to make them more reliable.
+// TODO: add tests for raw client
