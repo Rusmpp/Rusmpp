@@ -109,7 +109,9 @@ mod builder;
 pub use builder::ConnectionBuilder;
 
 mod event;
-pub use event::{Event, Insight, InsightEvent};
+pub use event::{
+    DefaultEventChannel, DiscardEventChannel, Event, Insight, InsightEvent, InsightEventChannel,
+};
 
 mod request;
 pub(crate) use request::{CloseRequest, RegisteredRequest, Request, UnregisteredRequest};
