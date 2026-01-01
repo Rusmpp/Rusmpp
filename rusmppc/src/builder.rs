@@ -15,6 +15,15 @@ use crate::{
     event::{DefaultEventChannel, DiscardEventChannel, EventChannel, InsightEventChannel},
 };
 
+/// Connection builder that discards all events.
+pub type DiscardConnectionBuilder = ConnectionBuilder<DiscardEventChannel>;
+
+/// Connection builder that sends [`InsightEvent`](crate::InsightEvent)s through the event stream.
+pub type InsightConnectionBuilder = ConnectionBuilder<InsightEventChannel>;
+
+/// Default connection builder that sends [`Event`](crate::Event)s through the event stream.
+pub type DefaultConnectionBuilder = ConnectionBuilder<DefaultEventChannel>;
+
 /// Builder for creating a new `SMPP` connection.
 #[derive(Debug)]
 pub struct ConnectionBuilder<E = DefaultEventChannel> {
@@ -36,13 +45,13 @@ pub struct ConnectionBuilder<E = DefaultEventChannel> {
     _phantom: std::marker::PhantomData<E>,
 }
 
-impl Default for ConnectionBuilder<DefaultEventChannel> {
+impl Default for DefaultConnectionBuilder {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl ConnectionBuilder<DefaultEventChannel> {
+impl DefaultConnectionBuilder {
     /// Creates a new [`ConnectionBuilder`] with default configurations.
     ///
     /// # Defaults
@@ -167,7 +176,7 @@ impl<E: EventChannel> ConnectionBuilder<E> {
     }
 }
 
-impl ConnectionBuilder {
+impl DefaultConnectionBuilder {
     /// Sets the maximum command length for incoming commands.
     pub const fn max_command_length(mut self, max_command_length: usize) -> Self {
         self.max_command_length = max_command_length;
@@ -481,7 +490,7 @@ pub struct EventsConnectionBuilder<E = DefaultEventChannel> {
 
 impl<E> EventsConnectionBuilder<E> {
     /// Discards all events from the background connection.
-    pub fn discard(self) -> ConnectionBuilder<DiscardEventChannel> {
+    pub fn discard(self) -> DiscardConnectionBuilder {
         ConnectionBuilder {
             max_command_length: self.builder.max_command_length,
             enquire_link_interval: self.builder.enquire_link_interval,
@@ -498,7 +507,7 @@ impl<E> EventsConnectionBuilder<E> {
     }
 
     /// Enables insight events from the background connection.
-    pub fn insights(self) -> ConnectionBuilder<InsightEventChannel> {
+    pub fn insights(self) -> InsightConnectionBuilder {
         ConnectionBuilder {
             max_command_length: self.builder.max_command_length,
             enquire_link_interval: self.builder.enquire_link_interval,

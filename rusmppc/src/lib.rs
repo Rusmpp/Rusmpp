@@ -106,15 +106,12 @@ pub(crate) use action::Action;
 mod connection;
 
 mod builder;
-pub use builder::ConnectionBuilder;
+pub use builder::{
+    ConnectionBuilder, DefaultConnectionBuilder, DiscardConnectionBuilder, InsightConnectionBuilder,
+};
 
 mod event;
 pub use event::{Event, Insight, InsightEvent};
-
-pub mod channel {
-    //! Event channel implementations.
-    pub use super::event::{DefaultEventChannel, DiscardEventChannel, InsightEventChannel};
-}
 
 mod request;
 pub(crate) use request::{CloseRequest, RegisteredRequest, Request, UnregisteredRequest};
