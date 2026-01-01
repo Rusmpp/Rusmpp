@@ -233,9 +233,12 @@ impl Connection {
                     };
 
                     match action {
-                        Action::Send(command) => {
-                            let sequence_number = command.sequence_number();
-
+                        Action::Send(pdu) => {
+                            let sequence_number = sequence_number.current_and_increment();
+                            let command = Command::builder()
+                                .status(CommandStatus::EsmeRok)
+                                .sequence_number(sequence_number)
+                                .pdu(pdu);
                             tracing::debug!(session_id, sequence_number, id=?command.id(), "Sending command");
                             tracing::trace!(session_id, sequence_number, ?command, "Sending command");
 
@@ -332,7 +335,7 @@ impl Connection {
                         break;
                     }
                 }
-            };
+            }
         }
 
         self.config

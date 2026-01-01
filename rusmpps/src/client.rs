@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use rusmpp::{Command, session::SessionState};
+use rusmpp::{Pdu, session::SessionState};
 use tokio::sync::{RwLock, RwLockReadGuard, mpsc::Sender};
 
 #[derive(Debug)]
@@ -11,7 +11,7 @@ pub struct Client {
 
 #[derive(Debug)]
 pub enum Action {
-    Send(Command),
+    Send(Pdu),
 }
 
 #[derive(Debug)]
