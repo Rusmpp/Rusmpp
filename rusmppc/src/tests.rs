@@ -849,33 +849,32 @@ async fn sent_enquire_link_and_received_enquire_link_response_should_be_sent_thr
             .await;
     });
 
-    let (client, events) = ConnectionBuilder::new()
+    let (client, mut events) = ConnectionBuilder::new()
         .enquire_link_interval(Duration::from_millis(1))
         .events()
         .insights()
         .connected(client);
-
-    tokio::time::sleep(Duration::from_millis(10)).await;
-
-    client.close().await.expect("Failed to close connection");
-
-    let events = events
-        .filter_map(|event| async {
-            match event {
-                InsightEvent::Insight(insight) => Some(insight),
-                _ => None,
-            }
-        })
-        .take(2)
-        .collect::<Vec<_>>()
-        .await;
 
     let expected_events = vec![
         Insight::SentEnquireLink(2),
         Insight::ReceivedEnquireLinkResp(2),
     ];
 
-    assert_eq!(events, expected_events);
+    let mut collected_events = Vec::new();
+
+    while let Some(event) = events.next().await {
+        if let InsightEvent::Insight(insight) = event {
+            collected_events.push(insight);
+
+            if collected_events.len() == expected_events.len() {
+                break;
+            }
+        }
+    }
+
+    client.close().await.expect("Failed to close connection");
+
+    assert_eq!(collected_events, expected_events);
 }
 
 #[tokio::test]
@@ -901,37 +900,34 @@ async fn received_enquire_link_and_sent_enquire_link_response_should_be_sent_thr
         framed
     });
 
-    let (client, events) = ConnectionBuilder::new()
+    let (client, mut events) = ConnectionBuilder::new()
         .no_enquire_link_interval()
         .events()
         .insights()
         .connected(client);
-
-    tokio::time::sleep(Duration::from_millis(10)).await;
-
-    client.close().await.expect("Failed to close connection");
-
-    let events = events
-        .filter_map(|event| async {
-            match event {
-                InsightEvent::Insight(insight) => Some(insight),
-                _ => None,
-            }
-        })
-        .take(2)
-        .collect::<Vec<_>>()
-        .await;
-
-    let _ = handle.await.expect("Failed await server handle");
 
     let expected_events = vec![
         Insight::ReceivedEnquireLink(1),
         Insight::SentEnquireLinkResp(1),
     ];
 
-    assert_eq!(events, expected_events);
+    let mut collected_events = Vec::new();
+
+    while let Some(event) = events.next().await {
+        if let InsightEvent::Insight(insight) = event {
+            collected_events.push(insight);
+
+            if collected_events.len() == expected_events.len() {
+                break;
+            }
+        }
+    }
+
+    client.close().await.expect("Failed to close connection");
+
+    let _ = handle.await.expect("Failed await server handle");
+
+    assert_eq!(collected_events, expected_events);
 }
 
-// TODO: sent_enquire_link_and_received_enquire_link_response_should_be_sent_through_events and received_enquire_link_and_sent_enquire_link_response_should_be_sent_through_events
-// are time based and not so reliable. Consider adding a way to mock time in the connection to make them more reliable.
 // TODO: add tests for raw client
