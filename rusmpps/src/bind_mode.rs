@@ -1,6 +1,6 @@
 use rusmpp::session::SessionState;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum BindMode {
     Tx,
     Rx,
