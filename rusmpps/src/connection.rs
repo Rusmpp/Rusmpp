@@ -1,3 +1,4 @@
+use std::net::SocketAddr;
 use std::{str::FromStr, sync::Arc, time::Duration};
 
 use futures::{SinkExt, StreamExt, TryStreamExt, future};
@@ -36,12 +37,17 @@ pub struct ConnectionConfig {
 #[derive(Debug)]
 pub struct Connection {
     session_id: u64,
+    socket_addr: SocketAddr,
     config: Arc<ConnectionConfig>,
 }
 
 impl Connection {
-    pub fn new(session_id: u64, config: Arc<ConnectionConfig>) -> Self {
-        Self { session_id, config }
+    pub fn new(socket_addr: SocketAddr, session_id: u64, config: Arc<ConnectionConfig>) -> Self {
+        Self {
+            socket_addr,
+            session_id,
+            config,
+        }
     }
 
     pub async fn run<S>(self, stream: S)
