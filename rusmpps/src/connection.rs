@@ -312,8 +312,7 @@ impl Connection {
                         }
                         _ => {
                             tracing::warn!(session_id, sequence_number, id=?id, "Received unsupported command");
-
-                            continue
+                            (Pdu::GenericNack, CommandStatus::EsmeRinvcmdid)
                         }
                     };
 
