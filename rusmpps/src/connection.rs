@@ -274,17 +274,17 @@ impl Connection {
 
                     let (id, _, sequence_number, pdu) = command.into_parts().raw();
 
-                    let pdu: Pdu = match pdu {
+                    let (pdu, status) = match pdu {
                         Some(Pdu::Unbind) => {
-                            Pdu::UnbindResp
+                            (Pdu::UnbindResp, CommandStatus::EsmeRok)
                         },
                         Some(Pdu::EnquireLink) => {
-                            Pdu::EnquireLinkResp
+                            (Pdu::EnquireLinkResp, CommandStatus::EsmeRok)
                         },
                         Some(Pdu::SubmitSm(_)) => {
-                            SubmitSmResp::builder()
+                            (SubmitSmResp::builder()
                                 .build()
-                                .into()
+                                .into(), CommandStatus::EsmeRok)
                         },
                         Some(Pdu::EnquireLinkResp) => {
                             match last_enquire_link_sequence_number {
@@ -323,7 +323,7 @@ impl Connection {
                     };
 
                     let command = Command::builder()
-                        .status(CommandStatus::EsmeRok)
+                        .status(status)
                         .sequence_number(sequence_number)
                         .pdu(pdu);
 
