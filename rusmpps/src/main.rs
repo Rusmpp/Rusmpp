@@ -1,9 +1,17 @@
+use async_trait::async_trait;
 use clap::Parser;
+use rusmpp::pdus::SubmitSmResp;
+use rusmpp::{CommandStatus, Pdu};
+use rusmpps::bind_mode::BindMode;
+use rusmpps::client::Action;
+use rusmpps::handler::{BindHandler, Handler};
 use rusmpps::{
     args::Args,
     config::Config,
     server::{Server, ServerParameters},
 };
+use std::net::SocketAddr;
+use tokio::sync::mpsc::Sender;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -33,6 +41,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         bind_delay: config.bind_delay,
         response_delay: config.response_delay,
         socket_addr: config.socket_addr,
+        bind_handler: DefaultBindHandler,
     };
 
     let server = Server::new(parameters);
@@ -79,4 +88,76 @@ async fn shutdown_signal() {
     }
 
     tracing::info!("Shutting down");
+}
+
+#[derive(Debug)]
+pub struct DefaultHandler;
+
+#[async_trait]
+impl Handler for DefaultHandler {
+    /// ```rust
+    ///     /**
+    ///      * Asynchronously handles a Protocol Data Unit (PDU) along with its sequence number.
+    ///      *
+    ///      * This method is used to process an incoming PDU and its associated sequence number.
+    ///      * The implementation logs the sequence number and PDU for debugging purposes.
+    ///      * Currently, the method does not perform additional logic and always returns `None`.
+    ///      *
+    ///      * # Parameters
+    ///      * - `sequence_number`: The sequence number associated with the incoming PDU.
+    ///      * - `pdu`: The Protocol Data Unit (PDU) to be processed.
+    ///      *
+    ///      * # Returns
+    ///      * - An `Option<(Pdu, CommandStatus)>` where:
+    ///      *   - `Some((Pdu, CommandStatus))`: Represents a response PDU along with a status indicating the outcome of the processing.
+    ///      *   - `None`: Indicates no response is generated (default in this implementation).
+    ///      *
+    ///      * # Side Effects
+    ///      * - Logs the sequence number and PDU to the console using `println!`.
+    ///      *
+    ///      * # Example
+    ///      * ```
+    ///      * let result = handler.handle_pdu(42, pdu).await;
+    ///      * assert!(result.is_none());
+    ///      * ```
+    ///      *
+    ///      * # Notes
+    ///      * - This is a placeholder function and may need further implementation to handle specific PDU types and business logic.
+    ///      */
+    ///     async fn handle_pdu(&self, sequence_number: u32, pdu: Pdu) -> Option<(Pdu, CommandStatus)> {
+    ///         println!("{sequence_number}-{:?}", pdu);
+    ///         None
+    ///     }
+    /// ```
+    async fn handle_pdu(&self, sequence_number: u32, pdu: Pdu) -> Option<(Pdu, CommandStatus)> {
+        match pdu {
+            Pdu::SubmitSm(_) => Some((
+                SubmitSmResp::builder().build().into(),
+                CommandStatus::EsmeRok,
+            )),
+            _ => {
+                tracing::warn!("Received unsupported PDU: {sequence_number} {pdu:?}");
+                None
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct DefaultBindHandler;
+
+#[async_trait]
+impl BindHandler for DefaultBindHandler {
+    type Handler = DefaultHandler;
+
+    async fn bind(
+        &self,
+        _addr: SocketAddr,
+        _bind_mode: BindMode,
+        _system_id: &str,
+        _password: &str,
+        _tx: Sender<Action>,
+    ) -> Result<Self::Handler, CommandStatus> {
+        Ok(DefaultHandler)
+    }
 }
