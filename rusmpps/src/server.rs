@@ -76,7 +76,7 @@ impl<B: BindHandler> Server<B> {
 
             tracing::info!(%addr, session_id, "Accepted connection");
 
-            let connection = Connection::new(addr.clone(), session_id, self.config.clone());
+            let connection = Connection::new(addr, session_id, self.config.clone());
 
             tokio::spawn(async move {
                 connection.run(stream).await;
