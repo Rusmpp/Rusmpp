@@ -186,9 +186,9 @@ impl Client {
 
     /// Sends an [`Unbind`](Pdu::Unbind) command to the server and waits for a successful [`UnbindResp`](Pdu::UnbindResp).
     pub async fn unbind(&self) -> Result<(), Error> {
-        let result = self.registered_request().unbind().await?;
+        self.registered_request().unbind().await?;
         self.inner.session_state.set(SessionState::Unbound);
-        Ok(result)
+        Ok(())
     }
 
     /// Sends an [`UnbindResp`](Pdu::UnbindResp) command to the server.
