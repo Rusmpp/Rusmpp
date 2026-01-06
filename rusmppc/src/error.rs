@@ -106,7 +106,7 @@ pub enum Error {
         supported_version: InterfaceVersion,
     },
     /// The client tried to send a command that is not allowed in the current state.
-    #[error("Command not allowed: {command_id:?}")]
+    #[error("Command not allowed: {command_id:?} in state {session_state:?}")]
     CommandNotAllowed {
         /// The command ID that was attempted to send.
         command_id: CommandId,
