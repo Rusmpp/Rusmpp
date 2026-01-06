@@ -3,7 +3,8 @@
 use std::time::Duration;
 
 use rusmpp::{
-    Command,
+    Command, CommandId,
+    session::SessionState,
     tokio_codec::{DecodeError, EncodeError},
     values::InterfaceVersion,
 };
@@ -103,6 +104,14 @@ pub enum Error {
         version: InterfaceVersion,
         /// The version that is supported by the library.
         supported_version: InterfaceVersion,
+    },
+    /// The client tried to send a command that is not allowed in the current state.
+    #[error("Command not allowed: {command_id:?}")]
+    CommandNotAllowed {
+        /// The command ID that was attempted to send.
+        command_id: CommandId,
+        /// The session state.
+        session_state: SessionState,
     },
 }
 

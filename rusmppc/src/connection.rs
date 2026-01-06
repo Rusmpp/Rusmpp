@@ -12,11 +12,13 @@ use crate::{
     error::Error,
     event::{EventChannel, Insight},
     request::ObligatedRequest,
+    session_state_holder::SessionStateHolder,
 };
 use futures::{FutureExt, Sink, SinkExt, Stream};
 use pin_project_lite::pin_project;
 use rusmpp::{
     Command, CommandId, CommandStatus, Pdu,
+    session::SessionState,
     tokio_codec::{DecodeError, EncodeError},
 };
 use tokio::sync::{
@@ -68,6 +70,7 @@ pin_project! {
         framed: F,
         #[pin]
         actions: UnboundedReceiverStream<Action>,
+        session_state: SessionStateHolder,
     }
 }
 
@@ -78,6 +81,7 @@ impl<D1: Delay, D2: Delay, E: EventChannel> Connection<(), D1, D2, E> {
         auto_enquire_link_response: bool,
         enquire_link_timer_delay: D1,
         enquire_link_response_timer_delay: D2,
+        session_state: SessionStateHolder,
     ) -> (
         Self,
         watch::Sender<()>,
@@ -109,6 +113,7 @@ impl<D1: Delay, D2: Delay, E: EventChannel> Connection<(), D1, D2, E> {
                 events,
                 framed: (),
                 actions: UnboundedReceiverStream::new(actions_rx),
+                session_state,
             },
             watch_tx,
             actions_tx,
@@ -133,6 +138,7 @@ impl<D1: Delay, D2: Delay, E: EventChannel> Connection<(), D1, D2, E> {
             enquire_link_response_timer: self.enquire_link_response_timer,
             framed,
             actions: self.actions,
+            session_state: self.session_state,
         }
     }
 }
@@ -656,6 +662,11 @@ where
                             }
 
                             // Command is an operation from the server.
+                            if matches!(id, CommandId::Outbind) {
+                                self.session_state.set(SessionState::Outbound);
+                            } else if matches!(id, CommandId::Unbind) {
+                                self.session_state.set(SessionState::Unbound);
+                            }
                             let _ = self.as_mut().events.send_incoming(command);
                         }
                         Poll::Ready(Some(Err(err))) => {
@@ -717,6 +728,7 @@ impl<E: EventChannel> NoSpawnConnectionBuilder<E> {
             self.builder.auto_enquire_link_response,
             enquire_link_timer_delay,
             enquire_link_response_timer_delay,
+            self.builder.session_state.clone(),
         );
 
         let client = Client::new(
@@ -724,6 +736,7 @@ impl<E: EventChannel> NoSpawnConnectionBuilder<E> {
             self.builder.response_timeout,
             self.builder.check_interface_version,
             watch,
+            self.builder.session_state,
         );
 
         (client, events, async move {
