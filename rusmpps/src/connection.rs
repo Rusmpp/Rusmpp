@@ -1,5 +1,9 @@
 use std::{str::FromStr, sync::Arc, time::Duration};
 
+use crate::{
+    client::{Action, Client, ClientSession, ConnectedClients, SequenceNumber},
+    timer::Timer,
+};
 use futures::{SinkExt, StreamExt, TryStreamExt, future};
 use rusmpp::{
     Command, CommandId, CommandStatus, Pdu,
@@ -8,18 +12,13 @@ use rusmpp::{
     types::COctetString,
     values::InterfaceVersion,
 };
+use rusmpps_lib::bind_mode::BindMode;
 use tokio::{
     io::{AsyncRead, AsyncWrite},
     sync::mpsc,
 };
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_util::codec::{FramedRead, FramedWrite};
-
-use crate::{
-    bind_mode::BindMode,
-    client::{Action, Client, ClientSession, ConnectedClients, SequenceNumber},
-    timer::Timer,
-};
 
 #[derive(Debug)]
 pub struct ConnectionConfig {

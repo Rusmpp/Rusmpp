@@ -101,7 +101,7 @@
 #![deny(missing_docs)]
 
 mod action;
-pub(crate) use action::Action;
+pub use action::Action;
 
 mod connection;
 

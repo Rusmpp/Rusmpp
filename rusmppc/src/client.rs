@@ -13,8 +13,8 @@ use rusmpp::{
     pdus::{
         BindReceiver, BindReceiverResp, BindTransceiver, BindTransceiverResp, BindTransmitter,
         BindTransmitterResp, BroadcastSm, BroadcastSmResp, CancelBroadcastSm, CancelSm, DataSm,
-        DataSmResp, DeliverSmResp, QueryBroadcastSm, QueryBroadcastSmResp, QuerySm, QuerySmResp,
-        ReplaceSm, SubmitMulti, SubmitMultiResp, SubmitSm, SubmitSmResp,
+        DataSmResp, DeliverSm, DeliverSmResp, QueryBroadcastSm, QueryBroadcastSmResp, QuerySm,
+        QuerySmResp, ReplaceSm, SubmitMulti, SubmitMultiResp, SubmitSm, SubmitSmResp,
     },
     values::InterfaceVersion,
 };
@@ -44,7 +44,22 @@ impl Clone for Client {
 }
 
 impl Client {
-    pub(crate) fn new(
+    /// ```rust
+    /// Creates a new instance of the client.
+    ///
+    /// # Parameters
+    /// - `actions`: An `UnboundedSender<Action>` used for sending actions to the client. It enables asynchronous,
+    ///   unbounded communication for performing various operations.
+    /// - `response_timeout`: An `Option<Duration>` specifying the maximum amount of time to wait for a response
+    ///   from the client. If `None` is provided, no timeout will be applied.
+    /// - `check_interface_version`: A `bool` indicating whether the client should verify the compatibility of the
+    ///   interface version during initialization or interaction.
+    /// - `watch`: A `watch::Sender<()>` used to signal updates or changes to listening watch streams. It allows
+    ///   observers to receive notifications about client state changes.
+    ///
+    /// # Returns
+    /// A new instance of `Self`, wrapping an `Arc<ClientInner>` that manages the internal state of the client.
+    pub fn new(
         actions: UnboundedSender<Action>,
         response_timeout: Option<Duration>,
         check_interface_version: bool,
@@ -172,6 +187,25 @@ impl Client {
     /// Sends a [`SubmitSm`] command to the server and waits for a successful [`SubmitSmResp`].
     pub async fn submit_sm(&self, submit_sm: impl Into<SubmitSm>) -> Result<SubmitSmResp, Error> {
         self.registered_request().submit_sm(submit_sm).await
+    }
+
+    /// Sends a [`DeliverSmResp`] command to the server.
+    pub async fn submit_sm_resp(
+        &self,
+        sequence_number: u32,
+        submit_sm_resp: impl Into<SubmitSmResp>,
+    ) -> Result<(), Error> {
+        self.unregistered_request()
+            .submit_sm_resp(sequence_number, submit_sm_resp)
+            .await
+    }
+
+    /// Sends a [`DeliverSm`] command to the server and waits for a successful [`DeliverSmResp`].
+    pub async fn deliver_sm(
+        &self,
+        deliver_sm: impl Into<DeliverSm>,
+    ) -> Result<DeliverSmResp, Error> {
+        self.registered_request().deliver_sm(deliver_sm).await
     }
 
     /// Sends an [`Unbind`](Pdu::Unbind) command to the server and waits for a successful [`UnbindResp`](Pdu::UnbindResp).
@@ -500,6 +534,16 @@ impl<'a> UnregisteredRequestBuilder<'a> {
             .await
     }
 
+    /// Sends a [`SubmitSmResp`] command to the server.
+    pub async fn submit_sm_resp(
+        self,
+        sequence_number: u32,
+        submit_sm_resp: impl Into<SubmitSmResp>,
+    ) -> Result<(), Error> {
+        self.unregistered_request(submit_sm_resp.into(), sequence_number)
+            .await
+    }
+
     /// Sends an [`UnbindResp`](Pdu::UnbindResp) command to the server.
     pub async fn unbind_resp(self, sequence_number: u32) -> Result<(), Error> {
         self.unregistered_request(Pdu::UnbindResp, sequence_number)
@@ -818,6 +862,15 @@ impl<'a> RegisteredRequestBuilder<'a> {
     /// Sends a [`SubmitSm`] command to the server and waits for a successful [`SubmitSmResp`].
     pub async fn submit_sm(&self, submit_sm: impl Into<SubmitSm>) -> Result<SubmitSmResp, Error> {
         self.request_extract(submit_sm.into(), extract!(SubmitSmResp))
+            .await
+    }
+
+    /// Sends a [`DeliverSm`] command to the server and waits for a successful [`SubmitSmResp`].
+    pub async fn deliver_sm(
+        &self,
+        deliver_sm: impl Into<DeliverSm>,
+    ) -> Result<DeliverSmResp, Error> {
+        self.request_extract(deliver_sm.into(), extract!(DeliverSmResp))
             .await
     }
 
