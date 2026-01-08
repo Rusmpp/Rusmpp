@@ -1,6 +1,7 @@
 use std::{net::SocketAddr, time::Duration};
 
 use futures::Stream;
+use rusmpp::session::SessionState;
 use rusmpp::tokio_codec::CommandCodec;
 use tokio::{
     io::{AsyncRead, AsyncWrite},
@@ -13,6 +14,7 @@ use crate::{
     delay::TokioDelay,
     error::Error,
     event::{DefaultEventChannel, DiscardEventChannel, EventChannel, InsightEventChannel},
+    session_state_holder::SessionStateHolder,
 };
 
 /// Connection builder that discards all events.
@@ -43,6 +45,7 @@ pub struct ConnectionBuilder<E = DefaultEventChannel> {
     #[cfg(feature = "native-tls")]
     native_tls_connector: Option<native_tls::TlsConnector>,
     _phantom: std::marker::PhantomData<E>,
+    pub(crate) session_state: SessionStateHolder,
 }
 
 impl Default for DefaultConnectionBuilder {
@@ -76,6 +79,7 @@ impl DefaultConnectionBuilder {
             #[cfg(feature = "native-tls")]
             native_tls_connector: None,
             _phantom: std::marker::PhantomData,
+            session_state: SessionStateHolder::new(SessionState::Closed),
         }
     }
 }
@@ -478,6 +482,7 @@ impl<E: EventChannel> NoSpawnConnectionBuilder<E> {
             CommandCodec::new().with_max_length(self.builder.max_command_length),
         );
 
+        self.builder.session_state.set(SessionState::Open);
         self.raw(framed, TokioDelay::new(), TokioDelay::new())
     }
 }
@@ -503,6 +508,7 @@ impl<E> EventsConnectionBuilder<E> {
             #[cfg(feature = "native-tls")]
             native_tls_connector: self.builder.native_tls_connector,
             _phantom: std::marker::PhantomData,
+            session_state: self.builder.session_state,
         }
     }
 
@@ -520,6 +526,7 @@ impl<E> EventsConnectionBuilder<E> {
             #[cfg(feature = "native-tls")]
             native_tls_connector: self.builder.native_tls_connector,
             _phantom: std::marker::PhantomData,
+            session_state: self.builder.session_state,
         }
     }
 }

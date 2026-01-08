@@ -132,6 +132,7 @@ pub(crate) use futures::RequestFutureGuard;
 
 mod response;
 pub(crate) use response::PendingResponses;
+mod session_state_holder;
 
 mod tcp_stream;
 pub(crate) use tcp_stream::MaybeTlsStream;

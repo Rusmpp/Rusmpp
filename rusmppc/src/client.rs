@@ -16,6 +16,7 @@ use rusmpp::{
         DataSmResp, DeliverSmResp, QueryBroadcastSm, QueryBroadcastSmResp, QuerySm, QuerySmResp,
         ReplaceSm, SubmitMulti, SubmitMultiResp, SubmitSm, SubmitSmResp,
     },
+    session::SessionState,
     values::InterfaceVersion,
 };
 use tokio::sync::{mpsc::UnboundedSender, oneshot, watch};
@@ -23,6 +24,7 @@ use tokio::sync::{mpsc::UnboundedSender, oneshot, watch};
 use crate::{
     Action, CloseRequest, CommandExt, ConnectionBuilder, PendingResponses, RegisteredRequest,
     RequestFutureGuard, UnregisteredRequest, error::Error,
+    session_state_holder::SessionStateHolder,
 };
 
 const TARGET: &str = "rusmppc::client";
@@ -49,6 +51,7 @@ impl Client {
         response_timeout: Option<Duration>,
         check_interface_version: bool,
         watch: watch::Sender<()>,
+        session_state: SessionStateHolder,
     ) -> Self {
         Self {
             inner: Arc::new(ClientInner::new(
@@ -56,6 +59,7 @@ impl Client {
                 response_timeout,
                 check_interface_version,
                 watch,
+                session_state,
             )),
         }
     }
@@ -72,7 +76,9 @@ impl Client {
         &self,
         bind: impl Into<BindTransmitter>,
     ) -> Result<BindTransmitterResp, Error> {
-        self.registered_request().bind_transmitter(bind).await
+        let resp = self.registered_request().bind_transmitter(bind).await?;
+        self.inner.session_state.set(SessionState::BoundTx);
+        Ok(resp)
     }
 
     /// Sends a [`BindReceiver`] command to the server and waits for a successful [`BindReceiverResp`].
@@ -80,7 +86,9 @@ impl Client {
         &self,
         bind: impl Into<BindReceiver>,
     ) -> Result<BindReceiverResp, Error> {
-        self.registered_request().bind_receiver(bind).await
+        let resp = self.registered_request().bind_receiver(bind).await?;
+        self.inner.session_state.set(SessionState::BoundRx);
+        Ok(resp)
     }
 
     /// Sends a [`BindTransceiver`] command to the server and waits for a successful [`BindTransceiverResp`].
@@ -88,7 +96,9 @@ impl Client {
         &self,
         bind: impl Into<BindTransceiver>,
     ) -> Result<BindTransceiverResp, Error> {
-        self.registered_request().bind_transceiver(bind).await
+        let resp = self.registered_request().bind_transceiver(bind).await?;
+        self.inner.session_state.set(SessionState::BoundTrx);
+        Ok(resp)
     }
 
     /// Sends a [`BroadcastSm`] command to the server and waits for a successful [`BroadcastSmResp`].
@@ -176,7 +186,9 @@ impl Client {
 
     /// Sends an [`Unbind`](Pdu::Unbind) command to the server and waits for a successful [`UnbindResp`](Pdu::UnbindResp).
     pub async fn unbind(&self) -> Result<(), Error> {
-        self.registered_request().unbind().await
+        self.registered_request().unbind().await?;
+        self.inner.session_state.set(SessionState::Unbound);
+        Ok(())
     }
 
     /// Sends an [`UnbindResp`](Pdu::UnbindResp) command to the server.
@@ -212,6 +224,7 @@ impl Client {
     ///
     /// After calling this method, clients can no longer send requests to the server.
     pub async fn close(&self) -> Result<(), Error> {
+        self.inner.session_state.set(SessionState::Closed);
         self.inner.close().await
     }
 
@@ -311,6 +324,10 @@ impl Client {
     fn raw_request(&'_ self) -> RawRegisteredRequestBuilder<'_> {
         RawRegisteredRequestBuilder::new(self, CommandStatus::EsmeRok)
     }
+
+    fn can_send(&self, command_id: CommandId) -> bool {
+        self.inner.session_state.get().can_send_as_esme(command_id)
+    }
 }
 
 #[derive(Debug)]
@@ -320,6 +337,7 @@ struct ClientInner {
     sequence_number: AtomicU32,
     check_interface_version: bool,
     watch: watch::Sender<()>,
+    session_state: SessionStateHolder,
 }
 
 impl ClientInner {
@@ -328,6 +346,7 @@ impl ClientInner {
         response_timeout: Option<Duration>,
         check_interface_version: bool,
         watch: watch::Sender<()>,
+        session_state: SessionStateHolder,
     ) -> Self {
         Self {
             actions,
@@ -335,6 +354,7 @@ impl ClientInner {
             sequence_number: AtomicU32::new(1),
             check_interface_version,
             watch,
+            session_state,
         }
     }
 
@@ -665,6 +685,17 @@ impl<'a> RegisteredRequestBuilder<'a> {
         Ok(())
     }
 
+    fn check_operation_matrix(&self, command_id: CommandId) -> Result<(), Error> {
+        if !self.client.can_send(command_id) {
+            return Err(Error::CommandNotAllowed {
+                command_id,
+                session_state: self.client.inner.session_state.get(),
+            });
+        }
+
+        Ok(())
+    }
+
     fn request(&self, pdu: impl Into<Pdu>) -> impl Future<Output = Result<Command, Error>> {
         let sequence_number = self.client.inner.next_sequence_number();
 
@@ -686,7 +717,10 @@ impl<'a> RegisteredRequestBuilder<'a> {
         pdu: impl Into<Pdu>,
         extract: fn(Pdu) -> Result<R, Pdu>,
     ) -> Result<R, Error> {
-        self.request(pdu.into())
+        let pdu = pdu.into();
+        self.check_operation_matrix(pdu.command_id())?;
+
+        self.request(pdu)
             .await?
             .ok()
             .map_err(Error::unexpected_response)
@@ -710,7 +744,10 @@ impl<'a> RegisteredRequestBuilder<'a> {
         pdu: impl Into<Pdu>,
         id: CommandId,
     ) -> Result<(), Error> {
-        self.request(pdu.into())
+        let pdu = pdu.into();
+        self.check_operation_matrix(pdu.command_id())?;
+
+        self.request(pdu)
             .await?
             .ok_and_matches(id)
             .map(|_| ())
