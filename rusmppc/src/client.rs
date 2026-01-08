@@ -325,7 +325,7 @@ impl Client {
         RawRegisteredRequestBuilder::new(self, CommandStatus::EsmeRok)
     }
 
-    async fn can_send(&self, command_id: CommandId) -> bool {
+    fn can_send(&self, command_id: CommandId) -> bool {
         self.inner.session_state.get().can_send_as_esme(command_id)
     }
 }
@@ -685,8 +685,8 @@ impl<'a> RegisteredRequestBuilder<'a> {
         Ok(())
     }
 
-    async fn check_operation_matrix(&self, command_id: CommandId) -> Result<(), Error> {
-        if !self.client.can_send(command_id).await {
+    fn check_operation_matrix(&self, command_id: CommandId) -> Result<(), Error> {
+        if !self.client.can_send(command_id) {
             return Err(Error::CommandNotAllowed {
                 command_id,
                 session_state: self.client.inner.session_state.get(),
@@ -718,7 +718,7 @@ impl<'a> RegisteredRequestBuilder<'a> {
         extract: fn(Pdu) -> Result<R, Pdu>,
     ) -> Result<R, Error> {
         let pdu = pdu.into();
-        self.check_operation_matrix(pdu.command_id()).await?;
+        self.check_operation_matrix(pdu.command_id())?;
 
         self.request(pdu)
             .await?
@@ -745,7 +745,7 @@ impl<'a> RegisteredRequestBuilder<'a> {
         id: CommandId,
     ) -> Result<(), Error> {
         let pdu = pdu.into();
-        self.check_operation_matrix(pdu.command_id()).await?;
+        self.check_operation_matrix(pdu.command_id())?;
 
         self.request(pdu)
             .await?
