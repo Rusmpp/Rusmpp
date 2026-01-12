@@ -12,6 +12,7 @@ keywords = ["smpp", "smsc", "messaging", "networking", "protocol"]
 publish = false
 
 [dependencies]
+rusmpps-lib = { path = "../rusmpps-lib"}
 rusmpp = { path = "../rusmpp", default-features = false, features = [
     "tokio-codec",
     "tracing",

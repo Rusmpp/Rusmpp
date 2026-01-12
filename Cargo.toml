@@ -8,6 +8,6 @@ members = [
     "rusmppy/rusmppyc",
     "rusmppz",
     "rusmpp-core",
-    "rusmpp-macros", "rusmpp-extra",
+    "rusmpp-macros", "rusmpp-extra", "rusmpps-lib",
 ]
 default-members = ["rusmpp"]
