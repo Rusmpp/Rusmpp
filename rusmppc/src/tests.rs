@@ -930,4 +930,5 @@ async fn received_enquire_link_and_sent_enquire_link_response_should_be_sent_thr
     assert_eq!(collected_events, expected_events);
 }
 
-// TODO: add tests for raw client
+// TODO: add tests for the RawRegisteredRequestBuilder
+// TODO: add tests for the response timeout methods on the RegisteredRequestBuilder and the RawRegisteredRequestBuilder
