@@ -37,6 +37,7 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
     // that resolves to the response command.
     let (sequence_number, response) = client
         .raw()
+        .response_timeout(Duration::from_secs(30))
         .send(
             BindTransceiver::builder()
                 .system_id(COctetString::from_str("NfDfddEKVI0NCxO")?)

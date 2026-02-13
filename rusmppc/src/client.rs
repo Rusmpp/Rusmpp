@@ -387,8 +387,11 @@ impl ClientInner {
         &self,
         response: oneshot::Receiver<Command>,
         sequence_number: u32,
+        response_timeout: Option<Duration>,
     ) -> Result<Command, Error> {
-        match self.response_timeout {
+        tracing::trace!(target: TARGET, sequence_number, timeout = ?response_timeout, "Waiting for response");
+
+        match response_timeout {
             None => response.await.map_err(|_| Error::ConnectionClosed),
             Some(timeout) => tokio::time::timeout(timeout, response)
                 .await
@@ -401,16 +404,21 @@ impl ClientInner {
     }
 
     /// See [`Self::send_registered`] and [`Self::await_response`].
-    async fn send_registered_and_await_response(&self, command: Command) -> Result<Command, Error> {
+    async fn send_registered_and_await_response(
+        &self,
+        command: Command,
+        response_timeout: Option<Duration>,
+    ) -> Result<Command, Error> {
         let sequence_number = command.sequence_number();
         let status = command.status();
         let id = command.id();
 
         let response = self.send_registered(command).await?;
 
-        tracing::trace!(target: TARGET, sequence_number, ?status, ?id, response_timeout = ?self.response_timeout, "Starting response timer");
+        tracing::trace!(target: TARGET, sequence_number, ?status, ?id, timeout = ?response_timeout, "Starting response timer");
 
-        self.await_response(response, sequence_number).await
+        self.await_response(response, sequence_number, response_timeout)
+            .await
     }
 }
 
@@ -676,7 +684,7 @@ impl<'a> RegisteredRequestBuilder<'a> {
         let future = self
             .client
             .inner
-            .send_registered_and_await_response(command);
+            .send_registered_and_await_response(command, self.response_timeout);
 
         RequestFutureGuard::new(&self.client.inner.actions, sequence_number, future)
     }
@@ -962,7 +970,7 @@ impl<'a> RawRegisteredRequestBuilder<'a> {
     ///
     /// # Notes
     ///
-    /// - If the sent command is not an operation expecting a response, the response future will never resolve and should be dropped.
+    /// - If the sent command is not an operation expecting a response, and the response timeout is unset, the response future will never resolve and should be dropped.
     /// - The response timeout is started when the response future is awaited.
     /// - No interface version check is performed.
     pub fn send(
@@ -993,7 +1001,7 @@ impl<'a> RawRegisteredRequestBuilder<'a> {
             let future = self
                 .client
                 .inner
-                .await_response(response, sequence_number)
+                .await_response(response, sequence_number, self.response_timeout)
                 .and_then(move |command| async move {
                     // XXX: it is ok to match against responses only, as this is a registered request
                     // If the request does not have a matching response, the user should not be awaiting it here anyway

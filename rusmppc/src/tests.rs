@@ -17,8 +17,8 @@ use futures::{SinkExt, StreamExt};
 use rusmpp::{
     Command, CommandId, CommandStatus, Pdu,
     pdus::{
-        AlertNotification, BindReceiverResp, BindTransceiverResp, BindTransmitterResp, SubmitSm,
-        SubmitSmResp,
+        AlertNotification, BindReceiverResp, BindTransceiverResp, BindTransmitterResp, DeliverSm,
+        SubmitSm, SubmitSmResp,
     },
     tokio_codec::CommandCodec,
 };
@@ -207,6 +207,61 @@ async fn cancel_request_future_should_remove_pending_response() {
         .connected(client);
 
     let future = client.submit_sm(SubmitSm::default());
+
+    tokio::select! {
+        _ = tokio::time::sleep(Duration::from_millis(100)) => {
+            tracing::debug!("Canceling request future");
+        }
+        _ = future => {}
+    }
+
+    let pending_response = client
+        .pending_responses()
+        .await
+        .expect("Failed to get pending responses");
+
+    assert!(
+        !pending_response.contains(&1),
+        "Pending response was not removed"
+    );
+
+    // The submit sm response should be sent to the event stream
+
+    let Some(Event::Incoming(command)) = events.next().await else {
+        panic!("Expected command event");
+    };
+
+    assert!(matches!(command.id(), CommandId::SubmitSmResp));
+    assert_eq!(command.sequence_number(), 1);
+
+    client.close().await.expect("Failed to close connection");
+
+    client.closed().await;
+
+    let _ = events.count().await;
+}
+
+/// Similar to [`cancel_request_future_should_remove_pending_response`] but this one uses the raw request builder.
+#[tokio::test]
+async fn raw_cancel_request_future_should_remove_pending_response() {
+    init_tracing();
+
+    let (server, client) = tokio::io::duplex(1024);
+
+    tokio::spawn(async move {
+        Server::new().run(server).await;
+    });
+
+    let (client, mut events) = ConnectionBuilder::new()
+        .response_timeout(Duration::from_millis(1000))
+        .connected(client);
+
+    let future = client
+        .raw()
+        .send(SubmitSm::default())
+        .await
+        .expect("Failed to send submit SM")
+        .1;
 
     tokio::select! {
         _ = tokio::time::sleep(Duration::from_millis(100)) => {
@@ -930,4 +985,123 @@ async fn received_enquire_link_and_sent_enquire_link_response_should_be_sent_thr
     assert_eq!(collected_events, expected_events);
 }
 
-// TODO: add tests for raw client
+#[tokio::test]
+async fn registered_request_builder_timeout() {
+    init_tracing();
+
+    let (server, client) = tokio::io::duplex(1024);
+
+    tokio::spawn(async move {
+        Server::new()
+            .response_delay(Duration::from_secs(1))
+            .run(server)
+            .await;
+    });
+
+    let (client, _) = ConnectionBuilder::new()
+        .response_timeout(Duration::from_secs(2))
+        .connected(client);
+
+    client
+        // This uses the default timeout of 2 seconds specified in the connection builder
+        .submit_sm(SubmitSm::default())
+        .await
+        .expect("Failed to submit SM");
+
+    let err = client
+        // This should override the connection's response timeout and use the one specified here instead
+        .response_timeout(Duration::from_millis(100))
+        .submit_sm(SubmitSm::default())
+        .await
+        .unwrap_err();
+
+    assert!(matches!(err, Error::ResponseTimeout { .. }));
+
+    client.close().await.expect("Failed to close connection");
+
+    client.closed().await;
+}
+
+#[tokio::test]
+async fn raw_request_builder_timeout() {
+    init_tracing();
+
+    let (server, client) = tokio::io::duplex(1024);
+
+    tokio::spawn(async move {
+        Server::new()
+            .response_delay(Duration::from_secs(1))
+            .run(server)
+            .await;
+    });
+
+    let (client, _) = ConnectionBuilder::new()
+        .response_timeout(Duration::from_secs(2))
+        .connected(client);
+
+    client
+        .raw()
+        // This uses the default timeout of 2 seconds specified in the connection builder
+        .send(SubmitSm::default())
+        .await
+        .expect("Failed to send submit SM")
+        .1
+        .await
+        .expect("Failed to await submit SM response");
+
+    let err = client
+        .raw()
+        // This should override the connection's response timeout and use the one specified here instead
+        .response_timeout(Duration::from_millis(100))
+        .send(SubmitSm::default())
+        .await
+        .expect("Failed to send submit SM")
+        .1
+        .await
+        .unwrap_err();
+
+    assert!(matches!(err, Error::ResponseTimeout { .. }));
+
+    client.close().await.expect("Failed to close connection");
+
+    client.closed().await;
+}
+
+#[tokio::test]
+async fn raw_awaiting_a_response_for_an_operation_that_does_not_require_a_response_and_response_timeout_is_unset_should_never_resolve()
+ {
+    init_tracing();
+
+    let (server, client) = tokio::io::duplex(1024);
+
+    tokio::spawn(async move {
+        Server::new()
+            .response_delay(Duration::from_millis(100))
+            .run(server)
+            .await;
+    });
+
+    let (client, _) = ConnectionBuilder::new()
+        .response_timeout(Duration::from_millis(200))
+        .connected(client);
+
+    let (_, response) = client
+        .raw()
+        .no_response_timeout()
+        .send(DeliverSm::default())
+        .await
+        .expect("Failed to send submit SM");
+
+    tokio::select! {
+        _ = tokio::time::sleep(Duration::from_millis(500)) => {
+
+        }
+        _ = response => {
+            panic!("Response future resolved unexpectedly");
+        }
+    }
+
+    client.close().await.expect("Failed to close connection");
+
+    client.closed().await;
+}
