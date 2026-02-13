@@ -389,7 +389,7 @@ impl ClientInner {
         sequence_number: u32,
         response_timeout: Option<Duration>,
     ) -> Result<Command, Error> {
-        tracing::trace!(target: TARGET, sequence_number, response_timeout = ?response_timeout, "Waiting for response");
+        tracing::trace!(target: TARGET, sequence_number, timeout = ?response_timeout, "Waiting for response");
 
         match response_timeout {
             None => response.await.map_err(|_| Error::ConnectionClosed),
@@ -415,7 +415,7 @@ impl ClientInner {
 
         let response = self.send_registered(command).await?;
 
-        tracing::trace!(target: TARGET, sequence_number, ?status, ?id, response_timeout = ?response_timeout, "Starting response timer");
+        tracing::trace!(target: TARGET, sequence_number, ?status, ?id, timeout = ?response_timeout, "Starting response timer");
 
         self.await_response(response, sequence_number, response_timeout)
             .await
