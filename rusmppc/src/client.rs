@@ -970,7 +970,7 @@ impl<'a> RawRegisteredRequestBuilder<'a> {
     ///
     /// # Notes
     ///
-    /// - If the sent command is not an operation expecting a response, the response future will never resolve and should be dropped.
+    /// - If the sent command is not an operation expecting a response, and the response timeout is unset, the response future will never resolve and should be dropped.
     /// - The response timeout is started when the response future is awaited.
     /// - No interface version check is performed.
     pub fn send(
