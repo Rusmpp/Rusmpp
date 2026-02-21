@@ -106,23 +106,11 @@ fn py_additional_methods(name: &str) -> &'static str {
         .unwrap_or("")
 }
 
-/// Issue: [Rusmpp #102](https://github.com/Rusmpp/Rusmpp/issues/102)
 fn gen_stub_pymethods(name: &str) -> &'static str {
     static STUB_GEN: OnceLock<HashMap<&'static str, &'static str>> = OnceLock::new();
 
     STUB_GEN
-        .get_or_init(|| {
-            let mut m = HashMap::new();
-            m.insert(
-                "EsmClass",
-                "#[cfg_attr(not(any(PyPy, GraalPy)), ::pyo3_stub_gen_derive::gen_stub_pymethods)]",
-            );
-            m.insert(
-                "RegisteredDelivery",
-                "#[cfg_attr(not(any(PyPy, GraalPy)), ::pyo3_stub_gen_derive::gen_stub_pymethods)]",
-            );
-            m
-        })
+        .get_or_init(HashMap::new)
         .get(name)
         .copied()
         .unwrap_or("#[::pyo3_stub_gen_derive::gen_stub_pymethods]")

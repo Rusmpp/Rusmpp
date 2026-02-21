@@ -1,6 +1,6 @@
 [package]
 name = "rusmppyc"
-version = "0.4.0-alpha.1"
+version = "0.4.0-alpha.2"
 edition = "2021"
 publish = false
 
@@ -27,9 +27,6 @@ humantime = "2.2.0"
 tracing = { version = "0.1.41", features = ["log-always"] }
 rusmpp = { path = "../../rusmpp", version = "0.4.0", default-features = false }
 rusmppc = { path = "../../rusmppc", version = "0.4.0", default-features = false }
-
-[build-dependencies]
-pyo3-build-config = { version = "0.27.1", features = ["resolve-config"] }
 
 [features]
 default = ["rustls"]
