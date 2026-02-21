@@ -6,10 +6,8 @@
 //! A 2-octet integer with the decimal value of 41746 would
 //! be encoded as 2 octets with the value 0xA312
 
-#[cfg(feature = "alloc")]
-use crate::decode::UnexpectedEof;
 use crate::{
-    decode::{DecodeError, borrowed},
+    decode::{DecodeError, DecodeErrorType, IntegerDecodeError, borrowed},
     encode::{Encode, Length},
 };
 
@@ -39,9 +37,8 @@ impl crate::encode::owned::Encode for u16 {
     }
 }
 
-#[cfg(feature = "alloc")]
-impl crate::decode::DecodeErrorType for u16 {
-    type Error = UnexpectedEof;
+impl DecodeErrorType for u16 {
+    type Error = IntegerDecodeError;
 }
 
 #[cfg(feature = "alloc")]
@@ -50,7 +47,12 @@ impl crate::decode::owned::Decode for u16 {
         use bytes::Buf;
 
         if src.len() < 2 {
-            return Err(DecodeError::unexpected_eof());
+            return Err(DecodeError::integer_decode_error(
+                IntegerDecodeError::TooFewBytes {
+                    actual: src.len(),
+                    min: 2,
+                },
+            ));
         }
 
         Ok((src.get_u16(), 2))
@@ -60,7 +62,12 @@ impl crate::decode::owned::Decode for u16 {
 impl borrowed::Decode<'_> for u16 {
     fn decode(src: &[u8]) -> Result<(Self, usize), DecodeError> {
         if src.len() < 2 {
-            return Err(DecodeError::unexpected_eof());
+            return Err(DecodeError::integer_decode_error(
+                IntegerDecodeError::TooFewBytes {
+                    actual: src.len(),
+                    min: 2,
+                },
+            ));
         }
 
         let mut bytes = [0; 2];

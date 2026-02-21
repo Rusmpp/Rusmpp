@@ -6,10 +6,8 @@
 //! A 1-octet Integer with a value 5, would be encoded in a
 //! single octet with the value 0x05
 
-#[cfg(feature = "alloc")]
-use crate::decode::UnexpectedEof;
 use crate::{
-    decode::{DecodeError, borrowed},
+    decode::{DecodeError, DecodeErrorType, IntegerDecodeError, borrowed},
     encode::{Encode, Length},
 };
 
@@ -36,9 +34,8 @@ impl crate::encode::owned::Encode for u8 {
     }
 }
 
-#[cfg(feature = "alloc")]
-impl crate::decode::DecodeErrorType for u8 {
-    type Error = UnexpectedEof;
+impl DecodeErrorType for u8 {
+    type Error = IntegerDecodeError;
 }
 
 #[cfg(feature = "alloc")]
@@ -47,7 +44,12 @@ impl crate::decode::owned::Decode for u8 {
         use bytes::Buf;
 
         if src.is_empty() {
-            return Err(DecodeError::unexpected_eof());
+            return Err(DecodeError::integer_decode_error(
+                IntegerDecodeError::TooFewBytes {
+                    actual: src.len(),
+                    min: 1,
+                },
+            ));
         }
 
         Ok((src.get_u8(), 1))
@@ -57,7 +59,12 @@ impl crate::decode::owned::Decode for u8 {
 impl borrowed::Decode<'_> for u8 {
     fn decode(src: &[u8]) -> Result<(Self, usize), DecodeError> {
         if src.is_empty() {
-            return Err(DecodeError::unexpected_eof());
+            return Err(DecodeError::integer_decode_error(
+                IntegerDecodeError::TooFewBytes {
+                    actual: src.len(),
+                    min: 1,
+                },
+            ));
         }
 
         Ok((src[0], 1))

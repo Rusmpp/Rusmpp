@@ -2,7 +2,7 @@ use alloc::{string::String, string::ToString, vec::Vec};
 use bytes::{BufMut, Bytes, BytesMut};
 
 use crate::{
-    decode::{DecodeError, DecodeErrorType, UnexpectedEof, owned::DecodeWithLength},
+    decode::{AnyOctetStringDecodeError, DecodeError, DecodeErrorType, owned::DecodeWithLength},
     encode::{Encode, Length, owned::Encode as BEncode},
 };
 
@@ -209,13 +209,18 @@ impl BEncode for AnyOctetString {
 }
 
 impl DecodeErrorType for AnyOctetString {
-    type Error = UnexpectedEof;
+    type Error = AnyOctetStringDecodeError;
 }
 
 impl DecodeWithLength for AnyOctetString {
     fn decode(src: &mut BytesMut, length: usize) -> Result<(Self, usize), DecodeError> {
         if src.len() < length {
-            return Err(DecodeError::unexpected_eof());
+            return Err(DecodeError::any_octet_string_decode_error(
+                AnyOctetStringDecodeError::TooFewBytes {
+                    actual: src.len(),
+                    min: length,
+                },
+            ));
         }
 
         let bytes = src.split_to(length).freeze();
@@ -297,11 +302,16 @@ mod tests {
         use super::*;
 
         #[test]
-        fn unexpected_eof_empty() {
+        fn too_few_bytes_empty() {
             let mut buf = BytesMut::new();
             let error = AnyOctetString::decode(&mut buf, 5).unwrap_err();
 
-            assert!(matches!(error.kind(), DecodeErrorKind::UnexpectedEof));
+            assert!(matches!(
+                error.kind(),
+                DecodeErrorKind::AnyOctetStringDecodeError(
+                    AnyOctetStringDecodeError::TooFewBytes { actual: 0, min: 5 }
+                )
+            ));
         }
 
         #[test]

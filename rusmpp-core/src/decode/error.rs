@@ -1,7 +1,5 @@
 use crate::fields::SmppField;
 
-// TODO: move errors to their respective modules. E.g. `COctetStringDecodeError` should be in the `c_octet_string` module.
-// TODO: create TooFewElementsError { min } instead of UnexpectedEof and move it to its respective module.
 // TODO: name all errors with the suffix "Error" for consistency.
 // TODO: delete the DecodeError. and the verbose feature.
 // TODO: make decode traits return the DecodeErrorType::Error instead of DecodeError.
@@ -73,8 +71,8 @@ impl DecodeError {
     }
 
     #[inline]
-    pub const fn unexpected_eof() -> Self {
-        Self::new(DecodeErrorKind::UnexpectedEof)
+    pub const fn integer_decode_error(error: IntegerDecodeError) -> Self {
+        Self::new(DecodeErrorKind::IntegerDecodeError(error))
     }
 
     #[inline]
@@ -85,6 +83,11 @@ impl DecodeError {
     #[inline]
     pub const fn octet_string_decode_error(error: OctetStringDecodeError) -> Self {
         Self::new(DecodeErrorKind::OctetStringDecodeError(error))
+    }
+
+    #[inline]
+    pub const fn any_octet_string_decode_error(error: AnyOctetStringDecodeError) -> Self {
+        Self::new(DecodeErrorKind::AnyOctetStringDecodeError(error))
     }
 
     #[inline]
@@ -151,9 +154,10 @@ impl DecodeErrorSource {
 #[derive(Debug, Copy, Clone)]
 #[non_exhaustive]
 pub enum DecodeErrorKind {
-    UnexpectedEof,
+    IntegerDecodeError(IntegerDecodeError),
     COctetStringDecodeError(COctetStringDecodeError),
     OctetStringDecodeError(OctetStringDecodeError),
+    AnyOctetStringDecodeError(AnyOctetStringDecodeError),
     UnsupportedKey {
         key: u32,
     },
@@ -166,8 +170,12 @@ pub enum DecodeErrorKind {
     UdhDecodeError(UdhDecodeError),
 }
 
-#[derive(Debug)]
-pub struct UnexpectedEof;
+/// An error that can occur when decoding a `Integer`.
+#[derive(Debug, Copy, Clone)]
+#[non_exhaustive]
+pub enum IntegerDecodeError {
+    TooFewBytes { actual: usize, min: usize },
+}
 
 /// An error that can occur when decoding a `COctetString`.
 #[derive(Debug, Copy, Clone)]
@@ -183,6 +191,13 @@ pub enum COctetStringDecodeError {
 #[non_exhaustive]
 pub enum OctetStringDecodeError {
     TooManyBytes { actual: usize, max: usize },
+    TooFewBytes { actual: usize, min: usize },
+}
+
+/// An error that can occur when decoding an `AnyOctetString`.
+#[derive(Debug, Copy, Clone)]
+#[non_exhaustive]
+pub enum AnyOctetStringDecodeError {
     TooFewBytes { actual: usize, min: usize },
 }
 
@@ -270,14 +285,25 @@ impl core::error::Error for DecodeError {
 impl core::fmt::Display for DecodeErrorKind {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            DecodeErrorKind::UnexpectedEof => write!(f, "Unexpected EOF"),
+            DecodeErrorKind::IntegerDecodeError(e) => write!(f, "Integer decode error: {e}"),
             DecodeErrorKind::COctetStringDecodeError(e) => write!(f, "COctetString error: {e}"),
             DecodeErrorKind::OctetStringDecodeError(e) => write!(f, "OctetString error: {e}"),
+            DecodeErrorKind::AnyOctetStringDecodeError(e) => write!(f, "AnyOctetString error: {e}"),
             DecodeErrorKind::UnsupportedKey { key } => write!(f, "Unsupported key: {key}"),
             DecodeErrorKind::TooManyElements { max } => {
                 write!(f, "Too many elements. max: {max}")
             }
             DecodeErrorKind::UdhDecodeError(e) => write!(f, "UDH decode error: {e}"),
+        }
+    }
+}
+
+impl core::fmt::Display for IntegerDecodeError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            IntegerDecodeError::TooFewBytes { actual, min } => {
+                write!(f, "Too few bytes. actual: {actual}, min: {min}")
+            }
         }
     }
 }
@@ -310,6 +336,18 @@ impl core::fmt::Display for OctetStringDecodeError {
 }
 
 impl core::error::Error for OctetStringDecodeError {}
+
+impl core::fmt::Display for AnyOctetStringDecodeError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            AnyOctetStringDecodeError::TooFewBytes { actual, min } => {
+                write!(f, "Too few bytes. actual: {actual}, min: {min}")
+            }
+        }
+    }
+}
+
+impl core::error::Error for AnyOctetStringDecodeError {}
 
 impl core::fmt::Display for UdhDecodeError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {

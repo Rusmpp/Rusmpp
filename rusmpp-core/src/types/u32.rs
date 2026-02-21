@@ -6,10 +6,8 @@
 //! A 4-octet integer with the decimal value of 31022623
 //! would be encoded as 4 octets with the value 0x1D95E1F
 
-#[cfg(feature = "alloc")]
-use crate::decode::UnexpectedEof;
 use crate::{
-    decode::{DecodeError, borrowed},
+    decode::{DecodeError, DecodeErrorType, IntegerDecodeError, borrowed},
     encode::{Encode, Length},
 };
 
@@ -41,9 +39,8 @@ impl crate::encode::owned::Encode for u32 {
     }
 }
 
-#[cfg(feature = "alloc")]
-impl crate::decode::DecodeErrorType for u32 {
-    type Error = UnexpectedEof;
+impl DecodeErrorType for u32 {
+    type Error = IntegerDecodeError;
 }
 
 #[cfg(feature = "alloc")]
@@ -52,7 +49,12 @@ impl crate::decode::owned::Decode for u32 {
         use bytes::Buf;
 
         if src.len() < 4 {
-            return Err(DecodeError::unexpected_eof());
+            return Err(DecodeError::integer_decode_error(
+                IntegerDecodeError::TooFewBytes {
+                    actual: src.len(),
+                    min: 4,
+                },
+            ));
         }
 
         Ok((src.get_u32(), 4))
@@ -62,7 +64,12 @@ impl crate::decode::owned::Decode for u32 {
 impl borrowed::Decode<'_> for u32 {
     fn decode(src: &[u8]) -> Result<(Self, usize), DecodeError> {
         if src.len() < 4 {
-            return Err(DecodeError::unexpected_eof());
+            return Err(DecodeError::integer_decode_error(
+                IntegerDecodeError::TooFewBytes {
+                    actual: src.len(),
+                    min: 4,
+                },
+            ));
         }
 
         let mut bytes = [0; 4];

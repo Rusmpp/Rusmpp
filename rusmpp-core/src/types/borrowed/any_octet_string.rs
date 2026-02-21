@@ -1,5 +1,5 @@
 use crate::{
-    decode::{DecodeError, DecodeErrorType, UnexpectedEof, borrowed::DecodeWithLength},
+    decode::{AnyOctetStringDecodeError, DecodeError, DecodeErrorType, borrowed::DecodeWithLength},
     encode::{Encode, Length},
 };
 
@@ -126,13 +126,18 @@ impl crate::encode::owned::Encode for AnyOctetString<'_> {
 }
 
 impl<'a> DecodeErrorType for AnyOctetString<'a> {
-    type Error = UnexpectedEof;
+    type Error = AnyOctetStringDecodeError;
 }
 
 impl<'a> DecodeWithLength<'a> for AnyOctetString<'a> {
     fn decode(src: &'a [u8], length: usize) -> Result<(Self, usize), DecodeError> {
         if src.len() < length {
-            return Err(DecodeError::unexpected_eof());
+            return Err(DecodeError::any_octet_string_decode_error(
+                AnyOctetStringDecodeError::TooFewBytes {
+                    actual: src.len(),
+                    min: length,
+                },
+            ));
         }
 
         let bytes = &src[..length];
@@ -189,11 +194,16 @@ mod tests {
         use super::*;
 
         #[test]
-        fn unexpected_eof_empty() {
+        fn too_few_bytes_empty() {
             let bytes = b"";
             let error = AnyOctetString::decode(bytes, 5).unwrap_err();
 
-            assert!(matches!(error.kind(), DecodeErrorKind::UnexpectedEof));
+            assert!(matches!(
+                error.kind(),
+                DecodeErrorKind::AnyOctetStringDecodeError(
+                    AnyOctetStringDecodeError::TooFewBytes { actual: 0, min: 5 }
+                )
+            ));
         }
 
         #[test]
