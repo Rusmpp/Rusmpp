@@ -42,7 +42,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist --find-interpreter --manifest-path rusmppy/rusmppyc/Cargo.toml ${{ matrix.platform.no_default_features && '--no-default-features' || '' }}
+          args: --release --out dist --interpreter python3.{10..14} --manifest-path rusmppy/rusmppyc/Cargo.toml ${{ matrix.platform.no_default_features && '--no-default-features' || '' }}
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
           manylinux: auto
       - name: Upload wheels
@@ -73,7 +73,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist --find-interpreter --manifest-path rusmppy/rusmppyc/Cargo.toml
+          args: --release --out dist --interpreter python3.{10..14} --manifest-path rusmppy/rusmppyc/Cargo.toml
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
           manylinux: musllinux_1_2
       - name: Upload wheels

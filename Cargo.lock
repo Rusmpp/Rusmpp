@@ -2629,14 +2629,13 @@ dependencies = [
 
 [[package]]
 name = "rusmppyc"
-version = "0.4.0-alpha.1"
+version = "0.4.0-alpha.2"
 dependencies = [
  "bytes",
  "futures",
  "humantime",
  "pyo3",
  "pyo3-async-runtimes",
- "pyo3-build-config",
  "pyo3-log",
  "pyo3-stub-gen",
  "pyo3-stub-gen-derive",
