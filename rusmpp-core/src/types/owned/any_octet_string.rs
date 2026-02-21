@@ -2,7 +2,7 @@ use alloc::{string::String, string::ToString, vec::Vec};
 use bytes::{BufMut, Bytes, BytesMut};
 
 use crate::{
-    decode::{DecodeError, owned::DecodeWithLength},
+    decode::{DecodeError, DecodeErrorType, UnexpectedEof, owned::DecodeWithLength},
     encode::{Encode, Length, owned::Encode as BEncode},
 };
 
@@ -206,6 +206,10 @@ impl BEncode for AnyOctetString {
     fn encode(&self, dst: &mut BytesMut) {
         dst.put(&self.bytes[..]);
     }
+}
+
+impl DecodeErrorType for AnyOctetString {
+    type Error = UnexpectedEof;
 }
 
 impl DecodeWithLength for AnyOctetString {

@@ -6,7 +6,7 @@ use crate::{
     container_attributes::{
         DecodeAttributes, DecodeImplementation, FromIntoAttributes, TestAttributes,
     },
-    parts,
+    decode_error, parts,
     repr::{Repr, ReprType},
 };
 
@@ -17,6 +17,7 @@ pub fn derive_rusmpp_for_struct(
     let struct_attrs = StructAttributes::extract(input)?;
 
     let parts = parts::quote_parts(input, fields_named);
+    let decode_error = decode_error::quote_decode_error(input, fields_named);
 
     if let Some(repr) = struct_attrs.repr {
         let repr_expanded = repr.quote_rusmpp(
@@ -40,6 +41,7 @@ pub fn derive_rusmpp_for_struct(
     let test = quote_test(input, &struct_attrs.test_attrs);
 
     let expanded = quote! {
+        #decode_error
         #parts
         #length
         #encode

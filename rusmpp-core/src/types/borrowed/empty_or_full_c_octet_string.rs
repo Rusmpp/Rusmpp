@@ -1,7 +1,7 @@
 #![allow(path_statements)]
 
 use crate::{
-    decode::{COctetStringDecodeError, DecodeError, borrowed::Decode},
+    decode::{COctetStringDecodeError, DecodeError, DecodeErrorType, borrowed::Decode},
     encode::{Encode, Length},
     types::empty_or_full_c_octet_string::Error,
 };
@@ -194,6 +194,10 @@ impl<const N: usize> crate::encode::owned::Encode for EmptyOrFullCOctetString<'_
 
         dst.put_slice(self.bytes);
     }
+}
+
+impl<'a, const N: usize> DecodeErrorType for EmptyOrFullCOctetString<'a, N> {
+    type Error = COctetStringDecodeError;
 }
 
 impl<'a, const N: usize> Decode<'a> for EmptyOrFullCOctetString<'a, N> {

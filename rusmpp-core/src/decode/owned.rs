@@ -2,7 +2,7 @@
 
 use bytes::BytesMut;
 
-use crate::decode::DecodeError;
+use crate::decode::{DecodeError, DecodeErrorType};
 
 /// Trait for decoding `SMPP` values from a buffer.
 ///
@@ -50,7 +50,7 @@ use crate::decode::DecodeError;
 /// assert_eq!(foo, expected);
 /// assert_eq!(&buf[..], &[0x08]);
 /// ```
-pub trait Decode: Sized {
+pub trait Decode: DecodeErrorType + Sized {
     /// Decode a value from a buffer.
     fn decode(src: &mut BytesMut) -> Result<(Self, usize), DecodeError>;
 }
@@ -107,7 +107,7 @@ pub trait Decode: Sized {
 /// assert_eq!(foo, expected);
 /// assert_eq!(&buf[..], &[0x09]);
 /// ```
-pub trait DecodeWithLength: Sized {
+pub trait DecodeWithLength: DecodeErrorType + Sized {
     /// Decode a value from a buffer, with a specified length
     fn decode(src: &mut BytesMut, length: usize) -> Result<(Self, usize), DecodeError>;
 }

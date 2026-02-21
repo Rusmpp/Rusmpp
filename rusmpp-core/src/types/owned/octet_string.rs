@@ -3,7 +3,7 @@ use alloc::{string::String, string::ToString, vec::Vec};
 use bytes::{BufMut, Bytes, BytesMut};
 
 use crate::{
-    decode::{DecodeError, OctetStringDecodeError, owned::DecodeWithLength},
+    decode::{DecodeError, DecodeErrorType, OctetStringDecodeError, owned::DecodeWithLength},
     encode::{Encode, Length, owned::Encode as BEncode},
     types::octet_string::Error,
 };
@@ -280,6 +280,10 @@ impl<const MIN: usize, const MAX: usize> BEncode for OctetString<MIN, MAX> {
     fn encode(&self, dst: &mut BytesMut) {
         dst.put(&self.bytes[..]);
     }
+}
+
+impl<const MIN: usize, const MAX: usize> DecodeErrorType for OctetString<MIN, MAX> {
+    type Error = OctetStringDecodeError;
 }
 
 impl<const MIN: usize, const MAX: usize> DecodeWithLength for OctetString<MIN, MAX> {

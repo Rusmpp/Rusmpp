@@ -6,6 +6,8 @@
 //! A 1-octet Integer with a value 5, would be encoded in a
 //! single octet with the value 0x05
 
+#[cfg(feature = "alloc")]
+use crate::decode::UnexpectedEof;
 use crate::{
     decode::{DecodeError, borrowed},
     encode::{Encode, Length},
@@ -32,6 +34,11 @@ impl crate::encode::owned::Encode for u8 {
 
         dst.put_u8(*self);
     }
+}
+
+#[cfg(feature = "alloc")]
+impl crate::decode::DecodeErrorType for u8 {
+    type Error = UnexpectedEof;
 }
 
 #[cfg(feature = "alloc")]

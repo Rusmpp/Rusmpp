@@ -4,7 +4,7 @@ use alloc::{string::String, string::ToString, vec::Vec};
 use bytes::{BufMut, Bytes, BytesMut};
 
 use crate::{
-    decode::{COctetStringDecodeError, DecodeError, owned::Decode},
+    decode::{COctetStringDecodeError, DecodeError, DecodeErrorType, owned::Decode},
     encode::{Encode, Length, owned::Encode as BEncode},
     types::c_octet_string::Error,
 };
@@ -338,6 +338,10 @@ impl<const MIN: usize, const MAX: usize> BEncode for COctetString<MIN, MAX> {
     fn encode(&self, dst: &mut BytesMut) {
         dst.put(&self.bytes[..]);
     }
+}
+
+impl<const MIN: usize, const MAX: usize> DecodeErrorType for COctetString<MIN, MAX> {
+    type Error = COctetStringDecodeError;
 }
 
 impl<const MIN: usize, const MAX: usize> Decode for COctetString<MIN, MAX> {

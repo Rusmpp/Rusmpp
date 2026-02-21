@@ -6,6 +6,8 @@
 //! A 2-octet integer with the decimal value of 41746 would
 //! be encoded as 2 octets with the value 0xA312
 
+#[cfg(feature = "alloc")]
+use crate::decode::UnexpectedEof;
 use crate::{
     decode::{DecodeError, borrowed},
     encode::{Encode, Length},
@@ -35,6 +37,11 @@ impl crate::encode::owned::Encode for u16 {
 
         dst.put_u16(*self);
     }
+}
+
+#[cfg(feature = "alloc")]
+impl crate::decode::DecodeErrorType for u16 {
+    type Error = UnexpectedEof;
 }
 
 #[cfg(feature = "alloc")]

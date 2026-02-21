@@ -1,7 +1,7 @@
 #![allow(path_statements)]
 
 use crate::{
-    decode::{DecodeError, OctetStringDecodeError, borrowed::DecodeWithLength},
+    decode::{DecodeError, DecodeErrorType, OctetStringDecodeError, borrowed::DecodeWithLength},
     encode::{Encode, Length},
     types::octet_string::Error,
 };
@@ -194,6 +194,10 @@ impl<const MIN: usize, const MAX: usize> crate::encode::owned::Encode
 
         dst.put_slice(self.bytes);
     }
+}
+
+impl<'a, const MIN: usize, const MAX: usize> DecodeErrorType for OctetString<'a, MIN, MAX> {
+    type Error = OctetStringDecodeError;
 }
 
 impl<'a, const MIN: usize, const MAX: usize> DecodeWithLength<'a> for OctetString<'a, MIN, MAX> {

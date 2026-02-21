@@ -6,6 +6,8 @@
 //! A 4-octet integer with the decimal value of 31022623
 //! would be encoded as 4 octets with the value 0x1D95E1F
 
+#[cfg(feature = "alloc")]
+use crate::decode::UnexpectedEof;
 use crate::{
     decode::{DecodeError, borrowed},
     encode::{Encode, Length},
@@ -37,6 +39,11 @@ impl crate::encode::owned::Encode for u32 {
 
         dst.put_u32(*self);
     }
+}
+
+#[cfg(feature = "alloc")]
+impl crate::decode::DecodeErrorType for u32 {
+    type Error = UnexpectedEof;
 }
 
 #[cfg(feature = "alloc")]

@@ -1,5 +1,30 @@
 use crate::fields::SmppField;
 
+// TODO: move errors to their respective modules. E.g. `COctetStringDecodeError` should be in the `c_octet_string` module.
+// TODO: create TooFewElementsError { min } instead of UnexpectedEof and move it to its respective module.
+// TODO: name all errors with the suffix "Error" for consistency.
+// TODO: delete the DecodeError. and the verbose feature.
+// TODO: make decode traits return the DecodeErrorType::Error instead of DecodeError.
+
+pub trait DecodeErrorType {
+    type Error;
+}
+
+impl<T> DecodeErrorType for Option<T>
+where
+    T: DecodeErrorType,
+{
+    type Error = T::Error;
+}
+
+// TODO: this is alloc feature
+impl<T> DecodeErrorType for alloc::vec::Vec<T>
+where
+    T: DecodeErrorType,
+{
+    type Error = T::Error;
+}
+
 /// An error that can occur when decoding `SMPP` values.
 #[derive(Debug)]
 pub struct DecodeError {
@@ -140,6 +165,9 @@ pub enum DecodeErrorKind {
     },
     UdhDecodeError(UdhDecodeError),
 }
+
+#[derive(Debug)]
+pub struct UnexpectedEof;
 
 /// An error that can occur when decoding a `COctetString`.
 #[derive(Debug, Copy, Clone)]
