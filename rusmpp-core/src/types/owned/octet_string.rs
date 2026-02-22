@@ -310,10 +310,7 @@ impl<const MIN: usize, const MAX: usize> DecodeWithLength for OctetString<MIN, M
 
         if src.len() < length {
             return Err(DecodeError::octet_string_decode_error(
-                OctetStringDecodeError::TooFewBytes {
-                    actual: length,
-                    min: MIN,
-                },
+                OctetStringDecodeError::UnexpectedEof,
             ));
         }
 
@@ -457,6 +454,17 @@ mod tests {
         use super::*;
 
         #[test]
+        fn unexpected_eof_empty() {
+            let mut buf = BytesMut::new();
+            let error = OctetString::<0, 6>::decode(&mut buf, 5).unwrap_err();
+
+            assert!(matches!(
+                error.kind(),
+                DecodeErrorKind::OctetStringDecodeError(OctetStringDecodeError::UnexpectedEof)
+            ));
+        }
+
+        #[test]
         fn too_many_bytes() {
             let mut buf = BytesMut::from(&b"Hello"[..]);
             let error = OctetString::<0, 5>::decode(&mut buf, 15).unwrap_err();
@@ -467,20 +475,6 @@ mod tests {
                     actual: 15,
                     max: 5,
                 },)
-            ));
-        }
-
-        #[test]
-        fn too_few_bytes_empty() {
-            let mut buf = BytesMut::new();
-            let error = OctetString::<0, 6>::decode(&mut buf, 5).unwrap_err();
-
-            assert!(matches!(
-                error.kind(),
-                DecodeErrorKind::OctetStringDecodeError(OctetStringDecodeError::TooFewBytes {
-                    actual: 0,
-                    min: 6,
-                })
             ));
         }
 

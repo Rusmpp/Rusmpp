@@ -207,10 +207,7 @@ impl<'a, const N: usize> Decode<'a> for EmptyOrFullCOctetString<'a, N> {
         for i in 0..N {
             if i >= src.len() {
                 return Err(DecodeError::c_octet_string_decode_error(
-                    COctetStringDecodeError::TooFewBytes {
-                        actual: src.len(),
-                        min: N,
-                    },
+                    COctetStringDecodeError::UnexpectedEof,
                 ));
             }
 
@@ -367,6 +364,17 @@ mod tests {
         use super::*;
 
         #[test]
+        fn unexpected_eof_empty() {
+            let bytes = b"";
+            let error = EmptyOrFullCOctetString::<6>::decode(bytes).unwrap_err();
+
+            assert!(matches!(
+                error.kind(),
+                DecodeErrorKind::COctetStringDecodeError(COctetStringDecodeError::UnexpectedEof)
+            ));
+        }
+
+        #[test]
         fn not_null_terminated() {
             let bytes = b"Hi";
             let error = EmptyOrFullCOctetString::<2>::decode(bytes).unwrap_err();
@@ -389,20 +397,6 @@ mod tests {
                 DecodeErrorKind::COctetStringDecodeError(
                     COctetStringDecodeError::NotNullTerminated,
                 )
-            ));
-        }
-
-        #[test]
-        fn too_few_bytes_empty() {
-            let bytes = b"";
-            let error = EmptyOrFullCOctetString::<6>::decode(bytes).unwrap_err();
-
-            assert!(matches!(
-                error.kind(),
-                DecodeErrorKind::COctetStringDecodeError(COctetStringDecodeError::TooFewBytes {
-                    actual: 0,
-                    min: 6,
-                },)
             ));
         }
 

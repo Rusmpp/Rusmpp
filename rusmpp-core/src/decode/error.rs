@@ -172,7 +172,7 @@ pub enum DecodeErrorKind {
 #[derive(Debug, Copy, Clone)]
 #[non_exhaustive]
 pub enum IntegerDecodeError {
-    TooFewBytes { actual: usize, min: usize },
+    UnexpectedEof,
 }
 
 /// An error that can occur when decoding a `COctetString`.
@@ -182,6 +182,7 @@ pub enum COctetStringDecodeError {
     TooFewBytes { actual: usize, min: usize },
     NotAscii,
     NotNullTerminated,
+    UnexpectedEof,
 }
 
 /// An error that can occur when decoding an `OctetString`.
@@ -190,19 +191,20 @@ pub enum COctetStringDecodeError {
 pub enum OctetStringDecodeError {
     TooManyBytes { actual: usize, max: usize },
     TooFewBytes { actual: usize, min: usize },
+    UnexpectedEof,
 }
 
 /// An error that can occur when decoding an `AnyOctetString`.
 #[derive(Debug, Copy, Clone)]
 #[non_exhaustive]
 pub enum AnyOctetStringDecodeError {
-    TooFewBytes { actual: usize, min: usize },
+    UnexpectedEof,
 }
 
 /// An error that can occur when decoding a `Vec<T>`.
 #[derive(Debug, Copy, Clone)]
 pub enum VecDecodeError<E> {
-    TooFewBytes { actual: usize, min: usize },
+    UnexpectedEof,
     TooManyElements { max: usize },
     ItemDecodeError(E),
 }
@@ -308,8 +310,8 @@ impl core::fmt::Display for DecodeErrorKind {
 impl core::fmt::Display for IntegerDecodeError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            IntegerDecodeError::TooFewBytes { actual, min } => {
-                write!(f, "Too few bytes. actual: {actual}, min: {min}")
+            IntegerDecodeError::UnexpectedEof => {
+                write!(f, "Unexpected end of buffer")
             }
         }
     }
@@ -323,6 +325,7 @@ impl core::fmt::Display for COctetStringDecodeError {
             }
             COctetStringDecodeError::NotAscii => write!(f, "Not ASCII"),
             COctetStringDecodeError::NotNullTerminated => write!(f, "Not null terminated"),
+            COctetStringDecodeError::UnexpectedEof => write!(f, "Unexpected end of buffer"),
         }
     }
 }
@@ -338,6 +341,9 @@ impl core::fmt::Display for OctetStringDecodeError {
             OctetStringDecodeError::TooFewBytes { actual, min } => {
                 write!(f, "Too few bytes. actual: {actual}, min: {min}")
             }
+            OctetStringDecodeError::UnexpectedEof => {
+                write!(f, "Unexpected end of buffer")
+            }
         }
     }
 }
@@ -347,8 +353,8 @@ impl core::error::Error for OctetStringDecodeError {}
 impl core::fmt::Display for AnyOctetStringDecodeError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            AnyOctetStringDecodeError::TooFewBytes { actual, min } => {
-                write!(f, "Too few bytes. actual: {actual}, min: {min}")
+            AnyOctetStringDecodeError::UnexpectedEof => {
+                write!(f, "Unexpected end of buffer")
             }
         }
     }
@@ -359,8 +365,8 @@ impl core::error::Error for AnyOctetStringDecodeError {}
 impl<E: core::fmt::Display> core::fmt::Display for VecDecodeError<E> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            VecDecodeError::TooFewBytes { actual, min } => {
-                write!(f, "Too few bytes. actual: {actual}, min: {min}")
+            VecDecodeError::UnexpectedEof => {
+                write!(f, "Unexpected end of buffer")
             }
             VecDecodeError::TooManyElements { max } => {
                 write!(f, "Too many elements. max: {max}")

@@ -498,10 +498,7 @@ impl<T: Decode> DecodeWithLength for alloc::vec::Vec<T> {
         }
 
         if length > src.len() {
-            return Err(DecodeError::vec_decode_error(VecDecodeError::TooFewBytes {
-                actual: src.len(),
-                min: length,
-            }));
+            return Err(DecodeError::vec_decode_error(VecDecodeError::UnexpectedEof));
         }
 
         let mut src = src.split_to(length);
@@ -527,13 +524,11 @@ mod tests {
     use alloc::vec::Vec;
 
     use crate::{
-        decode::{COctetStringDecodeError, DecodeErrorKind},
+        decode::{COctetStringDecodeError, DecodeErrorKind, IntegerDecodeError},
         types::owned::{COctetString, EmptyOrFullCOctetString},
     };
 
     use super::*;
-
-    // TODO: fill the fields in VecDecodeError::TooFewBytes { .. }
 
     /// Testing [`counted_move`](DecodeExt::counted_move) will automatically test [`counted`](DecodeExt::counted).
     #[test]
@@ -554,7 +549,7 @@ mod tests {
         let error = u8::counted(&mut buf, 5).unwrap_err();
         assert!(matches!(
             error.kind(),
-            DecodeErrorKind::VecDecodeError(VecDecodeError::TooFewBytes { .. })
+            DecodeErrorKind::IntegerDecodeError(IntegerDecodeError::UnexpectedEof)
         ));
 
         // Count is within the buffer
@@ -589,7 +584,7 @@ mod tests {
 
         assert!(matches!(
             error.kind(),
-            DecodeErrorKind::VecDecodeError(VecDecodeError::TooFewBytes { .. })
+            DecodeErrorKind::IntegerDecodeError(IntegerDecodeError::UnexpectedEof)
         ));
 
         let mut buf = BytesMut::from(&b"Hello\0World\0"[..]);
@@ -666,7 +661,7 @@ mod tests {
 
         assert!(matches!(
             error.kind(),
-            DecodeErrorKind::VecDecodeError(VecDecodeError::TooFewBytes { .. })
+            DecodeErrorKind::VecDecodeError(VecDecodeError::UnexpectedEof)
         ));
 
         // Length is within the buffer
@@ -699,7 +694,7 @@ mod tests {
 
         assert!(matches!(
             error.kind(),
-            DecodeErrorKind::VecDecodeError(VecDecodeError::TooFewBytes { .. })
+            DecodeErrorKind::VecDecodeError(VecDecodeError::UnexpectedEof)
         ));
 
         let mut buf = BytesMut::from(&b"Hello\0World\0"[..]);

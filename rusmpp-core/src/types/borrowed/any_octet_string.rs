@@ -133,10 +133,7 @@ impl<'a> DecodeWithLength<'a> for AnyOctetString<'a> {
     fn decode(src: &'a [u8], length: usize) -> Result<(Self, usize), DecodeError> {
         if src.len() < length {
             return Err(DecodeError::any_octet_string_decode_error(
-                AnyOctetStringDecodeError::TooFewBytes {
-                    actual: src.len(),
-                    min: length,
-                },
+                AnyOctetStringDecodeError::UnexpectedEof,
             ));
         }
 
@@ -194,14 +191,14 @@ mod tests {
         use super::*;
 
         #[test]
-        fn too_few_bytes_empty() {
+        fn unexpected_eof_empty() {
             let bytes = b"";
             let error = AnyOctetString::decode(bytes, 5).unwrap_err();
 
             assert!(matches!(
                 error.kind(),
                 DecodeErrorKind::AnyOctetStringDecodeError(
-                    AnyOctetStringDecodeError::TooFewBytes { actual: 0, min: 5 }
+                    AnyOctetStringDecodeError::UnexpectedEof
                 )
             ));
         }

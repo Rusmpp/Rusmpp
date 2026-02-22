@@ -48,10 +48,7 @@ impl crate::decode::owned::Decode for u16 {
 
         if src.len() < 2 {
             return Err(DecodeError::integer_decode_error(
-                IntegerDecodeError::TooFewBytes {
-                    actual: src.len(),
-                    min: 2,
-                },
+                IntegerDecodeError::UnexpectedEof,
             ));
         }
 
@@ -63,10 +60,7 @@ impl borrowed::Decode<'_> for u16 {
     fn decode(src: &[u8]) -> Result<(Self, usize), DecodeError> {
         if src.len() < 2 {
             return Err(DecodeError::integer_decode_error(
-                IntegerDecodeError::TooFewBytes {
-                    actual: src.len(),
-                    min: 2,
-                },
+                IntegerDecodeError::UnexpectedEof,
             ));
         }
 

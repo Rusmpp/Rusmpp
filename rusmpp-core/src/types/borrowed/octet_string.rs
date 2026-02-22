@@ -222,17 +222,9 @@ impl<'a, const MIN: usize, const MAX: usize> DecodeWithLength<'a> for OctetStrin
             ));
         }
 
-        // TODO: This error must not be called "TooFewBytes"
-        // it has different semantics
-        // The test is failing since commit
-        // refactor(rusmpp-core/decode-error)!: removed UnexpectedEof and added IntegerDecodeError and AnyOctetStringDecodeError
-        // 6ead75143294ca634f60b470baf3c7961bc65943
         if src.len() < length {
             return Err(DecodeError::octet_string_decode_error(
-                OctetStringDecodeError::TooFewBytes {
-                    actual: length,
-                    min: MIN,
-                },
+                OctetStringDecodeError::UnexpectedEof,
             ));
         }
 
@@ -351,6 +343,17 @@ mod tests {
         use super::*;
 
         #[test]
+        fn unexpected_eof_empty() {
+            let bytes = b"";
+            let error = OctetString::<0, 6>::decode(bytes, 5).unwrap_err();
+
+            assert!(matches!(
+                error.kind(),
+                DecodeErrorKind::OctetStringDecodeError(OctetStringDecodeError::UnexpectedEof)
+            ));
+        }
+
+        #[test]
         fn too_many_bytes() {
             let bytes = b"Hello";
             let error = OctetString::<0, 5>::decode(bytes, 15).unwrap_err();
@@ -361,20 +364,6 @@ mod tests {
                     actual: 15,
                     max: 5,
                 },)
-            ));
-        }
-
-        #[test]
-        fn too_few_bytes_empty() {
-            let bytes = b"";
-            let error = OctetString::<0, 6>::decode(bytes, 5).unwrap_err();
-
-            assert!(matches!(
-                error.kind(),
-                DecodeErrorKind::OctetStringDecodeError(OctetStringDecodeError::TooFewBytes {
-                    actual: 0,
-                    min: 6,
-                })
             ));
         }
 

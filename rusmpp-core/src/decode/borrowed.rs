@@ -486,10 +486,7 @@ impl<'a, const N: usize, T: Decode<'a>> DecodeWithLength<'a> for heapless::vec::
         }
 
         if length > src.len() {
-            return Err(DecodeError::vec_decode_error(VecDecodeError::TooFewBytes {
-                actual: src.len(),
-                min: length,
-            }));
+            return Err(DecodeError::vec_decode_error(VecDecodeError::UnexpectedEof));
         }
 
         let mut size = 0;
@@ -516,13 +513,11 @@ mod tests {
     use heapless::vec::Vec;
 
     use crate::{
-        decode::{COctetStringDecodeError, DecodeErrorKind},
+        decode::{COctetStringDecodeError, DecodeErrorKind, IntegerDecodeError},
         types::borrowed::{COctetString, EmptyOrFullCOctetString},
     };
 
     use super::*;
-
-    // TODO: fill the fields in VecDecodeError::TooFewBytes { .. }
 
     const N: usize = 32;
 
@@ -544,7 +539,7 @@ mod tests {
         let error = u8::counted_move::<N>(buf, 5, 0).unwrap_err();
         assert!(matches!(
             error.kind(),
-            DecodeErrorKind::VecDecodeError(VecDecodeError::TooFewBytes { .. })
+            DecodeErrorKind::IntegerDecodeError(IntegerDecodeError::UnexpectedEof)
         ));
 
         // Count is within the buffer
@@ -574,7 +569,7 @@ mod tests {
 
         assert!(matches!(
             error.kind(),
-            DecodeErrorKind::VecDecodeError(VecDecodeError::TooFewBytes { .. })
+            DecodeErrorKind::IntegerDecodeError(IntegerDecodeError::UnexpectedEof)
         ));
 
         let buf = b"Hello\0World\0";
@@ -651,7 +646,7 @@ mod tests {
 
         assert!(matches!(
             error.kind(),
-            DecodeErrorKind::VecDecodeError(VecDecodeError::TooFewBytes { .. })
+            DecodeErrorKind::VecDecodeError(VecDecodeError::UnexpectedEof)
         ));
 
         // Length is within the buffer
@@ -681,7 +676,7 @@ mod tests {
 
         assert!(matches!(
             error.kind(),
-            DecodeErrorKind::VecDecodeError(VecDecodeError::TooFewBytes { .. })
+            DecodeErrorKind::VecDecodeError(VecDecodeError::UnexpectedEof)
         ));
 
         let buf = b"Hello\0World\0";

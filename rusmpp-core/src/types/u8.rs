@@ -45,10 +45,7 @@ impl crate::decode::owned::Decode for u8 {
 
         if src.is_empty() {
             return Err(DecodeError::integer_decode_error(
-                IntegerDecodeError::TooFewBytes {
-                    actual: src.len(),
-                    min: 1,
-                },
+                IntegerDecodeError::UnexpectedEof,
             ));
         }
 
@@ -60,10 +57,7 @@ impl borrowed::Decode<'_> for u8 {
     fn decode(src: &[u8]) -> Result<(Self, usize), DecodeError> {
         if src.is_empty() {
             return Err(DecodeError::integer_decode_error(
-                IntegerDecodeError::TooFewBytes {
-                    actual: src.len(),
-                    min: 1,
-                },
+                IntegerDecodeError::UnexpectedEof,
             ));
         }
 
