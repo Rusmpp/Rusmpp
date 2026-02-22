@@ -1,4 +1,5 @@
 use crate::{
+    decode::DecodeErrorType,
     encode::Length,
     udhs::{concatenation::ConcatenatedShortMessage16Bit, errors::ConcatenatedShortMessageError},
 };
@@ -169,6 +170,11 @@ impl crate::encode::owned::Encode for ConcatenatedShortMessage8Bit {
 
         dst.put(&bytes[..]);
     }
+}
+
+impl DecodeErrorType for ConcatenatedShortMessage8Bit {
+    // TODO
+    type Error = core::convert::Infallible;
 }
 
 #[cfg(feature = "alloc")]

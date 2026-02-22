@@ -2,7 +2,7 @@ use rusmpp_macros::Rusmpp;
 
 use crate::{
     decode::{
-        DecodeError, DecodeResultExt,
+        DecodeError, DecodeErrorType, DecodeResultExt,
         owned::{Decode, DecodeWithKey, DecodeWithLength},
     },
     encode::Length,
@@ -115,6 +115,11 @@ impl crate::encode::owned::Encode for UdhValue {
             UdhValue::Other { value, .. } => value.encode(dst),
         }
     }
+}
+
+impl DecodeErrorType for UdhValue {
+    // TODO
+    type Error = core::convert::Infallible;
 }
 
 impl DecodeWithKey for UdhValue {

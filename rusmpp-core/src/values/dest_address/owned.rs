@@ -2,7 +2,7 @@ use rusmpp_macros::Rusmpp;
 
 use crate::{
     decode::{
-        DecodeError, DecodeResultExt,
+        DecodeError, DecodeErrorType, DecodeResultExt,
         owned::{Decode, DecodeExt},
     },
     encode::Length,
@@ -46,6 +46,11 @@ impl crate::encode::owned::Encode for DestAddress {
             Self::DistributionListName(dlm) => dlm.encode(dst),
         }
     }
+}
+
+impl DecodeErrorType for DestAddress {
+    // TODO
+    type Error = core::convert::Infallible;
 }
 
 impl Decode for DestAddress {

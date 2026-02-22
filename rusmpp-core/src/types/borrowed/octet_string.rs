@@ -222,6 +222,11 @@ impl<'a, const MIN: usize, const MAX: usize> DecodeWithLength<'a> for OctetStrin
             ));
         }
 
+        // TODO: This error must not be called "TooFewBytes"
+        // it has different semantics
+        // The test is failing since commit
+        // refactor(rusmpp-core/decode-error)!: removed UnexpectedEof and added IntegerDecodeError and AnyOctetStringDecodeError
+        // 6ead75143294ca634f60b470baf3c7961bc65943
         if src.len() < length {
             return Err(DecodeError::octet_string_decode_error(
                 OctetStringDecodeError::TooFewBytes {

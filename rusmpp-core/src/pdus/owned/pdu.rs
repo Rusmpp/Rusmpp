@@ -3,7 +3,7 @@ use bytes::BytesMut;
 use crate::{
     CommandId,
     decode::{
-        DecodeError, DecodeResultExt,
+        DecodeError, DecodeErrorType, DecodeResultExt,
         owned::{Decode, DecodeWithKeyOptional, DecodeWithLength},
     },
     encode::Length,
@@ -349,6 +349,11 @@ impl crate::encode::owned::Encode for Pdu {
             Pdu::Other { body, .. } => body.encode(dst),
         }
     }
+}
+
+impl DecodeErrorType for Pdu {
+    // TODO
+    type Error = core::convert::Infallible;
 }
 
 impl DecodeWithKeyOptional for Pdu {

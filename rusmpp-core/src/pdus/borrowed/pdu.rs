@@ -1,7 +1,7 @@
 use crate::{
     CommandId,
     decode::{
-        DecodeError, DecodeResultExt,
+        DecodeError, DecodeErrorType, DecodeResultExt,
         borrowed::{Decode, DecodeWithKeyOptional, DecodeWithLength},
     },
     encode::Length,
@@ -347,6 +347,11 @@ impl<const N: usize> crate::encode::owned::Encode for Pdu<'_, N> {
             Pdu::Other { body, .. } => body.encode(dst),
         }
     }
+}
+
+impl<const N: usize> DecodeErrorType for Pdu<'_, N> {
+    // TODO
+    type Error = core::convert::Infallible;
 }
 
 impl<'a, const N: usize> DecodeWithKeyOptional<'a> for Pdu<'a, N> {
