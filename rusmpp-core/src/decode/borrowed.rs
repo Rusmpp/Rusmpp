@@ -1,6 +1,13 @@
 //! Traits for decoding `SMPP` values with borrowed data.
 
-use crate::decode::DecodeError;
+use crate::decode::{DecodeError, DecodeErrorType, VecDecodeError};
+
+impl<const N: usize, T> DecodeErrorType for heapless::vec::Vec<T, N>
+where
+    T: DecodeErrorType,
+{
+    type Error = VecDecodeError<T::Error>;
+}
 
 /// Trait for decoding `SMPP` values from a slice.
 ///
@@ -479,7 +486,10 @@ impl<'a, const N: usize, T: Decode<'a>> DecodeWithLength<'a> for heapless::vec::
         }
 
         if length > src.len() {
-            return Err(DecodeError::unexpected_eof());
+            return Err(DecodeError::vec_decode_error(VecDecodeError::TooFewBytes {
+                actual: src.len(),
+                min: length,
+            }));
         }
 
         let mut size = 0;
@@ -491,8 +501,9 @@ impl<'a, const N: usize, T: Decode<'a>> DecodeWithLength<'a> for heapless::vec::
 
             size += size_;
 
-            vec.push(item)
-                .map_err(|_| DecodeError::too_many_elements(N))?;
+            vec.push(item).map_err(|_| {
+                DecodeError::vec_decode_error(VecDecodeError::TooManyElements { max: N })
+            })?;
         }
 
         Ok((vec, size))
@@ -510,6 +521,8 @@ mod tests {
     };
 
     use super::*;
+
+    // TODO: fill the fields in VecDecodeError::TooFewBytes { .. }
 
     const N: usize = 32;
 
@@ -529,7 +542,10 @@ mod tests {
         let buf = &[0, 1, 2];
 
         let error = u8::counted_move::<N>(buf, 5, 0).unwrap_err();
-        assert!(matches!(error.kind(), DecodeErrorKind::UnexpectedEof));
+        assert!(matches!(
+            error.kind(),
+            DecodeErrorKind::VecDecodeError(VecDecodeError::TooFewBytes { .. })
+        ));
 
         // Count is within the buffer
         let buf = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -556,7 +572,10 @@ mod tests {
         // Actually 10 values, 12 will break
         let error = u32::counted_move::<N>(buf, 12, 0).unwrap_err();
 
-        assert!(matches!(error.kind(), DecodeErrorKind::UnexpectedEof));
+        assert!(matches!(
+            error.kind(),
+            DecodeErrorKind::VecDecodeError(VecDecodeError::TooFewBytes { .. })
+        ));
 
         let buf = b"Hello\0World\0";
 
@@ -630,7 +649,10 @@ mod tests {
 
         let error = Vec::<u8, N>::decode(buf, 5).unwrap_err();
 
-        assert!(matches!(error.kind(), DecodeErrorKind::UnexpectedEof));
+        assert!(matches!(
+            error.kind(),
+            DecodeErrorKind::VecDecodeError(VecDecodeError::TooFewBytes { .. })
+        ));
 
         // Length is within the buffer
         let buf = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -657,7 +679,10 @@ mod tests {
         // Actually 40 bytes, 50 will break
         let error = Vec::<u32, N>::decode(buf, 50).unwrap_err();
 
-        assert!(matches!(error.kind(), DecodeErrorKind::UnexpectedEof));
+        assert!(matches!(
+            error.kind(),
+            DecodeErrorKind::VecDecodeError(VecDecodeError::TooFewBytes { .. })
+        ));
 
         let buf = b"Hello\0World\0";
 

@@ -15,14 +15,6 @@ where
     type Error = T::Error;
 }
 
-// TODO: this is alloc feature
-impl<T> DecodeErrorType for alloc::vec::Vec<T>
-where
-    T: DecodeErrorType,
-{
-    type Error = T::Error;
-}
-
 /// An error that can occur when decoding `SMPP` values.
 #[derive(Debug)]
 pub struct DecodeError {
@@ -88,6 +80,11 @@ impl DecodeError {
     #[inline]
     pub const fn any_octet_string_decode_error(error: AnyOctetStringDecodeError) -> Self {
         Self::new(DecodeErrorKind::AnyOctetStringDecodeError(error))
+    }
+
+    #[inline]
+    pub const fn vec_decode_error(error: VecDecodeError<usize>) -> Self {
+        Self::new(DecodeErrorKind::VecDecodeError(error))
     }
 
     #[inline]
@@ -158,6 +155,7 @@ pub enum DecodeErrorKind {
     COctetStringDecodeError(COctetStringDecodeError),
     OctetStringDecodeError(OctetStringDecodeError),
     AnyOctetStringDecodeError(AnyOctetStringDecodeError),
+    VecDecodeError(VecDecodeError<usize>), // TODO: we erase the inner error type here until we removed the whole DecodeError and the verbose feature.
     UnsupportedKey {
         key: u32,
     },
@@ -199,6 +197,14 @@ pub enum OctetStringDecodeError {
 #[non_exhaustive]
 pub enum AnyOctetStringDecodeError {
     TooFewBytes { actual: usize, min: usize },
+}
+
+/// An error that can occur when decoding a `Vec<T>`.
+#[derive(Debug, Copy, Clone)]
+pub enum VecDecodeError<E> {
+    TooFewBytes { actual: usize, min: usize },
+    TooManyElements { max: usize },
+    ItemDecodeError(E),
 }
 
 /// An error that can occur when decoding a `UDH`.
@@ -289,6 +295,7 @@ impl core::fmt::Display for DecodeErrorKind {
             DecodeErrorKind::COctetStringDecodeError(e) => write!(f, "COctetString error: {e}"),
             DecodeErrorKind::OctetStringDecodeError(e) => write!(f, "OctetString error: {e}"),
             DecodeErrorKind::AnyOctetStringDecodeError(e) => write!(f, "AnyOctetString error: {e}"),
+            DecodeErrorKind::VecDecodeError(e) => write!(f, "Vec decode error: {e}"),
             DecodeErrorKind::UnsupportedKey { key } => write!(f, "Unsupported key: {key}"),
             DecodeErrorKind::TooManyElements { max } => {
                 write!(f, "Too many elements. max: {max}")
@@ -348,6 +355,22 @@ impl core::fmt::Display for AnyOctetStringDecodeError {
 }
 
 impl core::error::Error for AnyOctetStringDecodeError {}
+
+impl<E: core::fmt::Display> core::fmt::Display for VecDecodeError<E> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            VecDecodeError::TooFewBytes { actual, min } => {
+                write!(f, "Too few bytes. actual: {actual}, min: {min}")
+            }
+            VecDecodeError::TooManyElements { max } => {
+                write!(f, "Too many elements. max: {max}")
+            }
+            VecDecodeError::ItemDecodeError(e) => write!(f, "Item decode error: {e}"),
+        }
+    }
+}
+
+impl<E: core::error::Error> core::error::Error for VecDecodeError<E> {}
 
 impl core::fmt::Display for UdhDecodeError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
