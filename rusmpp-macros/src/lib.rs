@@ -6,7 +6,6 @@ use proc_macro::TokenStream;
 use syn::{DeriveInput, parse_macro_input};
 
 mod container_attributes;
-mod decode_error;
 mod derive;
 mod enums;
 mod parts;

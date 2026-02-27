@@ -317,6 +317,8 @@ impl core::fmt::Display for IntegerDecodeError {
     }
 }
 
+impl core::error::Error for IntegerDecodeError {}
+
 impl core::fmt::Display for COctetStringDecodeError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
