@@ -142,7 +142,6 @@ fn quote_decode(
                     })
                 }
                 DecodeImplementation::Borrowed => {
-                    let decode_error = quote_borrowed_decode_error(input, fields_named);
                     let decode = match decode_type {
                         DecodeType::Decode => quote_borrowed_decode(input, &fields),
                         DecodeType::DecodeWithLength => {
@@ -151,26 +150,29 @@ fn quote_decode(
                     };
 
                     Ok(quote! {
-                        #decode_error
                         #decode
                     })
                 }
                 DecodeImplementation::All => match decode_type {
                     DecodeType::Decode => {
+                        let decode_error = quote_owned_decode_error(input, fields_named);
                         let quote_borrowed_decode = quote_borrowed_decode(input, &fields);
                         let quote_owned_decode = quote_owned_decode(input, &fields);
 
                         Ok(quote! {
+                            #decode_error
                             #quote_borrowed_decode
                             #quote_owned_decode
                         })
                     }
                     DecodeType::DecodeWithLength => {
+                        let decode_error = quote_owned_decode_error(input, fields_named);
                         let quote_borrowed_decode =
                             quote_borrowed_decode_with_length(input, &fields);
                         let quote_owned_decode = quote_owned_decode_with_length(input, &fields);
 
                         Ok(quote! {
+                            #decode_error
                             #quote_borrowed_decode
                             #quote_owned_decode
                         })
@@ -441,94 +443,6 @@ fn quote_owned_decode_error(input: &DeriveInput, fields_named: &FieldsNamed) -> 
         }
 
         impl crate::decode::DecodeErrorType for #name {
-            type Error = #decode_error_struct_name;
-        }
-    }
-}
-
-fn quote_borrowed_decode_error(input: &DeriveInput, fields_named: &FieldsNamed) -> TokenStream {
-    let name = &input.ident;
-    let (impl_generics, ty_generics, where_clause) = &input.generics.split_for_impl();
-
-    let decode_error_struct_name = Ident::new(&format!("{}DecodeError", name), name.span());
-
-    let decode_error_context_struct_name =
-        Ident::new(&format!("{}DecodeErrorContext", name), name.span());
-
-    let decode_error_struct_context_field_names_and_types = fields_named.named.iter().map(|f| {
-        let ident = f.ident.as_ref().expect("Named fields must have idents");
-        let ty = &f.ty;
-
-        (ident, ty)
-    });
-
-    let source_checks = fields_named.named.iter().map(|f| {
-        let ident = f.ident.as_ref().expect("Named fields must have idents");
-
-        quote! {
-            if let ::core::option::Option::Some(err) = &self.context.#ident {
-                return ::core::option::Option::Some(
-                    err as &(dyn ::core::error::Error + 'static)
-                );
-            }
-        }
-    });
-
-    let display_error_fields = fields_named.named.iter().map(|f| {
-        let ident = f.ident.as_ref().expect("Named fields must have idents");
-        let field_name = ident.to_string();
-
-        quote! {
-            if let ::core::option::Option::Some(err) = &self.context.#ident {
-                write!(f, "{}: {}", #field_name, err)?;
-                write!(f, " }}")?;
-
-                return Ok(())
-            }
-        }
-    });
-
-    // TODO: the generics in the #ty are problematic, we have to get rid of them
-    let decode_error_context_struct = decode_error_struct_context_field_names_and_types
-        .clone()
-        .map(|(ident, ty)| quote! { pub #ident: ::core::option::Option<<#ty as crate::decode::DecodeErrorType>::Error> });
-
-    quote! {
-        #[non_exhaustive]
-        #[derive(Debug)]
-        pub struct #decode_error_context_struct_name {
-            #(#decode_error_context_struct),*
-        }
-
-        #[non_exhaustive]
-        #[derive(Debug)]
-        pub struct #decode_error_struct_name {
-            context: #decode_error_context_struct_name
-        }
-
-        impl ::core::fmt::Display for #decode_error_struct_name {
-            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-                write!(f, "Failed to decode {} {{ ", stringify!(#name))?;
-
-                #(#display_error_fields)*
-
-                write!(f, " }}")
-            }
-        }
-
-        impl ::core::error::Error for #decode_error_struct_name {
-            fn source(&self) -> Option<&(dyn ::core::error::Error + 'static)> {
-                #(#source_checks)*
-
-                ::core::option::Option::None
-            }
-
-            fn cause(&self) -> Option<&dyn ::core::error::Error> {
-                self.source()
-            }
-        }
-
-        impl #impl_generics crate::decode::DecodeErrorType for #name #ty_generics #where_clause {
             type Error = #decode_error_struct_name;
         }
     }

@@ -149,6 +149,11 @@ impl DecodeWithKey for UdhValue {
     }
 }
 
+impl DecodeErrorType for Udh {
+    // TODO
+    type Error = core::convert::Infallible;
+}
+
 impl Decode for Udh {
     fn decode(src: &mut bytes::BytesMut) -> Result<(Self, usize), DecodeError> {
         let size = 0;
