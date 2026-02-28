@@ -4,7 +4,10 @@ use alloc::{string::String, string::ToString, vec::Vec};
 use bytes::{BufMut, Bytes, BytesMut};
 
 use crate::{
-    decode::{COctetStringDecodeError, DecodeError, DecodeErrorType, owned::Decode},
+    decode::{
+        COctetStringDecodeError, DecodeError,
+        owned::{Decode, DecodeErrorType},
+    },
     encode::{Encode, Length, owned::Encode as BEncode},
     types::c_octet_string::Error,
 };

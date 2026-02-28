@@ -70,8 +70,9 @@ impl Repr {
         let repr_ident = &self.ident;
 
         quote! {
-            impl crate::decode::DecodeErrorType for #name {
-                type Error = <#repr_ident as crate::decode::DecodeErrorType>::Error;
+            #[cfg(feature = "alloc")]
+            impl crate::decode::owned::DecodeErrorType for #name {
+                type Error = <#repr_ident as crate::decode::owned::DecodeErrorType>::Error;
             }
 
             #[cfg(feature = "alloc")]

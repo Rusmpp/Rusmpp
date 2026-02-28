@@ -1,7 +1,7 @@
 use crate::{
     CommandStatus,
     decode::{
-        DecodeError, DecodeErrorType, DecodeResultExt,
+        DecodeError, DecodeResultExt,
         borrowed::{Decode, DecodeWithKey, DecodeWithLength},
     },
     encode::Length,
@@ -404,11 +404,6 @@ impl crate::encode::owned::Encode for TlvValue<'_> {
             TlvValue::Other { value, .. } => value.encode(dst),
         }
     }
-}
-
-impl<'a> DecodeErrorType for TlvValue<'a> {
-    // TODO
-    type Error = core::convert::Infallible;
 }
 
 impl<'a> DecodeWithKey<'a> for TlvValue<'a> {

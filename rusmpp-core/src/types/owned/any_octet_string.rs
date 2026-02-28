@@ -2,7 +2,10 @@ use alloc::{string::String, string::ToString, vec::Vec};
 use bytes::{BufMut, Bytes, BytesMut};
 
 use crate::{
-    decode::{AnyOctetStringDecodeError, DecodeError, DecodeErrorType, owned::DecodeWithLength},
+    decode::{
+        AnyOctetStringDecodeError, DecodeError,
+        owned::{DecodeErrorType, DecodeWithLength},
+    },
     encode::{Encode, Length, owned::Encode as BEncode},
 };
 

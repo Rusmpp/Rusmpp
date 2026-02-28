@@ -2,8 +2,8 @@ use rusmpp_macros::Rusmpp;
 
 use crate::{
     decode::{
-        DecodeError, DecodeErrorType, DecodeResultExt,
-        owned::{Decode, DecodeWithKey, DecodeWithLength},
+        DecodeError, DecodeResultExt,
+        owned::{Decode, DecodeErrorType, DecodeWithKey, DecodeWithLength},
     },
     encode::Length,
     types::owned::AnyOctetString,

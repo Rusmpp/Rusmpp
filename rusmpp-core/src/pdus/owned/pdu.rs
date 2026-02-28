@@ -3,8 +3,8 @@ use bytes::BytesMut;
 use crate::{
     CommandId,
     decode::{
-        DecodeError, DecodeErrorType, DecodeResultExt,
-        owned::{Decode, DecodeWithKeyOptional, DecodeWithLength},
+        DecodeError, DecodeResultExt,
+        owned::{Decode, DecodeErrorType, DecodeWithKeyOptional, DecodeWithLength},
     },
     encode::Length,
     types::owned::AnyOctetString,

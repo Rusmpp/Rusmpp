@@ -3,8 +3,8 @@ use bytes::BytesMut;
 use crate::{
     CommandStatus,
     decode::{
-        DecodeError, DecodeErrorType, DecodeResultExt,
-        owned::{Decode, DecodeWithKey, DecodeWithLength},
+        DecodeError, DecodeResultExt,
+        owned::{Decode, DecodeErrorType, DecodeWithKey, DecodeWithLength},
     },
     encode::Length,
     tlvs::TlvTag,

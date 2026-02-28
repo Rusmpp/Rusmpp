@@ -1,13 +1,6 @@
 //! Traits for decoding `SMPP` values with borrowed data.
 
-use crate::decode::{DecodeError, DecodeErrorType, VecDecodeError};
-
-impl<const N: usize, T> DecodeErrorType for heapless::vec::Vec<T, N>
-where
-    T: DecodeErrorType,
-{
-    type Error = VecDecodeError<T::Error>;
-}
+use crate::decode::{DecodeError, HeaplessVecDecodeError};
 
 /// Trait for decoding `SMPP` values from a slice.
 ///
@@ -382,8 +375,11 @@ pub trait DecodeExt<'a>: Decode<'a> {
         (0..count).try_fold((heapless::vec::Vec::new(), 0), |(mut vec, size), _| {
             let (item, size_) = Self::decode(&src[size..])?;
 
-            vec.push(item)
-                .map_err(|_| DecodeError::too_many_elements(N))?;
+            vec.push(item).map_err(|_| {
+                DecodeError::heapless_vec_decode_error(HeaplessVecDecodeError::TooManyElements {
+                    max: N,
+                })
+            })?;
 
             Ok((vec, size + size_))
         })
@@ -486,7 +482,9 @@ impl<'a, const N: usize, T: Decode<'a>> DecodeWithLength<'a> for heapless::vec::
         }
 
         if length > src.len() {
-            return Err(DecodeError::vec_decode_error(VecDecodeError::UnexpectedEof));
+            return Err(DecodeError::heapless_vec_decode_error(
+                HeaplessVecDecodeError::UnexpectedEof,
+            ));
         }
 
         let mut size = 0;
@@ -499,7 +497,9 @@ impl<'a, const N: usize, T: Decode<'a>> DecodeWithLength<'a> for heapless::vec::
             size += size_;
 
             vec.push(item).map_err(|_| {
-                DecodeError::vec_decode_error(VecDecodeError::TooManyElements { max: N })
+                DecodeError::heapless_vec_decode_error(HeaplessVecDecodeError::TooManyElements {
+                    max: N,
+                })
             })?;
         }
 
@@ -646,7 +646,7 @@ mod tests {
 
         assert!(matches!(
             error.kind(),
-            DecodeErrorKind::VecDecodeError(VecDecodeError::UnexpectedEof)
+            DecodeErrorKind::HeaplessVecDecodeError(HeaplessVecDecodeError::UnexpectedEof)
         ));
 
         // Length is within the buffer
@@ -676,7 +676,7 @@ mod tests {
 
         assert!(matches!(
             error.kind(),
-            DecodeErrorKind::VecDecodeError(VecDecodeError::UnexpectedEof)
+            DecodeErrorKind::HeaplessVecDecodeError(HeaplessVecDecodeError::UnexpectedEof)
         ));
 
         let buf = b"Hello\0World\0";

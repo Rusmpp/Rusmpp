@@ -7,7 +7,7 @@
 //! would be encoded as 4 octets with the value 0x1D95E1F
 
 use crate::{
-    decode::{DecodeError, DecodeErrorType, IntegerDecodeError, borrowed},
+    decode::{DecodeError, IntegerDecodeError, borrowed},
     encode::{Encode, Length},
 };
 
@@ -39,7 +39,8 @@ impl crate::encode::owned::Encode for u32 {
     }
 }
 
-impl DecodeErrorType for u32 {
+#[cfg(feature = "alloc")]
+impl crate::decode::owned::DecodeErrorType for u32 {
     type Error = IntegerDecodeError;
 }
 

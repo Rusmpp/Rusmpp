@@ -7,7 +7,7 @@
 //! be encoded as 2 octets with the value 0xA312
 
 use crate::{
-    decode::{DecodeError, DecodeErrorType, IntegerDecodeError, borrowed},
+    decode::{DecodeError, IntegerDecodeError, borrowed},
     encode::{Encode, Length},
 };
 
@@ -37,7 +37,8 @@ impl crate::encode::owned::Encode for u16 {
     }
 }
 
-impl DecodeErrorType for u16 {
+#[cfg(feature = "alloc")]
+impl crate::decode::owned::DecodeErrorType for u16 {
     type Error = IntegerDecodeError;
 }
 

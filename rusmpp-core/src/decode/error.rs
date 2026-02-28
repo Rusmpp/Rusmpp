@@ -7,17 +7,6 @@ use crate::fields::SmppField;
 // TODO: borrowed: keep the DecodeError for borrowed types. The borrowed version of the lib should be lightweight, and creating a custom decode error type like the owned version has its limitations because of the lifetimes and generic params.
 // TODO: refine the DecodeError.
 
-pub trait DecodeErrorType {
-    type Error;
-}
-
-impl<T> DecodeErrorType for Option<T>
-where
-    T: DecodeErrorType,
-{
-    type Error = T::Error;
-}
-
 /// An error that can occur when decoding `SMPP` values.
 #[derive(Debug)]
 pub struct DecodeError {
@@ -86,18 +75,13 @@ impl DecodeError {
     }
 
     #[inline]
-    pub const fn vec_decode_error(error: VecDecodeError<usize>) -> Self {
-        Self::new(DecodeErrorKind::VecDecodeError(error))
+    pub const fn heapless_vec_decode_error(error: HeaplessVecDecodeError) -> Self {
+        Self::new(DecodeErrorKind::HeaplessVecDecodeError(error))
     }
 
     #[inline]
     pub const fn unsupported_key(key: u32) -> Self {
         Self::new(DecodeErrorKind::UnsupportedKey { key })
-    }
-
-    #[inline]
-    pub const fn too_many_elements(max: usize) -> Self {
-        Self::new(DecodeErrorKind::TooManyElements { max })
     }
 
     #[inline]
@@ -158,16 +142,8 @@ pub enum DecodeErrorKind {
     COctetStringDecodeError(COctetStringDecodeError),
     OctetStringDecodeError(OctetStringDecodeError),
     AnyOctetStringDecodeError(AnyOctetStringDecodeError),
-    VecDecodeError(VecDecodeError<usize>), // TODO: we erase the inner error type here until we removed the whole DecodeError and the verbose feature.
-    UnsupportedKey {
-        key: u32,
-    },
-    /// An error that can occur when decoding a fixed size of elements.
-    ///
-    /// E.g. decoding `[T; N]` where `N` is the fixed size. Mostly while decoding arrays of `TLVs`.
-    TooManyElements {
-        max: usize,
-    },
+    HeaplessVecDecodeError(HeaplessVecDecodeError),
+    UnsupportedKey { key: u32 },
     UdhDecodeError(UdhDecodeError),
 }
 
@@ -204,12 +180,16 @@ pub enum AnyOctetStringDecodeError {
     UnexpectedEof,
 }
 
-/// An error that can occur when decoding a `Vec<T>`.
+/// An error that can occur when decoding a `heapless::Vec<T>`.
 #[derive(Debug, Copy, Clone)]
-pub enum VecDecodeError<E> {
+pub enum HeaplessVecDecodeError {
     UnexpectedEof,
-    TooManyElements { max: usize },
-    ItemDecodeError(E),
+    /// An error that can occur when decoding a fixed size of elements.
+    ///
+    /// E.g. decoding `[T; N]` where `N` is the fixed size. Mostly while decoding arrays of `TLVs`.
+    TooManyElements {
+        max: usize,
+    },
 }
 
 /// An error that can occur when decoding a `UDH`.
@@ -300,11 +280,8 @@ impl core::fmt::Display for DecodeErrorKind {
             DecodeErrorKind::COctetStringDecodeError(e) => write!(f, "COctetString error: {e}"),
             DecodeErrorKind::OctetStringDecodeError(e) => write!(f, "OctetString error: {e}"),
             DecodeErrorKind::AnyOctetStringDecodeError(e) => write!(f, "AnyOctetString error: {e}"),
-            DecodeErrorKind::VecDecodeError(e) => write!(f, "Vec decode error: {e}"),
+            DecodeErrorKind::HeaplessVecDecodeError(e) => write!(f, "Vec decode error: {e}"),
             DecodeErrorKind::UnsupportedKey { key } => write!(f, "Unsupported key: {key}"),
-            DecodeErrorKind::TooManyElements { max } => {
-                write!(f, "Too many elements. max: {max}")
-            }
             DecodeErrorKind::UdhDecodeError(e) => write!(f, "UDH decode error: {e}"),
         }
     }
@@ -367,21 +344,20 @@ impl core::fmt::Display for AnyOctetStringDecodeError {
 
 impl core::error::Error for AnyOctetStringDecodeError {}
 
-impl<E: core::fmt::Display> core::fmt::Display for VecDecodeError<E> {
+impl core::fmt::Display for HeaplessVecDecodeError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            VecDecodeError::UnexpectedEof => {
+            HeaplessVecDecodeError::UnexpectedEof => {
                 write!(f, "Unexpected end of buffer")
             }
-            VecDecodeError::TooManyElements { max } => {
+            HeaplessVecDecodeError::TooManyElements { max } => {
                 write!(f, "Too many elements. max: {max}")
             }
-            VecDecodeError::ItemDecodeError(e) => write!(f, "Item decode error: {e}"),
         }
     }
 }
 
-impl<E: core::error::Error> core::error::Error for VecDecodeError<E> {}
+impl core::error::Error for HeaplessVecDecodeError {}
 
 impl core::fmt::Display for UdhDecodeError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {

@@ -1,5 +1,5 @@
 use crate::{
-    decode::{AnyOctetStringDecodeError, DecodeError, DecodeErrorType, borrowed::DecodeWithLength},
+    decode::{AnyOctetStringDecodeError, DecodeError, borrowed::DecodeWithLength},
     encode::{Encode, Length},
 };
 
@@ -123,10 +123,6 @@ impl crate::encode::owned::Encode for AnyOctetString<'_> {
 
         dst.put_slice(self.bytes);
     }
-}
-
-impl<'a> DecodeErrorType for AnyOctetString<'a> {
-    type Error = AnyOctetStringDecodeError;
 }
 
 impl<'a> DecodeWithLength<'a> for AnyOctetString<'a> {

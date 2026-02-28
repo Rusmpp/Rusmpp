@@ -405,21 +405,24 @@ fn quote_owned_decode_error(input: &DeriveInput, fields_named: &FieldsNamed) -> 
 
     let decode_error_context_struct = decode_error_struct_context_field_names_and_types
         .clone()
-        .map(|(ident, ty)| quote! { pub #ident: ::core::result::Result<#ty, <#ty as crate::decode::DecodeErrorType>::Error> });
+        .map(|(ident, ty)| quote! { pub #ident: ::core::result::Result<#ty, <#ty as crate::decode::owned::DecodeErrorType>::Error> });
 
     quote! {
+        #[cfg(feature = "alloc")]
         #[non_exhaustive]
         #[derive(Debug)]
         pub struct #decode_error_context_struct_name {
             #(#decode_error_context_struct),*
         }
 
+        #[cfg(feature = "alloc")]
         #[non_exhaustive]
         #[derive(Debug)]
         pub struct #decode_error_struct_name {
             context: #decode_error_context_struct_name
         }
 
+        #[cfg(feature = "alloc")]
         impl ::core::fmt::Display for #decode_error_struct_name {
             fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 write!(f, "Failed to decode {} {{ ", stringify!(#name))?;
@@ -430,6 +433,7 @@ fn quote_owned_decode_error(input: &DeriveInput, fields_named: &FieldsNamed) -> 
             }
         }
 
+        #[cfg(feature = "alloc")]
         impl ::core::error::Error for #decode_error_struct_name {
             fn source(&self) -> Option<&(dyn ::core::error::Error + 'static)> {
                 #(#source_checks)*
@@ -442,7 +446,8 @@ fn quote_owned_decode_error(input: &DeriveInput, fields_named: &FieldsNamed) -> 
             }
         }
 
-        impl crate::decode::DecodeErrorType for #name {
+        #[cfg(feature = "alloc")]
+        impl crate::decode::owned::DecodeErrorType for #name {
             type Error = #decode_error_struct_name;
         }
     }

@@ -1,4 +1,4 @@
-use crate::{decode::DecodeErrorType, encode::Length, udhs::errors::ConcatenatedShortMessageError};
+use crate::{encode::Length, udhs::errors::ConcatenatedShortMessageError};
 
 /// 16-bit Concatenated Short Message UDH.
 ///
@@ -170,7 +170,8 @@ impl crate::encode::owned::Encode for ConcatenatedShortMessage16Bit {
     }
 }
 
-impl DecodeErrorType for ConcatenatedShortMessage16Bit {
+#[cfg(feature = "alloc")]
+impl crate::decode::owned::DecodeErrorType for ConcatenatedShortMessage16Bit {
     // TODO
     type Error = core::convert::Infallible;
 }

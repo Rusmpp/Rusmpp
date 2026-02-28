@@ -2,7 +2,20 @@
 
 use bytes::BytesMut;
 
-use crate::decode::{DecodeError, DecodeErrorType, VecDecodeError};
+use crate::decode::DecodeError;
+
+use super::HeaplessVecDecodeError;
+
+pub trait DecodeErrorType {
+    type Error;
+}
+
+impl<T> DecodeErrorType for Option<T>
+where
+    T: DecodeErrorType,
+{
+    type Error = T::Error;
+}
 
 impl<T> DecodeErrorType for alloc::vec::Vec<T>
 where
@@ -10,6 +23,26 @@ where
 {
     type Error = VecDecodeError<T::Error>;
 }
+
+/// An error that can occur when decoding a `Vec<T>`.
+#[derive(Debug, Copy, Clone)]
+pub enum VecDecodeError<E> {
+    UnexpectedEof,
+    ItemDecodeError(E),
+}
+
+impl<E: core::fmt::Display> core::fmt::Display for VecDecodeError<E> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            VecDecodeError::UnexpectedEof => {
+                write!(f, "Unexpected end of buffer")
+            }
+            VecDecodeError::ItemDecodeError(e) => write!(f, "Item decode error: {e}"),
+        }
+    }
+}
+
+impl<E: core::error::Error> core::error::Error for VecDecodeError<E> {}
 
 /// Trait for decoding `SMPP` values from a buffer.
 ///
@@ -498,7 +531,9 @@ impl<T: Decode> DecodeWithLength for alloc::vec::Vec<T> {
         }
 
         if length > src.len() {
-            return Err(DecodeError::vec_decode_error(VecDecodeError::UnexpectedEof));
+            return Err(DecodeError::heapless_vec_decode_error(
+                HeaplessVecDecodeError::UnexpectedEof,
+            ));
         }
 
         let mut src = src.split_to(length);
@@ -661,7 +696,7 @@ mod tests {
 
         assert!(matches!(
             error.kind(),
-            DecodeErrorKind::VecDecodeError(VecDecodeError::UnexpectedEof)
+            DecodeErrorKind::HeaplessVecDecodeError(HeaplessVecDecodeError::UnexpectedEof)
         ));
 
         // Length is within the buffer
@@ -694,7 +729,7 @@ mod tests {
 
         assert!(matches!(
             error.kind(),
-            DecodeErrorKind::VecDecodeError(VecDecodeError::UnexpectedEof)
+            DecodeErrorKind::HeaplessVecDecodeError(HeaplessVecDecodeError::UnexpectedEof)
         ));
 
         let mut buf = BytesMut::from(&b"Hello\0World\0"[..]);

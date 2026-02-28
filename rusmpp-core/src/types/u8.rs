@@ -7,7 +7,7 @@
 //! single octet with the value 0x05
 
 use crate::{
-    decode::{DecodeError, DecodeErrorType, IntegerDecodeError, borrowed},
+    decode::{DecodeError, IntegerDecodeError, borrowed},
     encode::{Encode, Length},
 };
 
@@ -34,7 +34,8 @@ impl crate::encode::owned::Encode for u8 {
     }
 }
 
-impl DecodeErrorType for u8 {
+#[cfg(feature = "alloc")]
+impl crate::decode::owned::DecodeErrorType for u8 {
     type Error = IntegerDecodeError;
 }
 
