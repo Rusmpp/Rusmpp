@@ -35,8 +35,6 @@ pub mod command;
 
 pub mod session;
 
-pub mod fields;
-
 pub mod decode;
 
 pub mod encode;

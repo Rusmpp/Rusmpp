@@ -1,5 +1,4 @@
 // TODO: name all errors with the suffix "Error" for consistency.
-// TODO: delete the smpp field as it will not be needed after we create the verbose error types.
 // TODO: owned: make decode traits return the DecodeErrorType::Error instead of DecodeError.
 // TODO: borrowed: keep the DecodeError for borrowed types. The borrowed version of the lib should be lightweight, and creating a custom decode error type like the owned version has its limitations because of the lifetimes and generic params.
 // TODO: refine the DecodeError.
