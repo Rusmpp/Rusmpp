@@ -33,9 +33,9 @@ const NON_EXHAUSTIVE_RUSMPP_ENUMS: &[&str] = &[
 ];
 const NON_DEFAULT_RUSMPP_TYPES: &[&str] = &[
     "CommandId",
-    "DistributionListName",
-    "SmeAddress",
     "DestAddress",
+    "DestAddressValue",
+    "DestFlag",
     "Pdu",
     "Tlv",
     "TlvTag",

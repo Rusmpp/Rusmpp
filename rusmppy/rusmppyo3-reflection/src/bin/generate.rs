@@ -23,8 +23,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracer.trace_simple_type::<Pdu>()?;
     tracer.trace_simple_type::<Ansi41Specific>()?;
     tracer.trace_simple_type::<DataCoding>()?;
-    tracer.trace_simple_type::<DestAddress>()?;
     tracer.trace_simple_type::<DestFlag>()?;
+    tracer.trace_simple_type::<DestAddressValue>()?;
+    tracer.trace_simple_type::<DestAddress>()?;
     tracer.trace_simple_type::<GsmFeatures>()?;
     tracer.trace_simple_type::<IntermediateNotification>()?;
     tracer.trace_simple_type::<MCDeliveryReceipt>()?;

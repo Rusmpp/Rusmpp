@@ -5143,6 +5143,125 @@ impl ReplaceSm {
     }
 }
 
+#[::pyo3_stub_gen_derive::gen_stub_pyclass]
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[::pyo3::pyclass(get_all, set_all)]
+pub struct DistributionListName {
+    pub dl_name: Vec<u8>,
+}
+
+impl From<rusmpp_types::DistributionListName> for DistributionListName {
+    fn from(value: rusmpp_types::DistributionListName) -> Self {
+        let value = value.into_parts();
+        Self {
+            dl_name: value.dl_name.into(),
+        }
+    }
+}
+
+impl DistributionListName {
+    pub fn default_() -> Self {
+        Self::from(rusmpp_types::DistributionListName::default())
+    }
+}
+
+#[::pyo3_stub_gen_derive::gen_stub_pymethods]
+#[::pyo3::pymethods]
+impl DistributionListName {
+    #[new]
+
+    fn new(dl_name: Vec<u8>) -> Self {
+        Self { dl_name }
+    }
+    #[classmethod]
+    #[pyo3(signature=())]
+    pub fn default<'p>(_cls: &'p ::pyo3::Bound<'p, ::pyo3::types::PyType>) -> Self {
+        Self::default_()
+    }
+
+    fn __repr__(&self) -> String {
+        format!("{self:?}")
+    }
+}
+
+#[::pyo3_stub_gen_derive::gen_stub_pyclass]
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[::pyo3::pyclass(get_all, set_all)]
+pub struct SmeAddress {
+    pub dest_addr_ton: Ton,
+    pub dest_addr_npi: Npi,
+    pub destination_addr: Vec<u8>,
+}
+
+impl From<rusmpp_types::SmeAddress> for SmeAddress {
+    fn from(value: rusmpp_types::SmeAddress) -> Self {
+        let value = value.into_parts();
+        Self {
+            dest_addr_ton: value.dest_addr_ton.into(),
+            dest_addr_npi: value.dest_addr_npi.into(),
+            destination_addr: value.destination_addr.into(),
+        }
+    }
+}
+
+impl SmeAddress {
+    pub fn default_() -> Self {
+        Self::from(rusmpp_types::SmeAddress::default())
+    }
+}
+
+#[::pyo3_stub_gen_derive::gen_stub_pymethods]
+#[::pyo3::pymethods]
+impl SmeAddress {
+    #[new]
+
+    fn new(dest_addr_ton: Ton, dest_addr_npi: Npi, destination_addr: Vec<u8>) -> Self {
+        Self {
+            dest_addr_ton,
+            dest_addr_npi,
+            destination_addr,
+        }
+    }
+    #[classmethod]
+    #[pyo3(signature=())]
+    pub fn default<'p>(_cls: &'p ::pyo3::Bound<'p, ::pyo3::types::PyType>) -> Self {
+        Self::default_()
+    }
+
+    fn __repr__(&self) -> String {
+        format!("{self:?}")
+    }
+}
+
+#[::pyo3_stub_gen_derive::gen_stub_pyclass_complex_enum]
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[::pyo3::pyclass(get_all, set_all)]
+pub enum DestAddressValue {
+    SmeAddress(SmeAddress),
+    DistributionListName(DistributionListName),
+}
+
+impl From<rusmpp_types::DestAddressValue> for DestAddressValue {
+    fn from(value: rusmpp_types::DestAddressValue) -> Self {
+        match value {
+            rusmpp_types::DestAddressValue::SmeAddress(inner) => {
+                DestAddressValue::SmeAddress(inner.into())
+            }
+            rusmpp_types::DestAddressValue::DistributionListName(inner) => {
+                DestAddressValue::DistributionListName(inner.into())
+            }
+        }
+    }
+}
+
+#[::pyo3_stub_gen_derive::gen_stub_pymethods]
+#[::pyo3::pymethods]
+impl DestAddressValue {
+    fn __repr__(&self) -> String {
+        format!("{self:?}")
+    }
+}
+
 #[::pyo3_stub_gen_derive::gen_stub_pyclass_complex_enum]
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 #[::pyo3::pyclass(get_all, set_all)]
@@ -5162,21 +5281,9 @@ impl From<rusmpp_types::DestFlag> for DestFlag {
     }
 }
 
-impl DestFlag {
-    pub fn default_() -> Self {
-        Self::from(rusmpp_types::DestFlag::default())
-    }
-}
-
 #[::pyo3_stub_gen_derive::gen_stub_pymethods]
 #[::pyo3::pymethods]
 impl DestFlag {
-    #[classmethod]
-    #[pyo3(signature=())]
-    pub fn default<'p>(_cls: &'p ::pyo3::Bound<'p, ::pyo3::types::PyType>) -> Self {
-        Self::default_()
-    }
-
     fn __repr__(&self) -> String {
         format!("{self:?}")
     }
@@ -5185,96 +5292,17 @@ impl DestFlag {
 #[::pyo3_stub_gen_derive::gen_stub_pyclass]
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 #[::pyo3::pyclass(get_all, set_all)]
-pub struct DistributionListName {
-    pub dest_flag: DestFlag,
-    pub dl_name: Vec<u8>,
-}
-
-impl From<rusmpp_types::DistributionListName> for DistributionListName {
-    fn from(value: rusmpp_types::DistributionListName) -> Self {
-        let value = value.into_parts();
-        Self {
-            dest_flag: value.dest_flag.into(),
-            dl_name: value.dl_name.into(),
-        }
-    }
-}
-
-#[::pyo3_stub_gen_derive::gen_stub_pymethods]
-#[::pyo3::pymethods]
-impl DistributionListName {
-    #[new]
-
-    fn new(dest_flag: DestFlag, dl_name: Vec<u8>) -> Self {
-        Self { dest_flag, dl_name }
-    }
-
-    fn __repr__(&self) -> String {
-        format!("{self:?}")
-    }
-}
-
-#[::pyo3_stub_gen_derive::gen_stub_pyclass]
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
-#[::pyo3::pyclass(get_all, set_all)]
-pub struct SmeAddress {
-    pub dest_flag: DestFlag,
-    pub dest_addr_ton: Ton,
-    pub dest_addr_npi: Npi,
-    pub destination_addr: Vec<u8>,
-}
-
-impl From<rusmpp_types::SmeAddress> for SmeAddress {
-    fn from(value: rusmpp_types::SmeAddress) -> Self {
-        let value = value.into_parts();
-        Self {
-            dest_flag: value.dest_flag.into(),
-            dest_addr_ton: value.dest_addr_ton.into(),
-            dest_addr_npi: value.dest_addr_npi.into(),
-            destination_addr: value.destination_addr.into(),
-        }
-    }
-}
-
-#[::pyo3_stub_gen_derive::gen_stub_pymethods]
-#[::pyo3::pymethods]
-impl SmeAddress {
-    #[new]
-
-    fn new(
-        dest_flag: DestFlag,
-        dest_addr_ton: Ton,
-        dest_addr_npi: Npi,
-        destination_addr: Vec<u8>,
-    ) -> Self {
-        Self {
-            dest_flag,
-            dest_addr_ton,
-            dest_addr_npi,
-            destination_addr,
-        }
-    }
-
-    fn __repr__(&self) -> String {
-        format!("{self:?}")
-    }
-}
-
-#[::pyo3_stub_gen_derive::gen_stub_pyclass_complex_enum]
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
-#[::pyo3::pyclass(get_all, set_all)]
-pub enum DestAddress {
-    SmeAddress(SmeAddress),
-    DistributionListName(DistributionListName),
+pub struct DestAddress {
+    pub flag: DestFlag,
+    pub value: DestAddressValue,
 }
 
 impl From<rusmpp_types::DestAddress> for DestAddress {
     fn from(value: rusmpp_types::DestAddress) -> Self {
-        match value {
-            rusmpp_types::DestAddress::SmeAddress(inner) => DestAddress::SmeAddress(inner.into()),
-            rusmpp_types::DestAddress::DistributionListName(inner) => {
-                DestAddress::DistributionListName(inner.into())
-            }
+        let value = value.into_parts();
+        Self {
+            flag: value.flag.into(),
+            value: value.value.into(),
         }
     }
 }
@@ -5282,6 +5310,12 @@ impl From<rusmpp_types::DestAddress> for DestAddress {
 #[::pyo3_stub_gen_derive::gen_stub_pymethods]
 #[::pyo3::pymethods]
 impl DestAddress {
+    #[new]
+
+    fn new(flag: DestFlag, value: DestAddressValue) -> Self {
+        Self { flag, value }
+    }
+
     fn __repr__(&self) -> String {
         format!("{self:?}")
     }
@@ -6568,6 +6602,7 @@ pub fn add_classes(m: &::pyo3::Bound<'_, ::pyo3::prelude::PyModule>) -> ::pyo3::
     m.add_class::<DeliveryFailureReason>()?;
     m.add_class::<DestAddrNpResolution>()?;
     m.add_class::<DestAddress>()?;
+    m.add_class::<DestAddressValue>()?;
     m.add_class::<DestFlag>()?;
     m.add_class::<DisplayTime>()?;
     m.add_class::<DistributionListName>()?;
