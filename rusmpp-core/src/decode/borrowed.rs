@@ -456,6 +456,15 @@ pub trait DecodeWithKeyExt<'a>: DecodeWithKey<'a> {
         Self::optional_length_checked_decode(key, &src[size..], length)
             .map(|decoded| decoded.map(|(this, size_)| (this, size + size_)))
     }
+
+    /// Decode a value from a slice, using a key to determine the type ignoring the length.
+    fn no_length_decode_move(
+        key: Self::Key,
+        src: &'a [u8],
+        size: usize,
+    ) -> Result<(Self, usize), DecodeError> {
+        Self::decode(key, src, 0).map(|(this, size_)| (this, size + size_))
+    }
 }
 
 impl<'a, T: DecodeWithKey<'a>> DecodeWithKeyExt<'a> for T {}

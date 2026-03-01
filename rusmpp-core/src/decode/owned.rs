@@ -505,6 +505,15 @@ pub trait DecodeWithKeyExt: DecodeWithKey {
         Self::optional_length_checked_decode(key, src, length)
             .map(|decoded| decoded.map(|(this, size_)| (this, size + size_)))
     }
+
+    /// Decode a value from a slice, using a key to determine the type ignoring the length.
+    fn no_length_decode_move(
+        key: Self::Key,
+        src: &mut BytesMut,
+        size: usize,
+    ) -> Result<(Self, usize), DecodeError> {
+        Self::decode(key, src, 0).map(|(this, size_)| (this, size + size_))
+    }
 }
 
 impl<T: DecodeWithKey> DecodeWithKeyExt for T {}
