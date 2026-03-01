@@ -204,8 +204,7 @@ fn quote_borrowed_decode(input: &DeriveInput, fields: &ValidFields) -> TokenStre
         input.generics.split_for_impl().0.to_token_stream()
     };
 
-    let skipped_field_exists = fields.fields.iter().any(|f| f.attrs.skip());
-    let fields_names = fields.fields.iter().filter(|f| !f.attrs.skip()).map(|f| {
+    let fields_names = fields.fields.iter().map(|f| {
         f.field
             .ident
             .as_ref()
@@ -214,29 +213,13 @@ fn quote_borrowed_decode(input: &DeriveInput, fields: &ValidFields) -> TokenStre
 
     let fields = fields.fields.iter().map(|f| f.quote_borrowed_decode());
 
-    let constructor = if skipped_field_exists {
-        quote! {
-            Self::new(
-                #(#fields_names),*
-            )
-        }
-    } else {
-        quote! {
-            Self {
-                #(#fields_names),*
-            }
-        }
-    };
-
     quote! {
         impl #impl_generics crate::decode::borrowed::Decode<'a> for #name #ty_generics #where_clause {
             fn decode(src: &'a [u8]) -> Result<(Self, usize), crate::decode::DecodeError> {
                 let size = 0;
-                #(
-                    #fields
-                )*
+                #(#fields)*
 
-                Ok((#constructor, size))
+                Ok((Self {#(#fields_names),*}, size))
             }
         }
     }
@@ -246,8 +229,7 @@ fn quote_owned_decode(input: &DeriveInput, fields: &ValidFields) -> TokenStream 
     let name = &input.ident;
     let (impl_generics, ty_generics, where_clause) = &input.generics.split_for_impl();
 
-    let skipped_field_exists = fields.fields.iter().any(|f| f.attrs.skip());
-    let fields_names = fields.fields.iter().filter(|f| !f.attrs.skip()).map(|f| {
+    let fields_names = fields.fields.iter().map(|f| {
         f.field
             .ident
             .as_ref()
@@ -256,36 +238,19 @@ fn quote_owned_decode(input: &DeriveInput, fields: &ValidFields) -> TokenStream 
 
     let fields = fields.fields.iter().map(|f| f.quote_owned_decode());
 
-    let constructor = if skipped_field_exists {
-        quote! {
-            Self::new(
-                #(#fields_names),*
-            )
-        }
-    } else {
-        quote! {
-            Self {
-                #(#fields_names),*
-            }
-        }
-    };
-
     quote! {
         #[cfg(feature = "alloc")]
         impl #impl_generics crate::decode::owned::Decode for #name #ty_generics #where_clause {
             fn decode(src: &mut ::bytes::BytesMut) -> Result<(Self, usize), crate::decode::DecodeError> {
                 let size = 0;
-                #(
-                    #fields
-                )*
+                #(#fields)*
 
-                Ok((#constructor, size))
+                Ok((Self {#(#fields_names),*}, size))
             }
         }
     }
 }
 
-// XXX: Skipped fields are not used here
 fn quote_borrowed_decode_with_length(input: &DeriveInput, fields: &ValidFields) -> TokenStream {
     let name = &input.ident;
 
@@ -306,7 +271,7 @@ fn quote_borrowed_decode_with_length(input: &DeriveInput, fields: &ValidFields) 
         input.generics.split_for_impl().0.to_token_stream()
     };
 
-    let fields_names = fields.fields.iter().filter(|f| !f.attrs.skip()).map(|f| {
+    let fields_names = fields.fields.iter().map(|f| {
         f.field
             .ident
             .as_ref()
@@ -331,12 +296,11 @@ fn quote_borrowed_decode_with_length(input: &DeriveInput, fields: &ValidFields) 
     }
 }
 
-// XXX: Skipped fields are not used here
 fn quote_owned_decode_with_length(input: &DeriveInput, fields: &ValidFields) -> TokenStream {
     let name = &input.ident;
     let (impl_generics, ty_generics, where_clause) = &input.generics.split_for_impl();
 
-    let fields_names = fields.fields.iter().filter(|f| !f.attrs.skip()).map(|f| {
+    let fields_names = fields.fields.iter().map(|f| {
         f.field
             .ident
             .as_ref()
@@ -510,7 +474,6 @@ impl StructAttributes {
 }
 
 struct FieldAttributes {
-    skip_decode: bool,
     length: Option<Length>,
     key: Option<Ident>,
     count: Option<Ident>,
@@ -518,7 +481,6 @@ struct FieldAttributes {
 
 impl FieldAttributes {
     fn extract(field: &Field) -> syn::Result<Self> {
-        let mut skip_decode = false;
         let mut length = None;
         let mut key = None;
         let mut count = None;
@@ -529,9 +491,7 @@ impl FieldAttributes {
             }
 
             attr.parse_nested_meta(|meta| {
-                if meta.path.is_ident("skip_decode") {
-                    skip_decode = true;
-                } else if meta.path.is_ident("length") {
+                if meta.path.is_ident("length") {
                     let value = meta.value()?;
 
                     if let Ok(lit) = value.parse() {
@@ -566,32 +526,11 @@ impl FieldAttributes {
             })?;
         }
 
-        Ok(Self {
-            skip_decode,
-            length,
-            key,
-            count,
-        })
+        Ok(Self { length, key, count })
     }
 
     fn validated(self) -> syn::Result<ValidFieldAttributes> {
-        let Self {
-            skip_decode,
-            length,
-            key,
-            count,
-        } = self;
-
-        if skip_decode {
-            if length.is_some() || key.is_some() || count.is_some() {
-                return Err(syn::Error::new(
-                    proc_macro2::Span::call_site(),
-                    "skip_decode cannot be combined with length, key, or count",
-                ));
-            }
-
-            return Ok(ValidFieldAttributes::SkipDecode);
-        }
+        let Self { length, key, count } = self;
 
         match (length, key, count) {
             (Some(Length::Unchecked), None, None) => Ok(ValidFieldAttributes::LengthUnchecked),
@@ -627,8 +566,6 @@ enum Length {
 
 enum ValidFieldAttributes {
     None,
-    /// `#[rusmpp(skip_decode)]`
-    SkipDecode,
     /// `#[rusmpp(length = "unchecked")]`
     LengthUnchecked,
     /// `#[rusmpp(length = "checked")]`
@@ -667,10 +604,6 @@ impl ValidFieldAttributes {
                 | Self::Count { .. }
         )
     }
-
-    const fn skip(&self) -> bool {
-        matches!(self, Self::SkipDecode)
-    }
 }
 
 struct ValidField<'a> {
@@ -693,7 +626,6 @@ impl ValidField<'_> {
                     crate::fields::SmppField::#name,
                 )?;
             },
-            ValidFieldAttributes::SkipDecode => quote! {},
             ValidFieldAttributes::LengthUnchecked => quote! {
                 let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::borrowed::DecodeWithLengthExt::decode_move(
                     src, length.saturating_sub(size), size
@@ -755,7 +687,6 @@ impl ValidField<'_> {
                     crate::fields::SmppField::#name,
                 )?;
             },
-            ValidFieldAttributes::SkipDecode => quote! {},
             ValidFieldAttributes::LengthUnchecked => quote! {
                 let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::owned::DecodeWithLengthExt::decode_move(
                     src, length.saturating_sub(size), size

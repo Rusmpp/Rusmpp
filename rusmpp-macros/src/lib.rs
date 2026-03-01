@@ -34,7 +34,6 @@ mod structs;
 ///
 /// ## Field attributes
 ///
-/// - `#[rusmpp(skip_decode)]`: Skip decoding the field (requires a corresponding `new` constructor that does not take the skipped field as an argument).
 /// - `#[rusmpp(length = "unchecked")]`: Decode without length checks.
 /// - `#[rusmpp(length = "checked")]`: Decode using `length_checked_decode`.
 /// - `#[rusmpp(length = ident)]`: Use the value of another field (`ident`) as the length for decoding.
