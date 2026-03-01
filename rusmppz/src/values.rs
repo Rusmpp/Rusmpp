@@ -28,7 +28,7 @@ pub use rusmpp_core::values::{
     ReplaceIfPresentFlag, Screening, SetDpf, SmeOriginatedAcknowledgement, SubaddressTag, Ton,
     TypeOfMessage, TypeOfNetwork, UnitOfTime, UnitsOfTime, UserMessageReference, UssdServiceOp,
     borrowed::{
-        BroadcastAreaIdentifier, MessagePayload, ServiceType, Subaddress, UnsuccessSme,
-        {DestAddress, DistributionListName, SmeAddress},
+        BroadcastAreaIdentifier, DestAddress, DestAddressValue, DistributionListName,
+        MessagePayload, ServiceType, SmeAddress, Subaddress, UnsuccessSme,
     },
 };
