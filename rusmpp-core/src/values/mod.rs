@@ -187,7 +187,9 @@ pub mod owned {
     }
 
     pub use super::broadcast_area_identifier::owned::BroadcastAreaIdentifier;
-    pub use super::dest_address::owned::{DestAddress, DistributionListName, SmeAddress};
+    pub use super::dest_address::owned::{
+        DestAddress, DestAddressValue, DistributionListName, SmeAddress,
+    };
     pub use super::message_payload::owned::MessagePayload;
     pub use super::service_type::owned::ServiceType;
     pub use super::sub_address::owned::Subaddress;

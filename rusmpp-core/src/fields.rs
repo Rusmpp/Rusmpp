@@ -115,4 +115,5 @@ pub enum SmppField {
     udh_length,
     udh_id,
     udh_value,
+    flag,
 }
