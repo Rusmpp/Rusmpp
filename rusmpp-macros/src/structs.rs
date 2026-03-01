@@ -204,14 +204,8 @@ fn quote_borrowed_decode(input: &DeriveInput, fields: &ValidFields) -> TokenStre
         input.generics.split_for_impl().0.to_token_stream()
     };
 
-    let fields_names = fields.fields.iter().map(|f| {
-        f.field
-            .ident
-            .as_ref()
-            .expect("Named fields must have idents")
-    });
-
-    let fields = fields.fields.iter().map(|f| f.quote_borrowed_decode());
+    let fields_names = fields.names();
+    let fields = fields.quote_borrowed_decode();
 
     quote! {
         impl #impl_generics crate::decode::borrowed::Decode<'a> for #name #ty_generics #where_clause {
@@ -227,16 +221,11 @@ fn quote_borrowed_decode(input: &DeriveInput, fields: &ValidFields) -> TokenStre
 
 fn quote_owned_decode(input: &DeriveInput, fields: &ValidFields) -> TokenStream {
     let name = &input.ident;
+    let decode_error_context_struct_name = decode_error_context_struct_name(name);
     let (impl_generics, ty_generics, where_clause) = &input.generics.split_for_impl();
 
-    let fields_names = fields.fields.iter().map(|f| {
-        f.field
-            .ident
-            .as_ref()
-            .expect("Named fields must have idents")
-    });
-
-    let fields = fields.fields.iter().map(|f| f.quote_owned_decode());
+    let fields_names = fields.names();
+    let fields = fields.quote_owned_decode(decode_error_context_struct_name);
 
     quote! {
         #[cfg(feature = "alloc")]
@@ -271,14 +260,8 @@ fn quote_borrowed_decode_with_length(input: &DeriveInput, fields: &ValidFields) 
         input.generics.split_for_impl().0.to_token_stream()
     };
 
-    let fields_names = fields.fields.iter().map(|f| {
-        f.field
-            .ident
-            .as_ref()
-            .expect("Named fields must have idents")
-    });
-
-    let fields = fields.fields.iter().map(|f| f.quote_borrowed_decode());
+    let fields_names = fields.names();
+    let fields = fields.quote_borrowed_decode();
 
     quote! {
         impl #impl_generics crate::decode::borrowed::DecodeWithLength<'a> for #name #ty_generics #where_clause {
@@ -298,16 +281,11 @@ fn quote_borrowed_decode_with_length(input: &DeriveInput, fields: &ValidFields) 
 
 fn quote_owned_decode_with_length(input: &DeriveInput, fields: &ValidFields) -> TokenStream {
     let name = &input.ident;
+    let decode_error_context_struct_name = decode_error_context_struct_name(name);
     let (impl_generics, ty_generics, where_clause) = &input.generics.split_for_impl();
 
-    let fields_names = fields.fields.iter().map(|f| {
-        f.field
-            .ident
-            .as_ref()
-            .expect("Named fields must have idents")
-    });
-
-    let fields = fields.fields.iter().map(|f| f.quote_owned_decode());
+    let fields_names = fields.names();
+    let fields = fields.quote_owned_decode(decode_error_context_struct_name);
 
     quote! {
         #[cfg(feature = "alloc")]
@@ -326,13 +304,16 @@ fn quote_owned_decode_with_length(input: &DeriveInput, fields: &ValidFields) -> 
     }
 }
 
+fn decode_error_context_struct_name(name: &Ident) -> Ident {
+    Ident::new(&format!("{}DecodeErrorContext", name), name.span())
+}
+
 fn quote_owned_decode_error(input: &DeriveInput, fields_named: &FieldsNamed) -> TokenStream {
     let name = &input.ident;
 
     let decode_error_struct_name = Ident::new(&format!("{}DecodeError", name), name.span());
 
-    let decode_error_context_struct_name =
-        Ident::new(&format!("{}DecodeErrorContext", name), name.span());
+    let decode_error_context_struct_name = decode_error_context_struct_name(name);
 
     let decode_error_struct_context_field_names_and_types = fields_named.named.iter().map(|f| {
         let ident = f.ident.as_ref().expect("Named fields must have idents");
@@ -345,7 +326,7 @@ fn quote_owned_decode_error(input: &DeriveInput, fields_named: &FieldsNamed) -> 
         let ident = f.ident.as_ref().expect("Named fields must have idents");
 
         quote! {
-            if let ::core::result::Result::Err(err) = &self.context.#ident {
+            if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self.context.#ident {
                 return ::core::option::Option::Some(
                     err as &(dyn ::core::error::Error + 'static)
                 );
@@ -358,7 +339,7 @@ fn quote_owned_decode_error(input: &DeriveInput, fields_named: &FieldsNamed) -> 
         let field_name = ident.to_string();
 
         quote! {
-            if let ::core::result::Result::Err(err) = &self.context.#ident {
+            if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self.context.#ident {
                 write!(f, "{}: {}", #field_name, err)?;
                 write!(f, " }}")?;
 
@@ -369,7 +350,7 @@ fn quote_owned_decode_error(input: &DeriveInput, fields_named: &FieldsNamed) -> 
 
     let decode_error_context_struct = decode_error_struct_context_field_names_and_types
         .clone()
-        .map(|(ident, ty)| quote! { pub #ident: ::core::result::Result<#ty, <#ty as crate::decode::owned::DecodeErrorType>::Error> });
+        .map(|(ident, ty)| quote! { pub #ident: ::core::option::Option<::core::result::Result<#ty, <#ty as crate::decode::owned::DecodeErrorType>::Error>> });
 
     quote! {
         #[cfg(feature = "alloc")]
@@ -673,14 +654,15 @@ impl ValidField<'_> {
         }
     }
 
-    fn quote_owned_decode(&self) -> TokenStream {
+    // TODO: use the decode_error_context in the `map_err` calls
+    fn quote_owned_decode(&self, decode_error_context: TokenStream) -> TokenStream {
         let name = self
             .field
             .ident
             .as_ref()
             .expect("Named fields must have idents");
 
-        match &self.attrs {
+        let decode = match &self.attrs {
             ValidFieldAttributes::None => quote! {
                 let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(
                     crate::decode::owned::DecodeExt::decode_move(src, size),
@@ -731,6 +713,10 @@ impl ValidField<'_> {
                     src, #count_ident as usize, size
                 ),crate::fields::SmppField::#name)?;
             },
+        };
+
+        quote! {
+            #decode
         }
     }
 }
@@ -748,6 +734,69 @@ impl ValidFields<'_> {
             .any(|f| f.attrs.requires_decode_with_length())
             .then_some(DecodeType::DecodeWithLength)
             .unwrap_or(DecodeType::Decode)
+    }
+
+    fn names(&self) -> impl Iterator<Item = &Ident> {
+        self.fields.iter().map(|f| {
+            f.field
+                .ident
+                .as_ref()
+                .expect("Named fields must have idents")
+        })
+    }
+
+    fn quote_decode_error_context(
+        &self,
+        decode_error_context_struct_name: Ident,
+    ) -> impl Iterator<Item = TokenStream> + '_ {
+        let names = self.names().collect::<Vec<_>>();
+
+        names
+            .clone()
+            .into_iter()
+            .enumerate()
+            .map(move |(err_index, _)| {
+                let assignments = names.iter().enumerate().map(|(i, name)| {
+                    if i < err_index {
+                        quote! {
+                            #name: ::core::option::Option::Some(
+                                ::core::result::Result::Ok(#name)
+                            )
+                        }
+                    } else if i == err_index {
+                        quote! {
+                            #name: ::core::option::Option::Some(
+                                ::core::result::Result::Err(err)
+                            )
+                        }
+                    } else {
+                        quote! {
+                            #name: ::core::option::Option::None
+                        }
+                    }
+                });
+
+                quote! {
+                    let context = #decode_error_context_struct_name {
+                        #(#assignments),*
+                    };
+                }
+            })
+    }
+
+    fn quote_borrowed_decode(&self) -> impl Iterator<Item = TokenStream> + '_ {
+        self.fields.iter().map(|f| f.quote_borrowed_decode())
+    }
+
+    fn quote_owned_decode(
+        &self,
+        decode_error_context_struct_name: Ident,
+    ) -> impl Iterator<Item = TokenStream> + '_ {
+        let contexts = self.quote_decode_error_context(decode_error_context_struct_name);
+        self.fields
+            .iter()
+            .zip(contexts)
+            .map(|(f, context)| f.quote_owned_decode(context))
     }
 }
 
