@@ -157,28 +157,20 @@ impl DecodeErrorType for Udh {
 impl Decode for Udh {
     fn decode(src: &mut bytes::BytesMut) -> Result<(Self, usize), DecodeError> {
         let size = 0;
-        let (length, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::owned::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::udh_length,
-        )?;
-        let (id, size): (UdhId, usize) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::owned::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::udh_id,
-        )?;
+        let (length, size) = crate::decode::owned::DecodeExt::decode_move(src, size)?;
+        let (id, size): (UdhId, usize) = crate::decode::owned::DecodeExt::decode_move(src, size)?;
 
         let value_length = (length as usize).saturating_sub(id.length());
 
-        let (value, size) = crate::decode::DecodeErrorExt::map_as_source(
+        let (value, size) =
             crate::decode::owned::DecodeWithKeyExt::optional_length_checked_decode_move(
                 id,
                 src,
                 value_length,
                 size,
-            ),
-            crate::fields::SmppField::udh_value,
-        )?
-        .map(|(this, size)| (Some(this), size))
-        .unwrap_or((None, size));
+            )?
+            .map(|(this, size)| (Some(this), size))
+            .unwrap_or((None, size));
 
         Ok((Self { length, id, value }, size))
     }

@@ -6,7 +6,6 @@
 //! ## Features
 //!
 //! - `alloc`:  Enables the `alloc` crate.
-//! - `verbose`: Enables verbose error reports. Enables the `alloc` feature.
 //! - `arbitrary`: Implements [`Arbitrary`](https://docs.rs/arbitrary/latest/arbitrary/trait.Arbitrary.html) trait for all SMPP types.
 //! - `serde`: Implements [`Serialize`](https://docs.rs/serde/latest/serde/trait.Serialize.html) trait for all SMPP types.
 //! - `serde-deserialize-unchecked`: Implements [`Deserialize`](https://docs.rs/serde/latest/serde/trait.Deserialize.html) trait for owned SMPP types, but does not check the validity of the data. Use with caution.

@@ -1,7 +1,4 @@
-use crate::fields::SmppField;
-
 // TODO: name all errors with the suffix "Error" for consistency.
-// TODO: delete the verbose feature.
 // TODO: delete the smpp field as it will not be needed after we create the verbose error types.
 // TODO: owned: make decode traits return the DecodeErrorType::Error instead of DecodeError.
 // TODO: borrowed: keep the DecodeError for borrowed types. The borrowed version of the lib should be lightweight, and creating a custom decode error type like the owned version has its limitations because of the lifetimes and generic params.
@@ -10,43 +7,13 @@ use crate::fields::SmppField;
 /// An error that can occur when decoding `SMPP` values.
 #[derive(Debug)]
 pub struct DecodeError {
-    kind: DecodeErrorKind,
-    #[cfg(feature = "verbose")]
-    source: Option<alloc::boxed::Box<DecodeErrorSource>>,
+    pub kind: DecodeErrorKind,
 }
 
 impl DecodeError {
     #[inline]
     pub const fn new(kind: DecodeErrorKind) -> Self {
-        #[cfg(feature = "verbose")]
-        return Self { kind, source: None };
-
-        #[cfg(not(feature = "verbose"))]
         Self { kind }
-    }
-
-    #[inline]
-    #[cold]
-    #[cfg(feature = "verbose")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "verbose")))]
-    pub fn with_source(mut self, field: SmppField, error: DecodeError) -> Self {
-        self.source = Some(alloc::boxed::Box::new(DecodeErrorSource { field, error }));
-        self
-    }
-
-    #[inline]
-    #[cold]
-    #[cfg(feature = "verbose")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "verbose")))]
-    pub fn as_source(self, field: SmppField) -> DecodeError {
-        DecodeError::new(self.kind).with_source(field, self)
-    }
-
-    #[inline]
-    #[cfg(feature = "verbose")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "verbose")))]
-    pub fn source(&self) -> Option<&DecodeErrorSource> {
-        self.source.as_deref()
     }
 
     #[inline]
@@ -96,41 +63,6 @@ impl DecodeError {
         Self::new(DecodeErrorKind::UdhDecodeError(
             UdhDecodeError::ConcatenatedShortMessageDecodeError(error),
         ))
-    }
-
-    /// Checks recursively if the field exists in the sources tree.
-    #[cfg(feature = "verbose")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "verbose")))]
-    pub fn field_exists(&self, field: SmppField) -> bool {
-        if let Some(source) = &self.source {
-            if source.field == field {
-                return true;
-            }
-
-            return source.error.field_exists(field);
-        }
-
-        false
-    }
-}
-
-/// Source of [`DecodeError`].
-#[derive(Debug)]
-#[cfg(feature = "verbose")]
-#[cfg_attr(docsrs, doc(cfg(feature = "verbose")))]
-pub struct DecodeErrorSource {
-    field: SmppField,
-    error: DecodeError,
-}
-
-#[cfg(feature = "verbose")]
-impl DecodeErrorSource {
-    pub const fn field(&self) -> SmppField {
-        self.field
-    }
-
-    pub const fn error(&self) -> &DecodeError {
-        &self.error
     }
 }
 
@@ -223,49 +155,35 @@ pub enum ConcatenatedShortMessageDecodeError {
     },
 }
 
-#[cfg(feature = "verbose")]
-impl core::fmt::Display for DecodeErrorSource {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "field: {:?}, error: {}", self.field, self.error)
-    }
-}
-
-#[cfg(feature = "verbose")]
-impl core::error::Error for DecodeErrorSource {
-    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
-        Some(&self.error)
-    }
-
-    fn cause(&self) -> Option<&dyn core::error::Error> {
-        self.source()
-    }
-}
-
 impl core::fmt::Display for DecodeError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        #[cfg(feature = "verbose")]
-        return match &self.source {
-            Some(source) => {
-                write!(f, "Decode error. kind: {}, source: [{source}]", self.kind,)
-            }
-            None => write!(f, "Decode error. kind: {}", self.kind),
-        };
-
-        #[cfg(not(feature = "verbose"))]
         write!(f, "Decode error. kind: {}", self.kind)
     }
 }
 
 impl core::error::Error for DecodeError {
     fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
-        #[cfg(feature = "verbose")]
-        return match &self.source {
-            Some(source) => Some(source.as_ref()),
-            None => None,
-        };
-
-        #[cfg(not(feature = "verbose"))]
-        None
+        match &self.kind {
+            DecodeErrorKind::IntegerDecodeError(err) => {
+                Some(err as &(dyn ::core::error::Error + 'static))
+            }
+            DecodeErrorKind::COctetStringDecodeError(err) => {
+                Some(err as &(dyn ::core::error::Error + 'static))
+            }
+            DecodeErrorKind::OctetStringDecodeError(err) => {
+                Some(err as &(dyn ::core::error::Error + 'static))
+            }
+            DecodeErrorKind::AnyOctetStringDecodeError(err) => {
+                Some(err as &(dyn ::core::error::Error + 'static))
+            }
+            DecodeErrorKind::HeaplessVecDecodeError(err) => {
+                Some(err as &(dyn ::core::error::Error + 'static))
+            }
+            DecodeErrorKind::UnsupportedKey { .. } => None,
+            DecodeErrorKind::UdhDecodeError(err) => {
+                Some(err as &(dyn ::core::error::Error + 'static))
+            }
+        }
     }
 
     fn cause(&self) -> Option<&dyn core::error::Error> {
@@ -421,21 +339,5 @@ impl<T, E> DecodeResultExt<T, E> for Result<(T, usize), E> {
         F: FnOnce(T) -> U,
     {
         self.map(|(this, size)| (op(this), size))
-    }
-}
-
-#[doc(hidden)]
-pub trait DecodeErrorExt<T> {
-    fn map_as_source(self, field: SmppField) -> Result<T, DecodeError>;
-}
-
-impl<T> DecodeErrorExt<T> for Result<T, DecodeError> {
-    #[cold]
-    fn map_as_source(self, _field: SmppField) -> Result<T, DecodeError> {
-        #[cfg(feature = "verbose")]
-        return self.map_err(|error| error.as_source(_field));
-
-        #[cfg(not(feature = "verbose"))]
-        self
     }
 }

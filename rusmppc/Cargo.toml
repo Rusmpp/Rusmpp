@@ -14,7 +14,6 @@ keywords = ["smpp", "smsc", "messaging", "networking", "protocol"]
 rusmpp = { path = "../rusmpp", version = "0.4.0", default-features = false, features = [
     "tokio-codec",
     "tracing",
-    "verbose",
     "extra",
 ] }
 tokio = { version = "1.48.0", default-features = false, features = ["sync"] }
