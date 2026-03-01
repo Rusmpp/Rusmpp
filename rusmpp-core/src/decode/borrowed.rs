@@ -463,7 +463,7 @@ pub trait DecodeWithKeyExt<'a>: DecodeWithKey<'a> {
         src: &'a [u8],
         size: usize,
     ) -> Result<(Self, usize), DecodeError> {
-        Self::decode(key, src, 0).map(|(this, size_)| (this, size + size_))
+        Self::decode(key, &src[size..], 0).map(|(this, size_)| (this, size + size_))
     }
 }
 

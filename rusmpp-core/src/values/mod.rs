@@ -165,7 +165,9 @@ pub mod borrowed {
     }
 
     pub use super::broadcast_area_identifier::borrowed::BroadcastAreaIdentifier;
-    pub use super::dest_address::borrowed::{DestAddress, DistributionListName, SmeAddress};
+    pub use super::dest_address::borrowed::{
+        DestAddress, DestAddressValue, DistributionListName, SmeAddress,
+    };
     pub use super::message_payload::borrowed::MessagePayload;
     pub use super::service_type::borrowed::ServiceType;
     pub use super::sub_address::borrowed::Subaddress;
