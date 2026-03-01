@@ -114,8 +114,8 @@ impl DecodeWithKey for DestAddressValue {
 }
 
 /// SME Format Destination Address.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
-#[rusmpp(decode = owned, test = skip)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
+#[rusmpp(decode = owned)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 #[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
@@ -151,8 +151,8 @@ impl From<SmeAddress> for DestAddressValue {
 }
 
 /// Distribution List Format Destination Address.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
-#[rusmpp(decode = owned, test = skip)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
+#[rusmpp(decode = owned)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 #[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
@@ -175,8 +175,6 @@ impl From<DistributionListName> for DestAddressValue {
 
 #[cfg(test)]
 mod tests {
-    //! See tests in [borrowed](super::super::borrowed) for more details.
-
     use super::*;
 
     impl crate::tests::TestInstance for DestAddress {
@@ -197,5 +195,7 @@ mod tests {
     #[test]
     fn encode_decode() {
         crate::tests::owned::encode_decode_test_instances::<DestAddress>();
+        crate::tests::owned::encode_decode_test_instances::<SmeAddress>();
+        crate::tests::owned::encode_decode_test_instances::<DistributionListName>();
     }
 }
