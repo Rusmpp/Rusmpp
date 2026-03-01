@@ -38,6 +38,7 @@ mod structs;
 /// - `#[rusmpp(length = "unchecked")]`: Decode without length checks.
 /// - `#[rusmpp(length = "checked")]`: Decode using `length_checked_decode`.
 /// - `#[rusmpp(length = ident)]`: Use the value of another field (`ident`) as the length for decoding.
+/// - `#[rusmpp(key = ident)]`: Decode using a key from another field (`ident`) ignoring the length.
 /// - `#[rusmpp(key = ident, length = "unchecked")]`: Decode using a key and unchecked length.
 /// - `#[rusmpp(key = ident, length = ident)]`: Decode using a key and the value of another field (`ident`) as the length.
 /// - `#[rusmpp(count = ident)]`: Decode a vector of values, where `ident` is the number of elements to decode.

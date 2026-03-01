@@ -599,6 +599,7 @@ impl FieldAttributes {
             (Some(Length::Ident(length)), None, None) => Ok(ValidFieldAttributes::LengthIdent {
                 length_ident: length,
             }),
+            (None, Some(key), None) => Ok(ValidFieldAttributes::Key { key_ident: key }),
             (Some(Length::Unchecked), Some(key), None) => {
                 Ok(ValidFieldAttributes::KeyLengthUnchecked { key_ident: key })
             }
@@ -635,6 +636,10 @@ enum ValidFieldAttributes {
     /// `#[rusmpp(length = ident)]`
     LengthIdent {
         length_ident: Ident,
+    },
+    /// `#[rusmpp(key = ident)]`
+    Key {
+        key_ident: Ident,
     },
     /// `#[rusmpp(key = ident, length = "unchecked")]`
     KeyLengthUnchecked {
@@ -706,6 +711,11 @@ impl ValidField<'_> {
                     src, #length_ident as usize, size
                 ),crate::fields::SmppField::#name)?;
             },
+            ValidFieldAttributes::Key { key_ident } => quote! {
+                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::borrowed::DecodeWithKeyExt::no_length_decode_move(
+                    #key_ident, src, size
+                ),crate::fields::SmppField::#name)?;
+            },
             ValidFieldAttributes::KeyLengthUnchecked { key_ident } => quote! {
                 let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::borrowed::DecodeWithKeyOptionalExt::decode_move(
                     #key_ident, src, length.saturating_sub(size), size
@@ -761,6 +771,11 @@ impl ValidField<'_> {
             ValidFieldAttributes::LengthIdent { length_ident } => quote! {
                 let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::owned::DecodeWithLengthExt::decode_move(
                     src, #length_ident as usize, size
+                ),crate::fields::SmppField::#name)?;
+            },
+            ValidFieldAttributes::Key { key_ident } => quote! {
+                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::owned::DecodeWithKeyExt::no_length_decode_move(
+                    #key_ident, src, size
                 ),crate::fields::SmppField::#name)?;
             },
             ValidFieldAttributes::KeyLengthUnchecked { key_ident } => quote! {
