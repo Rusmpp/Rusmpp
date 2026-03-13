@@ -1,8 +1,10 @@
 use crate::{CloseRequest, PendingResponses, RegisteredRequest, Request, UnregisteredRequest};
 
+/// Action
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 pub enum Action {
+    /// Sends a request to the server.
     Request(Request),
     /// Removes a pending response from the connection's pending responses map.
     ///
@@ -19,10 +21,12 @@ pub enum Action {
 }
 
 impl Action {
+    /// Sends a registered request to the server.
     pub const fn registered_request(request: RegisteredRequest) -> Self {
         Self::Request(Request::Registered(request))
     }
 
+    /// Sends an unregistered request to the server.
     pub const fn unregistered_request(request: UnregisteredRequest) -> Self {
         Self::Request(Request::Unregistered(request))
     }
