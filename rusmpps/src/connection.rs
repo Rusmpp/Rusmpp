@@ -1,15 +1,16 @@
+use std::net::SocketAddr;
 use std::{str::FromStr, sync::Arc, time::Duration};
 
 use futures::{SinkExt, StreamExt, TryStreamExt, future};
 use rusmpp::{
     Command, CommandId, CommandStatus, Pdu,
-    pdus::{BindReceiverResp, BindTransceiverResp, BindTransmitterResp, SubmitSmResp},
+    pdus::{BindReceiverResp, BindTransceiverResp, BindTransmitterResp},
     tokio_codec::CommandCodec,
     types::COctetString,
     values::InterfaceVersion,
 };
 use tokio::{
-    io::{AsyncRead, AsyncWrite},
+    io::{AsyncRead, AsyncWrite, WriteHalf},
     sync::mpsc,
 };
 use tokio_stream::wrappers::ReceiverStream;
@@ -18,11 +19,12 @@ use tokio_util::codec::{FramedRead, FramedWrite};
 use crate::{
     bind_mode::BindMode,
     client::{Action, Client, ClientSession, ConnectedClients, SequenceNumber},
+    handler::{BindHandler, Handler},
     timer::Timer,
 };
 
 #[derive(Debug)]
-pub struct ConnectionConfig {
+pub struct ConnectionConfig<B: BindHandler> {
     pub connected_clients: ConnectedClients,
     pub clients: Vec<Client>,
     pub enquire_link_interval: Option<Duration>,
@@ -31,17 +33,23 @@ pub struct ConnectionConfig {
     pub bind_delay: Option<Duration>,
     pub response_delay: Option<Duration>,
     pub enquire_link_response_delay: Option<Duration>,
+    pub bind_handler: B,
 }
 
 #[derive(Debug)]
-pub struct Connection {
+pub struct Connection<B: BindHandler> {
     session_id: u64,
-    config: Arc<ConnectionConfig>,
+    socket_addr: SocketAddr,
+    config: Arc<ConnectionConfig<B>>,
 }
 
-impl Connection {
-    pub fn new(session_id: u64, config: Arc<ConnectionConfig>) -> Self {
-        Self { session_id, config }
+impl<B: BindHandler> Connection<B> {
+    pub fn new(socket_addr: SocketAddr, session_id: u64, config: Arc<ConnectionConfig<B>>) -> Self {
+        Self {
+            socket_addr,
+            session_id,
+            config,
+        }
     }
 
     pub async fn run<S>(self, stream: S)
@@ -66,7 +74,7 @@ impl Connection {
             ))
         });
 
-        let (sequence_number, system_id, _, bind_mode) = tokio::select! {
+        let (sequence_number, system_id, password, bind_mode) = tokio::select! {
             _ = tokio::time::sleep(self.config.session_timeout) => {
                 tracing::warn!(session_id, "Session timeout reached, closing connection");
 
@@ -126,8 +134,6 @@ impl Connection {
             }
         };
 
-        // TODO: Do the verification of system_id and password here
-
         let mc_system_id = COctetString::from_str("Rusmpps").expect("Must be valid system ID");
         let sc_interface_version = Some(InterfaceVersion::Smpp5_0);
 
@@ -149,25 +155,40 @@ impl Connection {
                 .into(),
         };
 
-        let command = Command::builder()
-            .status(CommandStatus::EsmeRok)
-            .sequence_number(sequence_number)
-            .pdu(pdu);
+        let (tx, rx) = mpsc::channel(100);
+        let bind_result = self
+            .config
+            .bind_handler
+            .bind(
+                self.socket_addr,
+                bind_mode,
+                &system_id.to_string(),
+                &password.to_string(),
+                tx.clone(),
+            )
+            .await;
 
-        if let Some(delay) = self.config.bind_delay {
-            tokio::time::sleep(delay).await;
-        }
+        let handler = match bind_result {
+            Err(status) => {
+                self.send_bind_response(session_id, &mut writer, sequence_number, pdu, status)
+                    .await;
+                return;
+            }
+            Ok(handler) => handler,
+        };
 
-        tracing::debug!(session_id, id=?command.id(), "Sending response");
-        tracing::trace!(session_id, ?command, "Sending response");
-
-        if let Err(err) = writer.send(command).await {
-            tracing::error!(session_id, ?err, "Failed to send response");
-
+        if self
+            .send_bind_response(
+                session_id,
+                &mut writer,
+                sequence_number,
+                pdu,
+                CommandStatus::EsmeRok,
+            )
+            .await
+        {
             return;
         }
-
-        let (tx, rx) = mpsc::channel(100);
 
         let mut sequence_number = SequenceNumber::new();
         let system_id = system_id.to_string();
@@ -268,17 +289,12 @@ impl Connection {
 
                     let (id, _, sequence_number, pdu) = command.into_parts().raw();
 
-                    let pdu: Pdu = match pdu {
+                    let (pdu, status) = match pdu {
                         Some(Pdu::Unbind) => {
-                            Pdu::UnbindResp
+                            (Pdu::UnbindResp, CommandStatus::EsmeRok)
                         },
                         Some(Pdu::EnquireLink) => {
-                            Pdu::EnquireLinkResp
-                        },
-                        Some(Pdu::SubmitSm(_)) => {
-                            SubmitSmResp::builder()
-                                .build()
-                                .into()
+                            (Pdu::EnquireLinkResp, CommandStatus::EsmeRok)
                         },
                         Some(Pdu::EnquireLinkResp) => {
                             match last_enquire_link_sequence_number {
@@ -304,10 +320,17 @@ impl Connection {
 
                             continue
                         }
+                        Some(pdu) => {
+                            if let Some((pdu, command_status)) = handler.handle_pdu(sequence_number, pdu).await {
+                                (pdu, command_status)
+                            } else {
+                                tracing::warn!(session_id, sequence_number, id=?id, "Received unsupported command");
+                                (Pdu::GenericNack, CommandStatus::EsmeRinvcmdid)
+                            }
+                        }
                         _ => {
-                            tracing::warn!(session_id, sequence_number, id=?id, "Received unsupported command");
-
-                            continue
+                            tracing::warn!(session_id, sequence_number, id=?id, "Received command without PDU");
+                            (Pdu::GenericNack, CommandStatus::EsmeRinvcmdid)
                         }
                     };
 
@@ -317,7 +340,7 @@ impl Connection {
                     };
 
                     let command = Command::builder()
-                        .status(CommandStatus::EsmeRok)
+                        .status(status)
                         .sequence_number(sequence_number)
                         .pdu(pdu);
 
@@ -342,5 +365,36 @@ impl Connection {
             .connected_clients
             .remove_session(&system_id, session_id)
             .await;
+    }
+
+    async fn send_bind_response<S>(
+        &self,
+        session_id: u64,
+        writer: &mut FramedWrite<WriteHalf<S>, CommandCodec>,
+        sequence_number: u32,
+        pdu: Pdu,
+        status: CommandStatus,
+    ) -> bool
+    where
+        S: AsyncRead + AsyncWrite + Send + Unpin + 'static,
+    {
+        let command = Command::builder()
+            .status(status)
+            .sequence_number(sequence_number)
+            .pdu(pdu);
+
+        if let Some(delay) = self.config.bind_delay {
+            tokio::time::sleep(delay).await;
+        }
+
+        tracing::debug!(session_id, id=?command.id(), "Sending response");
+        tracing::trace!(session_id, ?command, "Sending response");
+
+        if let Err(err) = writer.send(command).await {
+            tracing::error!(session_id, ?err, "Failed to send response");
+
+            return true;
+        }
+        false
     }
 }

@@ -23,6 +23,7 @@ tokio-stream = "0.1.17"
 futures = "0.3.31"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+async-trait = "0.1.86"
 anyhow = "1"
 pin-project-lite = "0.2.16"
 serde = { version = "1.0.219", features = ["derive"] }

@@ -7,10 +7,11 @@ use tokio::net::TcpListener;
 use crate::{
     client::{Client, ConnectedClients},
     connection::{Connection, ConnectionConfig},
+    handler::BindHandler,
 };
 
 #[derive(Debug)]
-pub struct ServerParameters {
+pub struct ServerParameters<B: BindHandler> {
     pub clients: Vec<Client>,
     pub enquire_link_interval: Option<Duration>,
     pub enquire_link_response_timeout: Duration,
@@ -19,17 +20,18 @@ pub struct ServerParameters {
     pub bind_delay: Option<Duration>,
     pub response_delay: Option<Duration>,
     pub socket_addr: SocketAddr,
+    pub bind_handler: B,
 }
 
 #[derive(Debug)]
-pub struct Server {
-    config: Arc<ConnectionConfig>,
+pub struct Server<B: BindHandler> {
+    config: Arc<ConnectionConfig<B>>,
     socket_addr: SocketAddr,
     session_id: u64,
 }
 
-impl Server {
-    pub fn new(parameters: ServerParameters) -> Self {
+impl<B: BindHandler> Server<B> {
+    pub fn new(parameters: ServerParameters<B>) -> Self {
         let config = Arc::new(ConnectionConfig {
             connected_clients: ConnectedClients::new(),
             clients: parameters.clients,
@@ -39,6 +41,7 @@ impl Server {
             bind_delay: parameters.bind_delay,
             response_delay: parameters.response_delay,
             enquire_link_response_delay: parameters.enquire_link_response_delay,
+            bind_handler: parameters.bind_handler,
         });
 
         Self {
@@ -73,7 +76,7 @@ impl Server {
 
             tracing::info!(%addr, session_id, "Accepted connection");
 
-            let connection = Connection::new(session_id, self.config.clone());
+            let connection = Connection::new(addr, session_id, self.config.clone());
 
             tokio::spawn(async move {
                 connection.run(stream).await;
