@@ -683,6 +683,7 @@ impl ValidField<'_> {
 
         quote! {
             #decode
+
         }
     }
 }

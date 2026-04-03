@@ -44,13 +44,11 @@ impl crate::decode::owned::DecodeErrorType for u16 {
 
 #[cfg(feature = "alloc")]
 impl crate::decode::owned::Decode for u16 {
-    fn decode(src: &mut bytes::BytesMut) -> Result<(Self, usize), DecodeError> {
+    fn decode(src: &mut bytes::BytesMut) -> Result<(Self, usize), Self::Error> {
         use bytes::Buf;
 
         if src.len() < 2 {
-            return Err(DecodeError::integer_decode_error(
-                IntegerDecodeError::UnexpectedEof,
-            ));
+            return Err(IntegerDecodeError::UnexpectedEof);
         }
 
         Ok((src.get_u16(), 2))

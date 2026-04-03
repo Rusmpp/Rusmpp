@@ -46,13 +46,11 @@ impl crate::decode::owned::DecodeErrorType for u32 {
 
 #[cfg(feature = "alloc")]
 impl crate::decode::owned::Decode for u32 {
-    fn decode(src: &mut bytes::BytesMut) -> Result<(Self, usize), DecodeError> {
+    fn decode(src: &mut bytes::BytesMut) -> Result<(Self, usize), Self::Error> {
         use bytes::Buf;
 
         if src.len() < 4 {
-            return Err(DecodeError::integer_decode_error(
-                IntegerDecodeError::UnexpectedEof,
-            ));
+            return Err(IntegerDecodeError::UnexpectedEof);
         }
 
         Ok((src.get_u32(), 4))
