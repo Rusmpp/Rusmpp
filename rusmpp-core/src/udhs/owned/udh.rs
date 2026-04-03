@@ -2,7 +2,7 @@ use rusmpp_macros::Rusmpp;
 
 use crate::{
     decode::{
-        DecodeError, DecodeResultExt,
+        AnyOctetStringDecodeError, ConcatenatedShortMessageDecodeError, DecodeResultExt,
         owned::{Decode, DecodeErrorType, DecodeWithKey, DecodeWithLength},
     },
     encode::Length,
@@ -87,6 +87,14 @@ impl UdhValue {
     }
 }
 
+// TODO: impl error for this guy. we might want to use thiserror.
+#[derive(Debug, Clone)]
+pub enum UdhValueDecodeError {
+    ConcatenatedShortMessage8Bit(ConcatenatedShortMessageDecodeError),
+    ConcatenatedShortMessage16Bit(ConcatenatedShortMessageDecodeError),
+    Other(AnyOctetStringDecodeError),
+}
+
 impl Length for UdhValue {
     fn length(&self) -> usize {
         match self {
@@ -118,8 +126,7 @@ impl crate::encode::owned::Encode for UdhValue {
 }
 
 impl DecodeErrorType for UdhValue {
-    // TODO
-    type Error = core::convert::Infallible;
+    type Error = UdhValueDecodeError;
 }
 
 impl DecodeWithKey for UdhValue {
@@ -129,20 +136,20 @@ impl DecodeWithKey for UdhValue {
         key: Self::Key,
         src: &mut bytes::BytesMut,
         length: usize,
-    ) -> Result<(Self, usize), DecodeError> {
+    ) -> Result<(Self, usize), Self::Error> {
         let (value, size) = match key {
-            UdhId::ConcatenatedShortMessages8Bit => {
-                Decode::decode(src).map_decoded(Self::ConcatenatedShortMessage8Bit)?
-            }
-            UdhId::ConcatenatedShortMessages16Bit => {
-                Decode::decode(src).map_decoded(Self::ConcatenatedShortMessage16Bit)?
-            }
-            other => {
-                DecodeWithLength::decode(src, length).map_decoded(|value| UdhValue::Other {
+            UdhId::ConcatenatedShortMessages8Bit => Decode::decode(src)
+                .map_decoded(Self::ConcatenatedShortMessage8Bit)
+                .map_err(Self::Error::ConcatenatedShortMessage8Bit)?,
+            UdhId::ConcatenatedShortMessages16Bit => Decode::decode(src)
+                .map_decoded(Self::ConcatenatedShortMessage16Bit)
+                .map_err(Self::Error::ConcatenatedShortMessage16Bit)?,
+            other => DecodeWithLength::decode(src, length)
+                .map_decoded(|value| UdhValue::Other {
                     udh_id: other,
                     value,
-                })?
-            }
+                })
+                .map_err(Self::Error::Other)?,
         };
 
         Ok((value, size))
@@ -155,24 +162,28 @@ impl DecodeErrorType for Udh {
 }
 
 impl Decode for Udh {
-    fn decode(src: &mut bytes::BytesMut) -> Result<(Self, usize), DecodeError> {
-        let size = 0;
-        let (length, size) = crate::decode::owned::DecodeExt::decode_move(src, size)?;
-        let (id, size): (UdhId, usize) = crate::decode::owned::DecodeExt::decode_move(src, size)?;
+    fn decode(src: &mut bytes::BytesMut) -> Result<(Self, usize), Self::Error> {
+        // let size = 0;
+        // let (length, size) = crate::decode::owned::DecodeExt::decode_move(src, size)?;
+        // let (id, size): (UdhId, usize) = crate::decode::owned::DecodeExt::decode_move(src, size)?;
 
-        let value_length = (length as usize).saturating_sub(id.length());
+        // let value_length = (length as usize).saturating_sub(id.length());
 
-        let (value, size) =
-            crate::decode::owned::DecodeWithKeyExt::optional_length_checked_decode_move(
-                id,
-                src,
-                value_length,
-                size,
-            )?
-            .map(|(this, size)| (Some(this), size))
-            .unwrap_or((None, size));
+        // let (value, size) =
+        //     crate::decode::owned::DecodeWithKeyExt::optional_length_checked_decode_move(
+        //         id,
+        //         src,
+        //         value_length,
+        //         size,
+        //     )?
+        //     .map(|(this, size)| (Some(this), size))
+        //     .unwrap_or((None, size));
 
-        Ok((Self { length, id, value }, size))
+        // Ok((Self { length, id, value }, size))
+
+        //TODO: well, we have to impl this per hand
+
+        todo!()
     }
 }
 

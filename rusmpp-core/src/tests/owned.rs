@@ -5,7 +5,7 @@ use bytes::BytesMut;
 use crate::{
     CommandId,
     command::owned::Command,
-    decode::owned::{Decode, DecodeWithLength},
+    decode::owned::{Decode, DecodeErrorType, DecodeWithLength},
     encode::{Length, owned::Encode},
     pdus::owned::*,
     tests::TestInstance,
@@ -18,6 +18,7 @@ use crate::{
 pub fn encode_decode_test_instances<T>()
 where
     T: TestInstance + core::fmt::Debug + PartialEq + Encode + Decode,
+    <T as DecodeErrorType>::Error: core::fmt::Debug,
 {
     for original in T::instances() {
         let mut buf = BytesMut::with_capacity(1024);
@@ -42,6 +43,7 @@ where
 pub fn encode_decode_with_length_test_instances<T>()
 where
     T: TestInstance + core::fmt::Debug + PartialEq + Encode + DecodeWithLength,
+    <T as DecodeErrorType>::Error: core::fmt::Debug,
 {
     for original in T::instances() {
         let mut buf = BytesMut::with_capacity(1024);

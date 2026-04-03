@@ -1,3 +1,5 @@
+#[cfg(feature = "alloc")]
+use crate::decode::ConcatenatedShortMessageDecodeError;
 use crate::{
     encode::Length,
     udhs::{concatenation::ConcatenatedShortMessage16Bit, errors::ConcatenatedShortMessageError},
@@ -173,33 +175,28 @@ impl crate::encode::owned::Encode for ConcatenatedShortMessage8Bit {
 
 #[cfg(feature = "alloc")]
 impl crate::decode::owned::DecodeErrorType for ConcatenatedShortMessage8Bit {
-    // TODO
-    type Error = core::convert::Infallible;
+    type Error = ConcatenatedShortMessageDecodeError;
 }
 
 #[cfg(feature = "alloc")]
 impl crate::decode::owned::Decode for ConcatenatedShortMessage8Bit {
-    fn decode(src: &mut bytes::BytesMut) -> Result<(Self, usize), crate::decode::DecodeError> {
+    fn decode(src: &mut bytes::BytesMut) -> Result<(Self, usize), Self::Error> {
         if src.len() < Self::LENGTH {
-            return Err(
-                crate::decode::DecodeError::concatenated_short_message_decode_error(
-                    crate::decode::ConcatenatedShortMessageDecodeError::TooFewBytes {
-                        actual: src.len(),
-                        min: Self::LENGTH,
-                    },
-                ),
-            );
+            return Err(ConcatenatedShortMessageDecodeError::TooFewBytes {
+                actual: src.len(),
+                min: Self::LENGTH,
+            });
         }
 
         let length = src[0];
 
         if length != 0x03_u8 {
-            return Err(crate::decode::DecodeError::concatenated_short_message_decode_error(
-                crate::decode::ConcatenatedShortMessageDecodeError::InvalidInformationElementLength {
+            return Err(
+                ConcatenatedShortMessageDecodeError::InvalidInformationElementLength {
                     actual: length,
                     expected: 0x03_u8,
                 },
-            ));
+            );
         }
 
         let decoded = Self::new(src[1], src[2], src[3])?;
@@ -278,9 +275,7 @@ mod tests {
         mod owned {
             use bytes::BytesMut;
 
-            use crate::decode::{
-                ConcatenatedShortMessageDecodeError, DecodeErrorKind, UdhDecodeError, owned::Decode,
-            };
+            use crate::decode::{ConcatenatedShortMessageDecodeError, owned::Decode};
 
             use super::*;
 
@@ -299,12 +294,8 @@ mod tests {
                 let mut buf = BytesMut::from(&[0x03, 0x12, 0x34][..]);
                 let err = ConcatenatedShortMessage8Bit::decode(&mut buf).unwrap_err();
                 assert!(matches!(
-                    err.kind(),
-                    DecodeErrorKind::UdhDecodeError(
-                        UdhDecodeError::ConcatenatedShortMessageDecodeError(
-                            ConcatenatedShortMessageDecodeError::TooFewBytes { actual: 3, min: 4 }
-                        )
-                    )
+                    err,
+                    ConcatenatedShortMessageDecodeError::TooFewBytes { actual: 3, min: 4 }
                 ));
             }
 
@@ -313,15 +304,11 @@ mod tests {
                 let mut buf = BytesMut::from(&[0x04, 0x12, 0x34, 0x02][..]);
                 let err = ConcatenatedShortMessage8Bit::decode(&mut buf).unwrap_err();
                 assert!(matches!(
-                    err.kind(),
-                    DecodeErrorKind::UdhDecodeError(
-                        UdhDecodeError::ConcatenatedShortMessageDecodeError(
-                            ConcatenatedShortMessageDecodeError::InvalidInformationElementLength {
-                                actual: 4,
-                                expected: 3
-                            }
-                        )
-                    )
+                    err,
+                    ConcatenatedShortMessageDecodeError::InvalidInformationElementLength {
+                        actual: 4,
+                        expected: 3
+                    }
                 ));
             }
 
@@ -330,15 +317,11 @@ mod tests {
                 let mut buf = BytesMut::from(&[0x03, 0x12, 2, 3][..]);
                 let err = ConcatenatedShortMessage8Bit::decode(&mut buf).unwrap_err();
                 assert!(matches!(
-                    err.kind(),
-                    DecodeErrorKind::UdhDecodeError(
-                        UdhDecodeError::ConcatenatedShortMessageDecodeError(
-                            ConcatenatedShortMessageDecodeError::PartNumberExceedsTotalParts {
-                                part_number: 3,
-                                total_parts: 2
-                            }
-                        )
-                    )
+                    err,
+                    ConcatenatedShortMessageDecodeError::PartNumberExceedsTotalParts {
+                        part_number: 3,
+                        total_parts: 2
+                    }
                 ));
             }
 
@@ -347,12 +330,8 @@ mod tests {
                 let mut buf = BytesMut::from(&[0x03, 0x12, 0x00, 0x01][..]);
                 let err = ConcatenatedShortMessage8Bit::decode(&mut buf).unwrap_err();
                 assert!(matches!(
-                    err.kind(),
-                    DecodeErrorKind::UdhDecodeError(
-                        UdhDecodeError::ConcatenatedShortMessageDecodeError(
-                            ConcatenatedShortMessageDecodeError::TotalPartsZero
-                        )
-                    )
+                    err,
+                    ConcatenatedShortMessageDecodeError::TotalPartsZero
                 ));
             }
 
@@ -361,12 +340,8 @@ mod tests {
                 let mut buf = BytesMut::from(&[0x03, 0x12, 0x03, 0x00][..]);
                 let err = ConcatenatedShortMessage8Bit::decode(&mut buf).unwrap_err();
                 assert!(matches!(
-                    err.kind(),
-                    DecodeErrorKind::UdhDecodeError(
-                        UdhDecodeError::ConcatenatedShortMessageDecodeError(
-                            ConcatenatedShortMessageDecodeError::PartNumberZero
-                        )
-                    )
+                    err,
+                    ConcatenatedShortMessageDecodeError::PartNumberZero
                 ));
             }
         }

@@ -3,13 +3,14 @@ use bytes::BytesMut;
 use crate::{
     CommandId,
     decode::{
-        DecodeError, DecodeResultExt,
+        AnyOctetStringDecodeError, DecodeResultExt,
         owned::{Decode, DecodeErrorType, DecodeWithKeyOptional, DecodeWithLength},
     },
     encode::Length,
     types::owned::AnyOctetString,
 };
 
+use super::errors::*;
 use super::*;
 
 /// `SMPP` PDU.
@@ -185,6 +186,45 @@ pub enum Pdu {
     },
 }
 
+// TODO: impl error for this guy. we might want to use thiserror.
+#[derive(Debug, derive_more::From)]
+pub enum PduDecodeError {
+    BindTransmitter(BindTransmitterDecodeError),
+    BindTransmitterResp(BindTransmitterRespDecodeError),
+    BindReceiver(BindReceiverDecodeError),
+    BindReceiverResp(BindReceiverRespDecodeError),
+    BindTransceiver(BindTransceiverDecodeError),
+    BindTransceiverResp(BindTransceiverRespDecodeError),
+    Outbind(OutbindDecodeError),
+    AlertNotification(AlertNotificationDecodeError),
+    SubmitSm(SubmitSmDecodeError),
+    SubmitSmResp(SubmitSmRespDecodeError),
+    QuerySm(QuerySmDecodeError),
+    QuerySmResp(QuerySmRespDecodeError),
+    DeliverSm(DeliverSmDecodeError),
+    DeliverSmResp(DeliverSmRespDecodeError),
+    DataSm(DataSmDecodeError),
+    DataSmResp(DataSmRespDecodeError),
+    CancelSm(CancelSmDecodeError),
+    ReplaceSm(ReplaceSmDecodeError),
+    SubmitMulti(SubmitMultiDecodeError),
+    SubmitMultiResp(SubmitMultiRespDecodeError),
+    BroadcastSm(BroadcastSmDecodeError),
+    BroadcastSmResp(BroadcastSmRespDecodeError),
+    QueryBroadcastSm(QueryBroadcastSmDecodeError),
+    QueryBroadcastSmResp(QueryBroadcastSmRespDecodeError),
+    CancelBroadcastSm(CancelBroadcastSmDecodeError),
+    Unbind,
+    UnbindResp,
+    EnquireLink,
+    EnquireLinkResp,
+    GenericNack,
+    CancelSmResp,
+    ReplaceSmResp,
+    CancelBroadcastSmResp,
+    Other(AnyOctetStringDecodeError),
+}
+
 impl Pdu {
     pub const fn command_id(&self) -> CommandId {
         match self {
@@ -352,8 +392,7 @@ impl crate::encode::owned::Encode for Pdu {
 }
 
 impl DecodeErrorType for Pdu {
-    // TODO
-    type Error = core::convert::Infallible;
+    type Error = PduDecodeError;
 }
 
 impl DecodeWithKeyOptional for Pdu {
@@ -363,7 +402,7 @@ impl DecodeWithKeyOptional for Pdu {
         key: Self::Key,
         src: &mut BytesMut,
         length: usize,
-    ) -> Result<Option<(Self, usize)>, DecodeError> {
+    ) -> Result<Option<(Self, usize)>, Self::Error> {
         if length == 0 {
             let body = match key {
                 CommandId::Unbind => Pdu::Unbind,

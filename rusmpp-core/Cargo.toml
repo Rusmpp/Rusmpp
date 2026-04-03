@@ -26,6 +26,7 @@ tokio-util = { version = "0.7.16", default-features = false, features = [
     "codec",
 ], optional = true }
 tracing = { version = "0.1.41", default-features = false, optional = true }
+derive_more = { version = "2", default-features = false, features = ["from"] }
 
 [dev-dependencies]
 strum = "0.27.2"
