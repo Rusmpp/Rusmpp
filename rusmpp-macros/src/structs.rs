@@ -128,7 +128,7 @@ fn quote_decode(
 
             match impl_type {
                 DecodeImplementation::Owned => {
-                    let decode_error = quote_owned_decode_error(input, fields_named);
+                    let decode_error = quote_owned_decode_error(input, &fields);
                     let decode = match decode_type {
                         DecodeType::Decode => quote_owned_decode(input, &fields),
                         DecodeType::DecodeWithLength => {
@@ -155,7 +155,7 @@ fn quote_decode(
                 }
                 DecodeImplementation::All => match decode_type {
                     DecodeType::Decode => {
-                        let decode_error = quote_owned_decode_error(input, fields_named);
+                        let decode_error = quote_owned_decode_error(input, &fields);
                         let quote_borrowed_decode = quote_borrowed_decode(input, &fields);
                         let quote_owned_decode = quote_owned_decode(input, &fields);
 
@@ -166,7 +166,7 @@ fn quote_decode(
                         })
                     }
                     DecodeType::DecodeWithLength => {
-                        let decode_error = quote_owned_decode_error(input, fields_named);
+                        let decode_error = quote_owned_decode_error(input, &fields);
                         let quote_borrowed_decode =
                             quote_borrowed_decode_with_length(input, &fields);
                         let quote_owned_decode = quote_owned_decode_with_length(input, &fields);
@@ -308,26 +308,25 @@ fn decode_error_context_struct_name(name: &Ident) -> Ident {
     Ident::new(&format!("{}DecodeErrorContext", name), name.span())
 }
 
-fn quote_owned_decode_error(input: &DeriveInput, fields_named: &FieldsNamed) -> TokenStream {
+fn quote_owned_decode_error(input: &DeriveInput, fields: &ValidFields) -> TokenStream {
     let name = &input.ident;
 
     let decode_error_struct_name = Ident::new(&format!("{}DecodeError", name), name.span());
 
     let decode_error_context_struct_name = decode_error_context_struct_name(name);
 
-    // TODO: we must handle the case where a field is annotated with counted to change the error type to the vector error type containing the original error.
-    let decode_error_struct_context_field_names_and_types = fields_named.named.iter().map(|f| {
-        let ident = f.ident.as_ref().expect("Named fields must have idents");
-        let ty = &f.ty;
+    let decode_error_struct_context_field_names_and_types_and_attrs =
+        fields.fields.iter().map(|f| {
+            let name = f.name();
+            let ty = f.ty();
+            let attrs = &f.attrs;
 
-        (ident, ty)
-    });
+            (name, ty, attrs)
+        });
 
-    let source_checks = fields_named.named.iter().map(|f| {
-        let ident = f.ident.as_ref().expect("Named fields must have idents");
-
+    let source_checks = fields.names().map(|name| {
         quote! {
-            if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self.context.#ident {
+            if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self.context.#name {
                 return ::core::option::Option::Some(
                     err as &(dyn ::core::error::Error + 'static)
                 );
@@ -335,13 +334,12 @@ fn quote_owned_decode_error(input: &DeriveInput, fields_named: &FieldsNamed) -> 
         }
     });
 
-    let display_error_fields = fields_named.named.iter().map(|f| {
-        let ident = f.ident.as_ref().expect("Named fields must have idents");
-        let field_name = ident.to_string();
+    let display_error_fields = fields.names().map(|name| {
+        let name_string = name.to_string();
 
         quote! {
-            if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self.context.#ident {
-                write!(f, "{}: {}", #field_name, err)?;
+            if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self.context.#name {
+                write!(f, "{}: {}", #name_string, err)?;
                 write!(f, " }}")?;
 
                 return Ok(())
@@ -349,9 +347,17 @@ fn quote_owned_decode_error(input: &DeriveInput, fields_named: &FieldsNamed) -> 
         }
     });
 
-    let decode_error_context_struct = decode_error_struct_context_field_names_and_types
+    let decode_error_context_struct = decode_error_struct_context_field_names_and_types_and_attrs
         .clone()
-        .map(|(ident, ty)| quote! { pub #ident: ::core::option::Option<::core::result::Result<#ty, <#ty as crate::decode::owned::DecodeErrorType>::Error>> });
+        .map(|(ident, ty, attrs)| {
+            let error_ty = if attrs.is_count() {
+                ty.flatten()
+            } else {
+                ty
+            };
+
+            quote! { pub #ident: ::core::option::Option<::core::result::Result<#ty, <#error_ty as crate::decode::owned::DecodeErrorType>::Error>> }
+        });
 
     quote! {
         #[cfg(feature = "alloc")]
@@ -586,6 +592,10 @@ impl ValidFieldAttributes {
                 | Self::Count { .. }
         )
     }
+
+    const fn is_count(&self) -> bool {
+        matches!(self, Self::Count { .. })
+    }
 }
 
 struct ValidField<'a> {
@@ -594,12 +604,19 @@ struct ValidField<'a> {
 }
 
 impl ValidField<'_> {
-    fn quote_borrowed_decode(&self) -> TokenStream {
-        let name = self
-            .field
+    fn name(&self) -> &Ident {
+        self.field
             .ident
             .as_ref()
-            .expect("Named fields must have idents");
+            .expect("Named field must have ident")
+    }
+
+    fn ty(&self) -> &syn::Type {
+        &self.field.ty
+    }
+
+    fn quote_borrowed_decode(&self) -> TokenStream {
+        let name = self.name();
 
         match &self.attrs {
             ValidFieldAttributes::None => quote! {
@@ -854,6 +871,39 @@ fn quote_test(input: &DeriveInput, test_attrs: &TestAttributes) -> TokenStream {
                     }
                 }
             }
+        }
+    }
+}
+
+trait TypeExt {
+    /// Flattens the type if the field is an `Option<T>` or `Vec<T>`, returning `T`. Otherwise, returns the original type.
+    ///
+    /// used with `counted` fields to extract the inner type and use the error type of the inner type and not the `Vec` itself.
+    fn flatten(&self) -> &syn::Type;
+}
+
+impl TypeExt for &syn::Type {
+    fn flatten(&self) -> &syn::Type {
+        {
+            if let syn::Type::Path(type_path) = self {
+                if type_path.qself.is_none() {
+                    if let Some(last_segment) = type_path.path.segments.last() {
+                        if last_segment.ident == "Option" || last_segment.ident == "Vec" {
+                            if let syn::PathArguments::AngleBracketed(args) =
+                                &last_segment.arguments
+                            {
+                                if args.args.len() == 1 {
+                                    if let syn::GenericArgument::Type(inner_ty) = &args.args[0] {
+                                        return inner_ty;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            self
         }
     }
 }
