@@ -15,13 +15,14 @@ use crate::{
 
 /// User Data Header (UDH).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
-#[rusmpp(decode = skip, test = skip)]
+#[rusmpp(decode = owned, test = skip)]
 pub struct Udh {
     /// UDH length (excluding the length field itself).
     length: u8,
     /// UDH identifier.
     id: UdhId,
     /// UDH value.
+    #[rusmpp(key = id, length = length - id)]
     value: Option<UdhValue>,
 }
 
@@ -153,37 +154,6 @@ impl DecodeWithKey for UdhValue {
         };
 
         Ok((value, size))
-    }
-}
-
-impl DecodeErrorType for Udh {
-    // TODO
-    type Error = core::convert::Infallible;
-}
-
-impl Decode for Udh {
-    fn decode(src: &mut bytes::BytesMut) -> Result<(Self, usize), Self::Error> {
-        // let size = 0;
-        // let (length, size) = crate::decode::owned::DecodeExt::decode_move(src, size)?;
-        // let (id, size): (UdhId, usize) = crate::decode::owned::DecodeExt::decode_move(src, size)?;
-
-        // let value_length = (length as usize).saturating_sub(id.length());
-
-        // let (value, size) =
-        //     crate::decode::owned::DecodeWithKeyExt::optional_length_checked_decode_move(
-        //         id,
-        //         src,
-        //         value_length,
-        //         size,
-        //     )?
-        //     .map(|(this, size)| (Some(this), size))
-        //     .unwrap_or((None, size));
-
-        // Ok((Self { length, id, value }, size))
-
-        //TODO: well, we have to impl this per hand
-
-        todo!()
     }
 }
 
