@@ -230,7 +230,7 @@ fn quote_owned_decode(input: &DeriveInput, fields: &ValidFields) -> TokenStream 
     quote! {
         #[cfg(feature = "alloc")]
         impl #impl_generics crate::decode::owned::Decode for #name #ty_generics #where_clause {
-            fn decode(src: &mut ::bytes::BytesMut) -> Result<(Self, usize), crate::decode::DecodeError> {
+            fn decode(src: &mut ::bytes::BytesMut) -> Result<(Self, usize), Self::Error> {
                 let size = 0;
                 #(#fields)*
 
@@ -290,7 +290,7 @@ fn quote_owned_decode_with_length(input: &DeriveInput, fields: &ValidFields) -> 
     quote! {
         #[cfg(feature = "alloc")]
         impl #impl_generics crate::decode::owned::DecodeWithLength for #name #ty_generics #where_clause {
-            fn decode(src: &mut ::bytes::BytesMut, length: usize) -> Result<(Self, usize), crate::decode::DecodeError> {
+            fn decode(src: &mut ::bytes::BytesMut, length: usize) -> Result<(Self, usize), Self::Error> {
                 let size = 0;
                 #(
                     #fields
@@ -315,6 +315,7 @@ fn quote_owned_decode_error(input: &DeriveInput, fields_named: &FieldsNamed) -> 
 
     let decode_error_context_struct_name = decode_error_context_struct_name(name);
 
+    // TODO: we must handle the case where a field is annotated with counted to change the error type to the vector error type containing the original error.
     let decode_error_struct_context_field_names_and_types = fields_named.named.iter().map(|f| {
         let ident = f.ident.as_ref().expect("Named fields must have idents");
         let ty = &f.ty;
@@ -364,7 +365,7 @@ fn quote_owned_decode_error(input: &DeriveInput, fields_named: &FieldsNamed) -> 
         #[non_exhaustive]
         #[derive(Debug)]
         pub struct #decode_error_struct_name {
-            context: #decode_error_context_struct_name
+            pub context: #decode_error_context_struct_name
         }
 
         #[cfg(feature = "alloc")]
@@ -637,7 +638,6 @@ impl ValidField<'_> {
         }
     }
 
-    // TODO: use the decode_error_context in the `map_err` calls
     fn quote_owned_decode(&self, decode_error_context: TokenStream) -> TokenStream {
         let name = self
             .field
@@ -647,43 +647,104 @@ impl ValidField<'_> {
 
         let decode = match &self.attrs {
             ValidFieldAttributes::None => quote! {
-                let (#name, size) = crate::decode::owned::DecodeExt::decode_move(src, size)?;
+                let (#name, size) =  match crate::decode::owned::DecodeExt::decode_move(src, size) {
+                    Ok(ok) => ok,
+                    Err(err) => {
+                        #decode_error_context
+
+                        return Err(Self::Error { context });
+                    }
+                };
             },
             ValidFieldAttributes::LengthUnchecked => quote! {
-                let (#name, size) = crate::decode::owned::DecodeWithLengthExt::decode_move(src, length.saturating_sub(size), size)?;
+                let (#name, size) = match crate::decode::owned::DecodeWithLengthExt::decode_move(src, length.saturating_sub(size), size) {
+                    Ok(ok) => ok,
+                    Err(err) => {
+                        #decode_error_context
+
+                        return Err(Self::Error { context });
+                    }
+                };
             },
             ValidFieldAttributes::LengthChecked => quote! {
-                let (#name, size) = crate::decode::owned::DecodeExt::length_checked_decode_move(src, length.saturating_sub(size), size)?
-                .map(|(this, size)| (Some(this), size))
-                .unwrap_or((None, size));
+                let opt = match crate::decode::owned::DecodeExt::length_checked_decode_move(src, length.saturating_sub(size), size) {
+                    Ok(ok) => ok,
+                    Err(err) => {
+                        #decode_error_context
+
+                        return Err(Self::Error { context });
+                    }
+                };
+
+                let (#name, size) = opt
+                    .map(|(this, size)| (Some(this), size))
+                    .unwrap_or((None, size));
             },
             ValidFieldAttributes::LengthIdent { length_ident } => quote! {
-                let (#name, size) = crate::decode::owned::DecodeWithLengthExt::decode_move(src, #length_ident as usize, size)?;
+                let (#name, size) = match crate::decode::owned::DecodeWithLengthExt::decode_move(src, #length_ident as usize, size) {
+                    Ok(ok) => ok,
+                    Err(err) => {
+                        #decode_error_context
+
+                        return Err(Self::Error { context });
+                    }
+                };
             },
             ValidFieldAttributes::Key { key_ident } => quote! {
-                let (#name, size) = crate::decode::owned::DecodeWithKeyExt::no_length_decode_move(#key_ident, src, size)?;
+                let (#name, size) = match crate::decode::owned::DecodeWithKeyExt::no_length_decode_move(#key_ident, src, size) {
+                    Ok(ok) => ok,
+                    Err(err) => {
+                        #decode_error_context
+
+                        return Err(Self::Error { context });
+                    }
+                };
             },
             ValidFieldAttributes::KeyLengthUnchecked { key_ident } => quote! {
-                let (#name, size) = crate::decode::owned::DecodeWithKeyOptionalExt::decode_move(#key_ident, src, length.saturating_sub(size), size)?
-                .map(|(this, size)| (Some(this), size))
-                .unwrap_or((None, size));
+                let opt = match crate::decode::owned::DecodeWithKeyOptionalExt::decode_move(#key_ident, src, length.saturating_sub(size), size) {
+                    Ok(ok) => ok,
+                    Err(err) => {
+                        #decode_error_context
+
+                        return Err(Self::Error { context });
+                    }
+                };
+
+                let (#name, size) = opt
+                    .map(|(this, size)| (Some(this), size))
+                    .unwrap_or((None, size));
             },
             ValidFieldAttributes::KeyLengthIdent {
                 key_ident,
                 length_ident,
             } => quote! {
-                let (#name, size) = crate::decode::owned::DecodeWithKeyExt::optional_length_checked_decode_move(#key_ident, src, #length_ident as usize, size)?
-                .map(|(this, size)| (Some(this), size))
-                .unwrap_or((None, size));
+                let opt = match crate::decode::owned::DecodeWithKeyExt::optional_length_checked_decode_move(#key_ident, src, #length_ident as usize, size) {
+                    Ok(ok) => ok,
+                    Err(err) => {
+                        #decode_error_context
+
+                        return Err(Self::Error { context });
+                    }
+                };
+
+                let (#name, size) = opt
+                    .map(|(this, size)| (Some(this), size))
+                    .unwrap_or((None, size));
             },
             ValidFieldAttributes::Count { count_ident } => quote! {
-                let (#name, size) = crate::decode::owned::DecodeExt::counted_move(src, #count_ident as usize, size)?;
+                let (#name, size) = match crate::decode::owned::DecodeExt::counted_move(src, #count_ident as usize, size) {
+                    Ok(ok) => ok,
+                    Err(err) => {
+                        #decode_error_context
+
+                        return Err(Self::Error { context });
+                    }
+                };
             },
         };
 
         quote! {
             #decode
-
         }
     }
 }

@@ -186,6 +186,16 @@ pub enum Pdu {
     },
 }
 
+// TODO
+impl core::fmt::Display for PduDecodeError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        todo!()
+    }
+}
+
+// TODO
+impl core::error::Error for PduDecodeError {}
+
 // TODO: impl error for this guy. we might want to use thiserror.
 #[derive(Debug, derive_more::From)]
 pub enum PduDecodeError {
