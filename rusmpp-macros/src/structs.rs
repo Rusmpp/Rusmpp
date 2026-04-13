@@ -482,31 +482,24 @@ impl FieldAttributes {
                 if meta.path.is_ident("length") {
                     let value = meta.value()?;
 
-                    // 1. Try parsing as a string literal first ("checked"/"unchecked")
                     if let Ok(Lit::Str(s)) = value.parse::<Lit>() {
                         match s.value().as_str() {
                             "unchecked" => length = Some(Length::Unchecked),
                             "checked" => length = Some(Length::Checked),
-                            _ => return Err(meta.error("Invalid length string literal")),
+                            _ => return Err(meta.error("invalid length string literal")),
                         }
                         return Ok(());
                     }
 
-                    // 2. Try parsing the first identifier
-                    let ident1: Ident = value.parse()?;
+                    let ident: Ident = value.parse()?;
 
-                    // 3. Check if the next token is a minus sign
                     if meta.input.peek(syn::Token![-]) {
-                        let _: syn::Token![-] = meta.input.parse()?; // Consume '-'
-                        let ident2: Ident = meta.input.parse()?; // Parse second ident
+                        let _: syn::Token![-] = meta.input.parse()?;
+                        let value: usize = meta.input.parse::<syn::LitInt>()?.base10_parse()?;
 
-                        length = Some(Length::IdentSubtracted {
-                            length_ident_1: ident1,
-                            length_ident_2: ident2,
-                        });
+                        length = Some(Length::IdentSubtracted { ident, value });
                     } else {
-                        // It's just a single identifier
-                        length = Some(Length::Ident(ident1));
+                        length = Some(Length::Ident(ident));
                     }
                 } else if meta.path.is_ident("key") {
                     let ident: Ident = meta.value()?.parse()?;
@@ -544,18 +537,13 @@ impl FieldAttributes {
                     length_ident: length,
                 })
             }
-            (
-                Some(Length::IdentSubtracted {
-                    length_ident_1,
-                    length_ident_2,
-                }),
-                Some(key),
-                None,
-            ) => Ok(ValidFieldAttributes::KeyLengthIdentSubtracted {
-                key_ident: key,
-                length_ident_1,
-                length_ident_2,
-            }),
+            (Some(Length::IdentSubtracted { ident, value }), Some(key), None) => {
+                Ok(ValidFieldAttributes::KeyLengthIdentSubtracted {
+                    key_ident: key,
+                    length_ident: ident,
+                    length_value: value,
+                })
+            }
             (None, None, Some(count)) => Ok(ValidFieldAttributes::Count { count_ident: count }),
             (None, None, None) => Ok(ValidFieldAttributes::None),
             _ => Err(syn::Error::new(
@@ -570,10 +558,7 @@ enum Length {
     Unchecked,
     Checked,
     Ident(Ident),
-    IdentSubtracted {
-        length_ident_1: Ident,
-        length_ident_2: Ident,
-    },
+    IdentSubtracted { ident: Ident, value: usize },
 }
 
 enum ValidFieldAttributes {
@@ -599,11 +584,11 @@ enum ValidFieldAttributes {
         key_ident: Ident,
         length_ident: Ident,
     },
-    /// `#[rusmpp(key = ident, length = ident1 - ident2)]`
+    /// `#[rusmpp(key = ident, length = ident - 1)]`
     KeyLengthIdentSubtracted {
         key_ident: Ident,
-        length_ident_1: Ident,
-        length_ident_2: Ident,
+        length_ident: Ident,
+        length_value: usize,
     },
     /// `#[rusmpp(count = ident)]`
     Count {
@@ -681,10 +666,11 @@ impl ValidField<'_> {
             },
             ValidFieldAttributes::KeyLengthIdentSubtracted {
                 key_ident,
-                length_ident_1,
-                length_ident_2,
+                length_ident,
+                length_value,
             } => quote! {
-                let _length = (#length_ident_1.length()).saturating_sub(#length_ident_2.length());
+                let _length = (#length_ident as usize).saturating_sub(#length_value);
+
                 let (#name, size) = crate::decode::borrowed::DecodeWithKeyExt::optional_length_checked_decode_move(#key_ident, src, _length, size)?
                 .map(|(this, size)| (Some(this), size))
                 .unwrap_or((None, size));
@@ -790,10 +776,10 @@ impl ValidField<'_> {
             },
             ValidFieldAttributes::KeyLengthIdentSubtracted {
                 key_ident,
-                length_ident_1,
-                length_ident_2,
+                length_ident,
+                length_value,
             } => quote! {
-                let _length = (#length_ident_1.length()).saturating_sub(#length_ident_2.length());
+                let _length = (#length_ident as usize).saturating_sub(#length_value);
 
                 let opt = match crate::decode::owned::DecodeWithKeyExt::optional_length_checked_decode_move(#key_ident, src, _length, size) {
                     Ok(ok) => ok,

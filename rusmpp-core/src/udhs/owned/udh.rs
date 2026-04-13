@@ -22,7 +22,9 @@ pub struct Udh {
     /// UDH identifier.
     id: UdhId,
     /// UDH value.
-    #[rusmpp(key = id, length = length - id)]
+    // XXX: the length of the value is `self.length` - `self.id.length()`
+    // `self.id.length()` is always `1`
+    #[rusmpp(key = id, length = length - 1)]
     value: Option<UdhValue>,
 }
 
@@ -87,6 +89,16 @@ impl UdhValue {
         }
     }
 }
+
+// TODO
+impl core::fmt::Display for UdhValueDecodeError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        todo!()
+    }
+}
+
+// TODO
+impl core::error::Error for UdhValueDecodeError {}
 
 // TODO: impl error for this guy. we might want to use thiserror.
 #[derive(Debug, Clone)]
