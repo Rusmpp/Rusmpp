@@ -80,6 +80,7 @@
         "pymodule",
         "PYPI",
         "pypy",
+        "qself",
         "Ralybnd",
         "Rbcastcancelfail",
         "Rbcastfail",
