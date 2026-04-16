@@ -1,7 +1,7 @@
 //! Owned `SMPP` PDUs.
 
 mod pdu;
-pub use pdu::Pdu;
+pub use pdu::{Pdu, PduDecodeError};
 
 pub mod builders {
     pub use super::{
