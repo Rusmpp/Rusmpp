@@ -109,6 +109,206 @@ impl crate::encode::Encode for CancelSm {
         size
     }
 }
+#[non_exhaustive]
+pub struct CancelSmDecodeErrorContext {
+    pub service_type: ::core::option::Option<
+        ::core::result::Result<
+            ServiceType,
+            <ServiceType as crate::decode::owned::DecodeErrorType>::Error,
+        >,
+    >,
+    pub message_id: ::core::option::Option<
+        ::core::result::Result<
+            COctetString<1, 65>,
+            <COctetString<1, 65> as crate::decode::owned::DecodeErrorType>::Error,
+        >,
+    >,
+    pub other: ::core::option::Option<
+        ::core::result::Result<u8, <u8 as crate::decode::owned::DecodeErrorType>::Error>,
+    >,
+}
+#[automatically_derived]
+impl ::core::fmt::Debug for CancelSmDecodeErrorContext {
+    #[inline]
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        ::core::fmt::Formatter::debug_struct_field3_finish(
+            f,
+            "CancelSmDecodeErrorContext",
+            "service_type",
+            &self.service_type,
+            "message_id",
+            &self.message_id,
+            "other",
+            &&self.other,
+        )
+    }
+}
+#[automatically_derived]
+impl ::core::clone::Clone for CancelSmDecodeErrorContext {
+    #[inline]
+    fn clone(&self) -> CancelSmDecodeErrorContext {
+        CancelSmDecodeErrorContext {
+            service_type: ::core::clone::Clone::clone(&self.service_type),
+            message_id: ::core::clone::Clone::clone(&self.message_id),
+            other: ::core::clone::Clone::clone(&self.other),
+        }
+    }
+}
+#[non_exhaustive]
+pub struct CancelSmDecodeError {
+    pub context: CancelSmDecodeErrorContext,
+}
+#[automatically_derived]
+impl ::core::fmt::Debug for CancelSmDecodeError {
+    #[inline]
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        ::core::fmt::Formatter::debug_struct_field1_finish(
+            f,
+            "CancelSmDecodeError",
+            "context",
+            &&self.context,
+        )
+    }
+}
+#[automatically_derived]
+impl ::core::clone::Clone for CancelSmDecodeError {
+    #[inline]
+    fn clone(&self) -> CancelSmDecodeError {
+        CancelSmDecodeError {
+            context: ::core::clone::Clone::clone(&self.context),
+        }
+    }
+}
+impl ::core::fmt::Display for CancelSmDecodeError {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+        f.write_fmt(format_args!("Failed to decode {0} {{ ", "CancelSm"))?;
+        if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self
+            .context
+            .service_type
+        {
+            f.write_fmt(format_args!("{0}: {1}", "service_type", err))?;
+            f.write_fmt(format_args!(" }}"))?;
+            return Ok(());
+        }
+        if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self
+            .context
+            .message_id
+        {
+            f.write_fmt(format_args!("{0}: {1}", "message_id", err))?;
+            f.write_fmt(format_args!(" }}"))?;
+            return Ok(());
+        }
+        if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self
+            .context
+            .other
+        {
+            f.write_fmt(format_args!("{0}: {1}", "other", err))?;
+            f.write_fmt(format_args!(" }}"))?;
+            return Ok(());
+        }
+        f.write_fmt(format_args!(" }}"))
+    }
+}
+impl ::core::error::Error for CancelSmDecodeError {
+    fn source(&self) -> Option<&(dyn ::core::error::Error + 'static)> {
+        if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self
+            .context
+            .service_type
+        {
+            return ::core::option::Option::Some(
+                err as &(dyn ::core::error::Error + 'static),
+            );
+        }
+        if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self
+            .context
+            .message_id
+        {
+            return ::core::option::Option::Some(
+                err as &(dyn ::core::error::Error + 'static),
+            );
+        }
+        if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self
+            .context
+            .other
+        {
+            return ::core::option::Option::Some(
+                err as &(dyn ::core::error::Error + 'static),
+            );
+        }
+        ::core::option::Option::None
+    }
+    fn cause(&self) -> Option<&dyn ::core::error::Error> {
+        self.source()
+    }
+}
+impl crate::decode::owned::DecodeErrorType for CancelSm {
+    type Error = CancelSmDecodeError;
+}
+impl crate::decode::owned::Decode for CancelSm {
+    fn decode(src: &mut ::bytes::BytesMut) -> Result<(Self, usize), Self::Error> {
+        let size = 0;
+        let (service_type, size) = match crate::decode::owned::DecodeExt::decode_move(
+            src,
+            size,
+        ) {
+            Ok(ok) => ok,
+            Err(err) => {
+                let context = CancelSmDecodeErrorContext {
+                    service_type: ::core::option::Option::Some(
+                        ::core::result::Result::Err(err),
+                    ),
+                    message_id: ::core::option::Option::None,
+                    other: ::core::option::Option::None,
+                };
+                return Err(Self::Error { context });
+            }
+        };
+        let (message_id, size) = match crate::decode::owned::DecodeExt::decode_move(
+            src,
+            size,
+        ) {
+            Ok(ok) => ok,
+            Err(err) => {
+                let context = CancelSmDecodeErrorContext {
+                    service_type: ::core::option::Option::Some(
+                        ::core::result::Result::Ok(service_type),
+                    ),
+                    message_id: ::core::option::Option::Some(
+                        ::core::result::Result::Err(err),
+                    ),
+                    other: ::core::option::Option::None,
+                };
+                return Err(Self::Error { context });
+            }
+        };
+        let (other, size) = match crate::decode::owned::DecodeExt::decode_move(
+            src,
+            size,
+        ) {
+            Ok(ok) => ok,
+            Err(err) => {
+                let context = CancelSmDecodeErrorContext {
+                    service_type: ::core::option::Option::Some(
+                        ::core::result::Result::Ok(service_type),
+                    ),
+                    message_id: ::core::option::Option::Some(
+                        ::core::result::Result::Ok(message_id),
+                    ),
+                    other: ::core::option::Option::Some(::core::result::Result::Err(err)),
+                };
+                return Err(Self::Error { context });
+            }
+        };
+        Ok((
+            Self {
+                service_type,
+                message_id,
+                other,
+            },
+            size,
+        ))
+    }
+}
 /// Docs
 ///
 /// More docs
@@ -223,18 +423,15 @@ impl<'a> crate::encode::Encode for CancelSm<'a> {
 impl<'a> crate::decode::borrowed::Decode<'a> for CancelSm<'a> {
     fn decode(src: &'a [u8]) -> Result<(Self, usize), crate::decode::DecodeError> {
         let size = 0;
-        let (service_type, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::service_type,
+        let (service_type, size) = crate::decode::borrowed::DecodeExt::decode_move(
+            src,
+            size,
         )?;
-        let (message_id, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::message_id,
+        let (message_id, size) = crate::decode::borrowed::DecodeExt::decode_move(
+            src,
+            size,
         )?;
-        let (other, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::other,
-        )?;
+        let (other, size) = crate::decode::borrowed::DecodeExt::decode_move(src, size)?;
         Ok((
             Self {
                 service_type,

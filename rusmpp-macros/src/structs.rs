@@ -228,7 +228,6 @@ fn quote_owned_decode(input: &DeriveInput, fields: &ValidFields) -> TokenStream 
     let fields = fields.quote_owned_decode(decode_error_context_struct_name);
 
     quote! {
-        #[cfg(feature = "alloc")]
         impl #impl_generics crate::decode::owned::Decode for #name #ty_generics #where_clause {
             fn decode(src: &mut ::bytes::BytesMut) -> Result<(Self, usize), Self::Error> {
                 let size = 0;
@@ -288,7 +287,6 @@ fn quote_owned_decode_with_length(input: &DeriveInput, fields: &ValidFields) -> 
     let fields = fields.quote_owned_decode(decode_error_context_struct_name);
 
     quote! {
-        #[cfg(feature = "alloc")]
         impl #impl_generics crate::decode::owned::DecodeWithLength for #name #ty_generics #where_clause {
             fn decode(src: &mut ::bytes::BytesMut, length: usize) -> Result<(Self, usize), Self::Error> {
                 let size = 0;
@@ -360,21 +358,18 @@ fn quote_owned_decode_error(input: &DeriveInput, fields: &ValidFields) -> TokenS
         });
 
     quote! {
-        #[cfg(feature = "alloc")]
         #[non_exhaustive]
         #[derive(Debug, Clone)]
         pub struct #decode_error_context_struct_name {
             #(#decode_error_context_struct),*
         }
 
-        #[cfg(feature = "alloc")]
         #[non_exhaustive]
         #[derive(Debug, Clone)]
         pub struct #decode_error_struct_name {
             pub context: #decode_error_context_struct_name
         }
 
-        #[cfg(feature = "alloc")]
         impl ::core::fmt::Display for #decode_error_struct_name {
             fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 write!(f, "Failed to decode {} {{ ", stringify!(#name))?;
@@ -385,7 +380,6 @@ fn quote_owned_decode_error(input: &DeriveInput, fields: &ValidFields) -> TokenS
             }
         }
 
-        #[cfg(feature = "alloc")]
         impl ::core::error::Error for #decode_error_struct_name {
             fn source(&self) -> Option<&(dyn ::core::error::Error + 'static)> {
                 #(#source_checks)*
@@ -398,7 +392,6 @@ fn quote_owned_decode_error(input: &DeriveInput, fields: &ValidFields) -> TokenS
             }
         }
 
-        #[cfg(feature = "alloc")]
         impl crate::decode::owned::DecodeErrorType for #name {
             type Error = #decode_error_struct_name;
         }

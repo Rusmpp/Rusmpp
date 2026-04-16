@@ -117,6 +117,209 @@ impl crate::encode::Encode for SubmitMulti {
         size
     }
 }
+#[non_exhaustive]
+pub struct SubmitMultiDecodeErrorContext {
+    pub other: ::core::option::Option<
+        ::core::result::Result<u8, <u8 as crate::decode::owned::DecodeErrorType>::Error>,
+    >,
+    pub number_of_dests: ::core::option::Option<
+        ::core::result::Result<u8, <u8 as crate::decode::owned::DecodeErrorType>::Error>,
+    >,
+    pub dest_address: ::core::option::Option<
+        ::core::result::Result<
+            ::alloc::vec::Vec<DestAddress>,
+            <DestAddress as crate::decode::owned::DecodeErrorType>::Error,
+        >,
+    >,
+}
+#[automatically_derived]
+impl ::core::fmt::Debug for SubmitMultiDecodeErrorContext {
+    #[inline]
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        ::core::fmt::Formatter::debug_struct_field3_finish(
+            f,
+            "SubmitMultiDecodeErrorContext",
+            "other",
+            &self.other,
+            "number_of_dests",
+            &self.number_of_dests,
+            "dest_address",
+            &&self.dest_address,
+        )
+    }
+}
+#[automatically_derived]
+impl ::core::clone::Clone for SubmitMultiDecodeErrorContext {
+    #[inline]
+    fn clone(&self) -> SubmitMultiDecodeErrorContext {
+        SubmitMultiDecodeErrorContext {
+            other: ::core::clone::Clone::clone(&self.other),
+            number_of_dests: ::core::clone::Clone::clone(&self.number_of_dests),
+            dest_address: ::core::clone::Clone::clone(&self.dest_address),
+        }
+    }
+}
+#[non_exhaustive]
+pub struct SubmitMultiDecodeError {
+    pub context: SubmitMultiDecodeErrorContext,
+}
+#[automatically_derived]
+impl ::core::fmt::Debug for SubmitMultiDecodeError {
+    #[inline]
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        ::core::fmt::Formatter::debug_struct_field1_finish(
+            f,
+            "SubmitMultiDecodeError",
+            "context",
+            &&self.context,
+        )
+    }
+}
+#[automatically_derived]
+impl ::core::clone::Clone for SubmitMultiDecodeError {
+    #[inline]
+    fn clone(&self) -> SubmitMultiDecodeError {
+        SubmitMultiDecodeError {
+            context: ::core::clone::Clone::clone(&self.context),
+        }
+    }
+}
+impl ::core::fmt::Display for SubmitMultiDecodeError {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+        f.write_fmt(format_args!("Failed to decode {0} {{ ", "SubmitMulti"))?;
+        if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self
+            .context
+            .other
+        {
+            f.write_fmt(format_args!("{0}: {1}", "other", err))?;
+            f.write_fmt(format_args!(" }}"))?;
+            return Ok(());
+        }
+        if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self
+            .context
+            .number_of_dests
+        {
+            f.write_fmt(format_args!("{0}: {1}", "number_of_dests", err))?;
+            f.write_fmt(format_args!(" }}"))?;
+            return Ok(());
+        }
+        if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self
+            .context
+            .dest_address
+        {
+            f.write_fmt(format_args!("{0}: {1}", "dest_address", err))?;
+            f.write_fmt(format_args!(" }}"))?;
+            return Ok(());
+        }
+        f.write_fmt(format_args!(" }}"))
+    }
+}
+impl ::core::error::Error for SubmitMultiDecodeError {
+    fn source(&self) -> Option<&(dyn ::core::error::Error + 'static)> {
+        if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self
+            .context
+            .other
+        {
+            return ::core::option::Option::Some(
+                err as &(dyn ::core::error::Error + 'static),
+            );
+        }
+        if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self
+            .context
+            .number_of_dests
+        {
+            return ::core::option::Option::Some(
+                err as &(dyn ::core::error::Error + 'static),
+            );
+        }
+        if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self
+            .context
+            .dest_address
+        {
+            return ::core::option::Option::Some(
+                err as &(dyn ::core::error::Error + 'static),
+            );
+        }
+        ::core::option::Option::None
+    }
+    fn cause(&self) -> Option<&dyn ::core::error::Error> {
+        self.source()
+    }
+}
+impl crate::decode::owned::DecodeErrorType for SubmitMulti {
+    type Error = SubmitMultiDecodeError;
+}
+impl crate::decode::owned::DecodeWithLength for SubmitMulti {
+    fn decode(
+        src: &mut ::bytes::BytesMut,
+        length: usize,
+    ) -> Result<(Self, usize), Self::Error> {
+        let size = 0;
+        let (other, size) = match crate::decode::owned::DecodeExt::decode_move(
+            src,
+            size,
+        ) {
+            Ok(ok) => ok,
+            Err(err) => {
+                let context = SubmitMultiDecodeErrorContext {
+                    other: ::core::option::Option::Some(
+                        ::core::result::Result::Err(err),
+                    ),
+                    number_of_dests: ::core::option::Option::None,
+                    dest_address: ::core::option::Option::None,
+                };
+                return Err(Self::Error { context });
+            }
+        };
+        let (number_of_dests, size) = match crate::decode::owned::DecodeExt::decode_move(
+            src,
+            size,
+        ) {
+            Ok(ok) => ok,
+            Err(err) => {
+                let context = SubmitMultiDecodeErrorContext {
+                    other: ::core::option::Option::Some(
+                        ::core::result::Result::Ok(other),
+                    ),
+                    number_of_dests: ::core::option::Option::Some(
+                        ::core::result::Result::Err(err),
+                    ),
+                    dest_address: ::core::option::Option::None,
+                };
+                return Err(Self::Error { context });
+            }
+        };
+        let (dest_address, size) = match crate::decode::owned::DecodeExt::counted_move(
+            src,
+            number_of_dests as usize,
+            size,
+        ) {
+            Ok(ok) => ok,
+            Err(err) => {
+                let context = SubmitMultiDecodeErrorContext {
+                    other: ::core::option::Option::Some(
+                        ::core::result::Result::Ok(other),
+                    ),
+                    number_of_dests: ::core::option::Option::Some(
+                        ::core::result::Result::Ok(number_of_dests),
+                    ),
+                    dest_address: ::core::option::Option::Some(
+                        ::core::result::Result::Err(err),
+                    ),
+                };
+                return Err(Self::Error { context });
+            }
+        };
+        Ok((
+            Self {
+                other,
+                number_of_dests,
+                dest_address,
+            },
+            size,
+        ))
+    }
+}
 /// Docs
 ///
 /// More docs
@@ -243,21 +446,15 @@ for SubmitMulti<'a, N> {
         length: usize,
     ) -> Result<(Self, usize), crate::decode::DecodeError> {
         let size = 0;
-        let (other, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::other,
+        let (other, size) = crate::decode::borrowed::DecodeExt::decode_move(src, size)?;
+        let (number_of_dests, size) = crate::decode::borrowed::DecodeExt::decode_move(
+            src,
+            size,
         )?;
-        let (number_of_dests, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::number_of_dests,
-        )?;
-        let (dest_address, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeExt::counted_move(
-                src,
-                number_of_dests as usize,
-                size,
-            ),
-            crate::fields::SmppField::dest_address,
+        let (dest_address, size) = crate::decode::borrowed::DecodeExt::counted_move(
+            src,
+            number_of_dests as usize,
+            size,
         )?;
         Ok((
             Self {

@@ -113,6 +113,209 @@ impl crate::encode::Encode for SubmitSm {
         size
     }
 }
+#[non_exhaustive]
+pub struct SubmitSmDecodeErrorContext {
+    pub other: ::core::option::Option<
+        ::core::result::Result<u8, <u8 as crate::decode::owned::DecodeErrorType>::Error>,
+    >,
+    pub sm_length: ::core::option::Option<
+        ::core::result::Result<u8, <u8 as crate::decode::owned::DecodeErrorType>::Error>,
+    >,
+    pub short_message: ::core::option::Option<
+        ::core::result::Result<
+            OctetString<0, 255>,
+            <OctetString<0, 255> as crate::decode::owned::DecodeErrorType>::Error,
+        >,
+    >,
+}
+#[automatically_derived]
+impl ::core::fmt::Debug for SubmitSmDecodeErrorContext {
+    #[inline]
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        ::core::fmt::Formatter::debug_struct_field3_finish(
+            f,
+            "SubmitSmDecodeErrorContext",
+            "other",
+            &self.other,
+            "sm_length",
+            &self.sm_length,
+            "short_message",
+            &&self.short_message,
+        )
+    }
+}
+#[automatically_derived]
+impl ::core::clone::Clone for SubmitSmDecodeErrorContext {
+    #[inline]
+    fn clone(&self) -> SubmitSmDecodeErrorContext {
+        SubmitSmDecodeErrorContext {
+            other: ::core::clone::Clone::clone(&self.other),
+            sm_length: ::core::clone::Clone::clone(&self.sm_length),
+            short_message: ::core::clone::Clone::clone(&self.short_message),
+        }
+    }
+}
+#[non_exhaustive]
+pub struct SubmitSmDecodeError {
+    pub context: SubmitSmDecodeErrorContext,
+}
+#[automatically_derived]
+impl ::core::fmt::Debug for SubmitSmDecodeError {
+    #[inline]
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        ::core::fmt::Formatter::debug_struct_field1_finish(
+            f,
+            "SubmitSmDecodeError",
+            "context",
+            &&self.context,
+        )
+    }
+}
+#[automatically_derived]
+impl ::core::clone::Clone for SubmitSmDecodeError {
+    #[inline]
+    fn clone(&self) -> SubmitSmDecodeError {
+        SubmitSmDecodeError {
+            context: ::core::clone::Clone::clone(&self.context),
+        }
+    }
+}
+impl ::core::fmt::Display for SubmitSmDecodeError {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+        f.write_fmt(format_args!("Failed to decode {0} {{ ", "SubmitSm"))?;
+        if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self
+            .context
+            .other
+        {
+            f.write_fmt(format_args!("{0}: {1}", "other", err))?;
+            f.write_fmt(format_args!(" }}"))?;
+            return Ok(());
+        }
+        if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self
+            .context
+            .sm_length
+        {
+            f.write_fmt(format_args!("{0}: {1}", "sm_length", err))?;
+            f.write_fmt(format_args!(" }}"))?;
+            return Ok(());
+        }
+        if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self
+            .context
+            .short_message
+        {
+            f.write_fmt(format_args!("{0}: {1}", "short_message", err))?;
+            f.write_fmt(format_args!(" }}"))?;
+            return Ok(());
+        }
+        f.write_fmt(format_args!(" }}"))
+    }
+}
+impl ::core::error::Error for SubmitSmDecodeError {
+    fn source(&self) -> Option<&(dyn ::core::error::Error + 'static)> {
+        if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self
+            .context
+            .other
+        {
+            return ::core::option::Option::Some(
+                err as &(dyn ::core::error::Error + 'static),
+            );
+        }
+        if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self
+            .context
+            .sm_length
+        {
+            return ::core::option::Option::Some(
+                err as &(dyn ::core::error::Error + 'static),
+            );
+        }
+        if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self
+            .context
+            .short_message
+        {
+            return ::core::option::Option::Some(
+                err as &(dyn ::core::error::Error + 'static),
+            );
+        }
+        ::core::option::Option::None
+    }
+    fn cause(&self) -> Option<&dyn ::core::error::Error> {
+        self.source()
+    }
+}
+impl crate::decode::owned::DecodeErrorType for SubmitSm {
+    type Error = SubmitSmDecodeError;
+}
+impl crate::decode::owned::DecodeWithLength for SubmitSm {
+    fn decode(
+        src: &mut ::bytes::BytesMut,
+        length: usize,
+    ) -> Result<(Self, usize), Self::Error> {
+        let size = 0;
+        let (other, size) = match crate::decode::owned::DecodeExt::decode_move(
+            src,
+            size,
+        ) {
+            Ok(ok) => ok,
+            Err(err) => {
+                let context = SubmitSmDecodeErrorContext {
+                    other: ::core::option::Option::Some(
+                        ::core::result::Result::Err(err),
+                    ),
+                    sm_length: ::core::option::Option::None,
+                    short_message: ::core::option::Option::None,
+                };
+                return Err(Self::Error { context });
+            }
+        };
+        let (sm_length, size) = match crate::decode::owned::DecodeExt::decode_move(
+            src,
+            size,
+        ) {
+            Ok(ok) => ok,
+            Err(err) => {
+                let context = SubmitSmDecodeErrorContext {
+                    other: ::core::option::Option::Some(
+                        ::core::result::Result::Ok(other),
+                    ),
+                    sm_length: ::core::option::Option::Some(
+                        ::core::result::Result::Err(err),
+                    ),
+                    short_message: ::core::option::Option::None,
+                };
+                return Err(Self::Error { context });
+            }
+        };
+        let (short_message, size) = match crate::decode::owned::DecodeWithLengthExt::decode_move(
+            src,
+            sm_length as usize,
+            size,
+        ) {
+            Ok(ok) => ok,
+            Err(err) => {
+                let context = SubmitSmDecodeErrorContext {
+                    other: ::core::option::Option::Some(
+                        ::core::result::Result::Ok(other),
+                    ),
+                    sm_length: ::core::option::Option::Some(
+                        ::core::result::Result::Ok(sm_length),
+                    ),
+                    short_message: ::core::option::Option::Some(
+                        ::core::result::Result::Err(err),
+                    ),
+                };
+                return Err(Self::Error { context });
+            }
+        };
+        Ok((
+            Self {
+                other,
+                sm_length,
+                short_message,
+            },
+            size,
+        ))
+    }
+}
 /// Docs
 ///
 /// More docs
@@ -235,21 +438,15 @@ for SubmitSm<'a, N> {
         length: usize,
     ) -> Result<(Self, usize), crate::decode::DecodeError> {
         let size = 0;
-        let (other, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::other,
+        let (other, size) = crate::decode::borrowed::DecodeExt::decode_move(src, size)?;
+        let (sm_length, size) = crate::decode::borrowed::DecodeExt::decode_move(
+            src,
+            size,
         )?;
-        let (sm_length, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::sm_length,
-        )?;
-        let (short_message, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeWithLengthExt::decode_move(
-                src,
-                sm_length as usize,
-                size,
-            ),
-            crate::fields::SmppField::short_message,
+        let (short_message, size) = crate::decode::borrowed::DecodeWithLengthExt::decode_move(
+            src,
+            sm_length as usize,
+            size,
         )?;
         Ok((
             Self {

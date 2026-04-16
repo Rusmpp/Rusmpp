@@ -2,74 +2,74 @@
 ///
 /// More docs
 #[rusmpp(decode = owned)]
-pub struct Tlv {
+pub struct Udh {
     /// Docs
     ///
     /// More docs
-    tag: TlvTag,
-    value_length: u16,
+    pub length: u8,
+    id: UdhId,
     /// Docs
     ///
     /// More docs
-    #[rusmpp(key = tag, length = value_length)]
-    value: Option<TlvValue>,
+    #[rusmpp(key = id, length = length-1)]
+    value: Option<UdhValue>,
 }
 #[automatically_derived]
-impl ::core::fmt::Debug for Tlv {
+impl ::core::fmt::Debug for Udh {
     #[inline]
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         ::core::fmt::Formatter::debug_struct_field3_finish(
             f,
-            "Tlv",
-            "tag",
-            &self.tag,
-            "value_length",
-            &self.value_length,
+            "Udh",
+            "length",
+            &self.length,
+            "id",
+            &self.id,
             "value",
             &&self.value,
         )
     }
 }
-pub struct TlvParts {
-    pub tag: TlvTag,
-    pub value_length: u16,
-    pub value: Option<TlvValue>,
+pub struct UdhParts {
+    pub length: u8,
+    pub id: UdhId,
+    pub value: Option<UdhValue>,
 }
 #[automatically_derived]
-impl ::core::fmt::Debug for TlvParts {
+impl ::core::fmt::Debug for UdhParts {
     #[inline]
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         ::core::fmt::Formatter::debug_struct_field3_finish(
             f,
-            "TlvParts",
-            "tag",
-            &self.tag,
-            "value_length",
-            &self.value_length,
+            "UdhParts",
+            "length",
+            &self.length,
+            "id",
+            &self.id,
             "value",
             &&self.value,
         )
     }
 }
-impl TlvParts {
+impl UdhParts {
     #[inline]
     #[allow(clippy::too_many_arguments)]
-    pub const fn new(tag: TlvTag, value_length: u16, value: Option<TlvValue>) -> Self {
-        Self { tag, value_length, value }
+    pub const fn new(length: u8, id: UdhId, value: Option<UdhValue>) -> Self {
+        Self { length, id, value }
     }
     #[inline]
     #[allow(unused_parens)]
-    pub fn raw(self) -> (TlvTag, u16, Option<TlvValue>) {
-        (self.tag, self.value_length, self.value)
+    pub fn raw(self) -> (u8, UdhId, Option<UdhValue>) {
+        (self.length, self.id, self.value)
     }
 }
-impl Tlv {
+impl Udh {
     /// Converts [`Self`] into its parts.
     #[inline]
-    pub fn into_parts(self) -> TlvParts {
-        TlvParts {
-            tag: self.tag,
-            value_length: self.value_length,
+    pub fn into_parts(self) -> UdhParts {
+        UdhParts {
+            length: self.length,
+            id: self.id,
             value: self.value,
         }
     }
@@ -79,121 +79,118 @@ impl Tlv {
     ///
     /// This may create invalid instances. It's up to the caller to ensure that the parts are valid.
     #[inline]
-    pub fn from_parts(parts: TlvParts) -> Self {
+    pub fn from_parts(parts: UdhParts) -> Self {
         Self {
-            tag: parts.tag,
-            value_length: parts.value_length,
+            length: parts.length,
+            id: parts.id,
             value: parts.value,
         }
     }
 }
-impl crate::encode::Length for Tlv {
+impl crate::encode::Length for Udh {
     fn length(&self) -> usize {
         let mut length = 0;
-        length += crate::encode::Length::length(&self.tag);
-        length += crate::encode::Length::length(&self.value_length);
+        length += crate::encode::Length::length(&self.length);
+        length += crate::encode::Length::length(&self.id);
         length += crate::encode::Length::length(&self.value);
         length
     }
 }
-impl crate::encode::Encode for Tlv {
+impl crate::encode::Encode for Udh {
     fn encode(&self, dst: &mut [u8]) -> usize {
         let size = 0;
-        let size = crate::encode::EncodeExt::encode_move(&self.tag, dst, size);
-        let size = crate::encode::EncodeExt::encode_move(&self.value_length, dst, size);
+        let size = crate::encode::EncodeExt::encode_move(&self.length, dst, size);
+        let size = crate::encode::EncodeExt::encode_move(&self.id, dst, size);
         let size = crate::encode::EncodeExt::encode_move(&self.value, dst, size);
         size
     }
 }
 #[non_exhaustive]
-pub struct TlvDecodeErrorContext {
-    pub tag: ::core::option::Option<
-        ::core::result::Result<
-            TlvTag,
-            <TlvTag as crate::decode::owned::DecodeErrorType>::Error,
-        >,
+pub struct UdhDecodeErrorContext {
+    pub length: ::core::option::Option<
+        ::core::result::Result<u8, <u8 as crate::decode::owned::DecodeErrorType>::Error>,
     >,
-    pub value_length: ::core::option::Option<
+    pub id: ::core::option::Option<
         ::core::result::Result<
-            u16,
-            <u16 as crate::decode::owned::DecodeErrorType>::Error,
+            UdhId,
+            <UdhId as crate::decode::owned::DecodeErrorType>::Error,
         >,
     >,
     pub value: ::core::option::Option<
         ::core::result::Result<
-            Option<TlvValue>,
-            <Option<TlvValue> as crate::decode::owned::DecodeErrorType>::Error,
+            Option<UdhValue>,
+            <Option<UdhValue> as crate::decode::owned::DecodeErrorType>::Error,
         >,
     >,
 }
 #[automatically_derived]
-impl ::core::fmt::Debug for TlvDecodeErrorContext {
+impl ::core::fmt::Debug for UdhDecodeErrorContext {
     #[inline]
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         ::core::fmt::Formatter::debug_struct_field3_finish(
             f,
-            "TlvDecodeErrorContext",
-            "tag",
-            &self.tag,
-            "value_length",
-            &self.value_length,
+            "UdhDecodeErrorContext",
+            "length",
+            &self.length,
+            "id",
+            &self.id,
             "value",
             &&self.value,
         )
     }
 }
 #[automatically_derived]
-impl ::core::clone::Clone for TlvDecodeErrorContext {
+impl ::core::clone::Clone for UdhDecodeErrorContext {
     #[inline]
-    fn clone(&self) -> TlvDecodeErrorContext {
-        TlvDecodeErrorContext {
-            tag: ::core::clone::Clone::clone(&self.tag),
-            value_length: ::core::clone::Clone::clone(&self.value_length),
+    fn clone(&self) -> UdhDecodeErrorContext {
+        UdhDecodeErrorContext {
+            length: ::core::clone::Clone::clone(&self.length),
+            id: ::core::clone::Clone::clone(&self.id),
             value: ::core::clone::Clone::clone(&self.value),
         }
     }
 }
 #[non_exhaustive]
-pub struct TlvDecodeError {
-    pub context: TlvDecodeErrorContext,
+pub struct UdhDecodeError {
+    pub context: UdhDecodeErrorContext,
 }
 #[automatically_derived]
-impl ::core::fmt::Debug for TlvDecodeError {
+impl ::core::fmt::Debug for UdhDecodeError {
     #[inline]
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         ::core::fmt::Formatter::debug_struct_field1_finish(
             f,
-            "TlvDecodeError",
+            "UdhDecodeError",
             "context",
             &&self.context,
         )
     }
 }
 #[automatically_derived]
-impl ::core::clone::Clone for TlvDecodeError {
+impl ::core::clone::Clone for UdhDecodeError {
     #[inline]
-    fn clone(&self) -> TlvDecodeError {
-        TlvDecodeError {
+    fn clone(&self) -> UdhDecodeError {
+        UdhDecodeError {
             context: ::core::clone::Clone::clone(&self.context),
         }
     }
 }
-impl ::core::fmt::Display for TlvDecodeError {
+impl ::core::fmt::Display for UdhDecodeError {
     fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-        f.write_fmt(format_args!("Failed to decode {0} {{ ", "Tlv"))?;
+        f.write_fmt(format_args!("Failed to decode {0} {{ ", "Udh"))?;
         if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self
             .context
-            .tag
+            .length
         {
-            f.write_fmt(format_args!("{0}: {1}", "tag", err))?;
+            f.write_fmt(format_args!("{0}: {1}", "length", err))?;
             f.write_fmt(format_args!(" }}"))?;
             return Ok(());
         }
         if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self
             .context
-            .value_length
+            .id
         {
-            f.write_fmt(format_args!("{0}: {1}", "value_length", err))?;
+            f.write_fmt(format_args!("{0}: {1}", "id", err))?;
             f.write_fmt(format_args!(" }}"))?;
             return Ok(());
         }
@@ -208,11 +205,11 @@ impl ::core::fmt::Display for TlvDecodeError {
         f.write_fmt(format_args!(" }}"))
     }
 }
-impl ::core::error::Error for TlvDecodeError {
+impl ::core::error::Error for UdhDecodeError {
     fn source(&self) -> Option<&(dyn ::core::error::Error + 'static)> {
         if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self
             .context
-            .tag
+            .length
         {
             return ::core::option::Option::Some(
                 err as &(dyn ::core::error::Error + 'static),
@@ -220,7 +217,7 @@ impl ::core::error::Error for TlvDecodeError {
         }
         if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self
             .context
-            .value_length
+            .id
         {
             return ::core::option::Option::Some(
                 err as &(dyn ::core::error::Error + 'static),
@@ -240,52 +237,55 @@ impl ::core::error::Error for TlvDecodeError {
         self.source()
     }
 }
-impl crate::decode::owned::DecodeErrorType for Tlv {
-    type Error = TlvDecodeError;
+impl crate::decode::owned::DecodeErrorType for Udh {
+    type Error = UdhDecodeError;
 }
-impl crate::decode::owned::Decode for Tlv {
+impl crate::decode::owned::Decode for Udh {
     fn decode(src: &mut ::bytes::BytesMut) -> Result<(Self, usize), Self::Error> {
         let size = 0;
-        let (tag, size) = match crate::decode::owned::DecodeExt::decode_move(src, size) {
-            Ok(ok) => ok,
-            Err(err) => {
-                let context = TlvDecodeErrorContext {
-                    tag: ::core::option::Option::Some(::core::result::Result::Err(err)),
-                    value_length: ::core::option::Option::None,
-                    value: ::core::option::Option::None,
-                };
-                return Err(Self::Error { context });
-            }
-        };
-        let (value_length, size) = match crate::decode::owned::DecodeExt::decode_move(
+        let (length, size) = match crate::decode::owned::DecodeExt::decode_move(
             src,
             size,
         ) {
             Ok(ok) => ok,
             Err(err) => {
-                let context = TlvDecodeErrorContext {
-                    tag: ::core::option::Option::Some(::core::result::Result::Ok(tag)),
-                    value_length: ::core::option::Option::Some(
+                let context = UdhDecodeErrorContext {
+                    length: ::core::option::Option::Some(
                         ::core::result::Result::Err(err),
                     ),
+                    id: ::core::option::Option::None,
                     value: ::core::option::Option::None,
                 };
                 return Err(Self::Error { context });
             }
         };
+        let (id, size) = match crate::decode::owned::DecodeExt::decode_move(src, size) {
+            Ok(ok) => ok,
+            Err(err) => {
+                let context = UdhDecodeErrorContext {
+                    length: ::core::option::Option::Some(
+                        ::core::result::Result::Ok(length),
+                    ),
+                    id: ::core::option::Option::Some(::core::result::Result::Err(err)),
+                    value: ::core::option::Option::None,
+                };
+                return Err(Self::Error { context });
+            }
+        };
+        let _length = (length as usize).saturating_sub(1usize);
         let opt = match crate::decode::owned::DecodeWithKeyExt::optional_length_checked_decode_move(
-            tag,
+            id,
             src,
-            value_length as usize,
+            _length,
             size,
         ) {
             Ok(ok) => ok,
             Err(err) => {
-                let context = TlvDecodeErrorContext {
-                    tag: ::core::option::Option::Some(::core::result::Result::Ok(tag)),
-                    value_length: ::core::option::Option::Some(
-                        ::core::result::Result::Ok(value_length),
+                let context = UdhDecodeErrorContext {
+                    length: ::core::option::Option::Some(
+                        ::core::result::Result::Ok(length),
                     ),
+                    id: ::core::option::Option::Some(::core::result::Result::Ok(id)),
                     value: ::core::option::Option::Some(::core::result::Result::Err(err)),
                 };
                 return Err(Self::Error { context });
@@ -294,85 +294,81 @@ impl crate::decode::owned::Decode for Tlv {
         let (value, size) = opt
             .map(|(this, size)| (Some(this), size))
             .unwrap_or((None, size));
-        Ok((Self { tag, value_length, value }, size))
+        Ok((Self { length, id, value }, size))
     }
 }
 /// Docs
 ///
 /// More docs
 #[rusmpp(decode = borrowed)]
-pub struct Tlv<'a> {
+pub struct Udh<'a, const N: usize> {
     /// Docs
     ///
     /// More docs
-    tag: TlvTag,
-    value_length: u16,
+    pub length: u8,
+    id: UdhId,
     /// Docs
     ///
     /// More docs
-    #[rusmpp(key = tag, length = value_length)]
-    value: Option<TlvValue<'a>>,
+    #[rusmpp(key = id, length = length-1)]
+    value: Option<UdhValue<'a, N>>,
 }
 #[automatically_derived]
-impl<'a> ::core::fmt::Debug for Tlv<'a> {
+impl<'a, const N: usize> ::core::fmt::Debug for Udh<'a, N> {
     #[inline]
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         ::core::fmt::Formatter::debug_struct_field3_finish(
             f,
-            "Tlv",
-            "tag",
-            &self.tag,
-            "value_length",
-            &self.value_length,
+            "Udh",
+            "length",
+            &self.length,
+            "id",
+            &self.id,
             "value",
             &&self.value,
         )
     }
 }
-pub struct TlvParts<'a> {
-    pub tag: TlvTag,
-    pub value_length: u16,
-    pub value: Option<TlvValue<'a>>,
+pub struct UdhParts<'a, const N: usize> {
+    pub length: u8,
+    pub id: UdhId,
+    pub value: Option<UdhValue<'a, N>>,
 }
 #[automatically_derived]
-impl<'a> ::core::fmt::Debug for TlvParts<'a> {
+impl<'a, const N: usize> ::core::fmt::Debug for UdhParts<'a, N> {
     #[inline]
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         ::core::fmt::Formatter::debug_struct_field3_finish(
             f,
-            "TlvParts",
-            "tag",
-            &self.tag,
-            "value_length",
-            &self.value_length,
+            "UdhParts",
+            "length",
+            &self.length,
+            "id",
+            &self.id,
             "value",
             &&self.value,
         )
     }
 }
-impl<'a> TlvParts<'a> {
+impl<'a, const N: usize> UdhParts<'a, N> {
     #[inline]
     #[allow(clippy::too_many_arguments)]
-    pub const fn new(
-        tag: TlvTag,
-        value_length: u16,
-        value: Option<TlvValue<'a>>,
-    ) -> Self {
-        Self { tag, value_length, value }
+    pub const fn new(length: u8, id: UdhId, value: Option<UdhValue<'a, N>>) -> Self {
+        Self { length, id, value }
     }
     #[inline]
     #[allow(unused_parens)]
-    pub fn raw(self) -> (TlvTag, u16, Option<TlvValue<'a>>) {
-        (self.tag, self.value_length, self.value)
+    pub fn raw(self) -> (u8, UdhId, Option<UdhValue<'a, N>>) {
+        (self.length, self.id, self.value)
     }
 }
-impl<'a> Tlv<'a> {
+impl<'a, const N: usize> Udh<'a, N> {
     /// Converts [`Self`] into its parts.
     #[inline]
-    pub fn into_parts(self) -> TlvParts<'a> {
-        TlvParts {
-            tag: self.tag,
-            value_length: self.value_length,
+    pub fn into_parts(self) -> UdhParts<'a, N> {
+        UdhParts {
+            length: self.length,
+            id: self.id,
             value: self.value,
         }
     }
@@ -382,48 +378,46 @@ impl<'a> Tlv<'a> {
     ///
     /// This may create invalid instances. It's up to the caller to ensure that the parts are valid.
     #[inline]
-    pub fn from_parts(parts: TlvParts<'a>) -> Self {
+    pub fn from_parts(parts: UdhParts<'a, N>) -> Self {
         Self {
-            tag: parts.tag,
-            value_length: parts.value_length,
+            length: parts.length,
+            id: parts.id,
             value: parts.value,
         }
     }
 }
-impl<'a> crate::encode::Length for Tlv<'a> {
+impl<'a, const N: usize> crate::encode::Length for Udh<'a, N> {
     fn length(&self) -> usize {
         let mut length = 0;
-        length += crate::encode::Length::length(&self.tag);
-        length += crate::encode::Length::length(&self.value_length);
+        length += crate::encode::Length::length(&self.length);
+        length += crate::encode::Length::length(&self.id);
         length += crate::encode::Length::length(&self.value);
         length
     }
 }
-impl<'a> crate::encode::Encode for Tlv<'a> {
+impl<'a, const N: usize> crate::encode::Encode for Udh<'a, N> {
     fn encode(&self, dst: &mut [u8]) -> usize {
         let size = 0;
-        let size = crate::encode::EncodeExt::encode_move(&self.tag, dst, size);
-        let size = crate::encode::EncodeExt::encode_move(&self.value_length, dst, size);
+        let size = crate::encode::EncodeExt::encode_move(&self.length, dst, size);
+        let size = crate::encode::EncodeExt::encode_move(&self.id, dst, size);
         let size = crate::encode::EncodeExt::encode_move(&self.value, dst, size);
         size
     }
 }
-impl<'a> crate::decode::borrowed::Decode<'a> for Tlv<'a> {
+impl<'a, const N: usize> crate::decode::borrowed::Decode<'a> for Udh<'a, N> {
     fn decode(src: &'a [u8]) -> Result<(Self, usize), crate::decode::DecodeError> {
         let size = 0;
-        let (tag, size) = crate::decode::borrowed::DecodeExt::decode_move(src, size)?;
-        let (value_length, size) = crate::decode::borrowed::DecodeExt::decode_move(
-            src,
-            size,
-        )?;
+        let (length, size) = crate::decode::borrowed::DecodeExt::decode_move(src, size)?;
+        let (id, size) = crate::decode::borrowed::DecodeExt::decode_move(src, size)?;
+        let _length = (length as usize).saturating_sub(1usize);
         let (value, size) = crate::decode::borrowed::DecodeWithKeyExt::optional_length_checked_decode_move(
-                tag,
+                id,
                 src,
-                value_length as usize,
+                _length,
                 size,
             )?
             .map(|(this, size)| (Some(this), size))
             .unwrap_or((None, size));
-        Ok((Self { tag, value_length, value }, size))
+        Ok((Self { length, id, value }, size))
     }
 }
