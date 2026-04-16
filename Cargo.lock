@@ -615,27 +615,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "derive_more"
-version = "2.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d751e9e49156b02b44f9c1815bcb94b984cdcc4396ecc32521c739452808b134"
-dependencies = [
- "derive_more-impl",
-]
-
-[[package]]
-name = "derive_more-impl"
-version = "2.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "799a97264921d8623a957f6c3b9011f3b5492f557bbb7a5a19b7fa6d06ba8dcb"
-dependencies = [
- "proc-macro2",
- "quote",
- "rustc_version",
- "syn 2.0.111",
-]
-
-[[package]]
 name = "diff"
 version = "0.1.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2566,7 +2545,6 @@ version = "0.4.0"
 dependencies = [
  "arbitrary",
  "bytes",
- "derive_more",
  "embedded-io-adapters",
  "framez",
  "futures",
@@ -2577,6 +2555,7 @@ dependencies = [
  "strum",
  "strum_macros",
  "testcontainers",
+ "thiserror 2.0.17",
  "tokio",
  "tokio-util",
  "tracing",

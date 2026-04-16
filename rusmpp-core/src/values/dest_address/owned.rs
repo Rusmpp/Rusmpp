@@ -3,7 +3,7 @@ use rusmpp_macros::Rusmpp;
 
 use crate::{
     decode::{
-        DecodeError, DecodeResultExt,
+        DecodeResultExt,
         owned::{Decode, DecodeErrorType, DecodeWithKey},
     },
     encode::Length,
@@ -92,21 +92,38 @@ impl crate::encode::owned::Encode for DestAddressValue {
     }
 }
 
+#[derive(Debug, Clone, thiserror::Error)]
+pub enum DestAddressValueDecodeError {
+    #[error("SmeAddress decode error: {0}")]
+    SmeAddress(
+        #[from]
+        #[source]
+        SmeAddressDecodeError,
+    ),
+    #[error("DistributionListName decode error: {0}")]
+    DistributionListName(
+        #[from]
+        #[source]
+        DistributionListNameDecodeError,
+    ),
+    #[error("Unsupported DestFlag: {0:?}")]
+    UnsupportedFlag(DestFlag),
+}
+
 impl DecodeErrorType for DestAddressValue {
-    // TODO
-    type Error = core::convert::Infallible;
+    type Error = DestAddressValueDecodeError;
 }
 
 impl DecodeWithKey for DestAddressValue {
     type Key = DestFlag;
 
-    fn decode(key: Self::Key, src: &mut BytesMut, _: usize) -> Result<(Self, usize), DecodeError> {
+    fn decode(key: Self::Key, src: &mut BytesMut, _: usize) -> Result<(Self, usize), Self::Error> {
         let (value, size) = match key {
             DestFlag::SmeAddress => Decode::decode(src).map_decoded(Self::SmeAddress)?,
             DestFlag::DistributionListName => {
                 Decode::decode(src).map_decoded(Self::DistributionListName)?
             }
-            DestFlag::Other(flag) => return Err(DecodeError::unsupported_key(flag.into())),
+            DestFlag::Other(_) => return Err(Self::Error::UnsupportedFlag(key)),
         };
 
         Ok((value, size))

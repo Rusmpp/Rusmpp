@@ -90,24 +90,6 @@ impl UdhValue {
     }
 }
 
-// TODO
-impl core::fmt::Display for UdhValueDecodeError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        todo!()
-    }
-}
-
-// TODO
-impl core::error::Error for UdhValueDecodeError {}
-
-// TODO: impl error for this guy. we might want to use thiserror.
-#[derive(Debug, Clone)]
-pub enum UdhValueDecodeError {
-    ConcatenatedShortMessage8Bit(ConcatenatedShortMessageDecodeError),
-    ConcatenatedShortMessage16Bit(ConcatenatedShortMessageDecodeError),
-    Other(AnyOctetStringDecodeError),
-}
-
 impl Length for UdhValue {
     fn length(&self) -> usize {
         match self {
@@ -136,6 +118,20 @@ impl crate::encode::owned::Encode for UdhValue {
             UdhValue::Other { value, .. } => value.encode(dst),
         }
     }
+}
+
+#[derive(Debug, Clone, thiserror::Error)]
+pub enum UdhValueDecodeError {
+    #[error("ConcatenatedShortMessage8Bit decode error: {0}")]
+    ConcatenatedShortMessage8Bit(#[source] ConcatenatedShortMessageDecodeError),
+    #[error("ConcatenatedShortMessage16Bit decode error: {0}")]
+    ConcatenatedShortMessage16Bit(#[source] ConcatenatedShortMessageDecodeError),
+    #[error("Other decode error: {0}")]
+    Other(
+        #[from]
+        #[source]
+        AnyOctetStringDecodeError,
+    ),
 }
 
 impl DecodeErrorType for UdhValue {
