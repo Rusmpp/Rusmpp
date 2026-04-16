@@ -161,10 +161,67 @@ impl PduBuilder {
 
 #[cfg(test)]
 mod tests {
+    use bytes::BytesMut;
+
+    use crate::{
+        decode::{COctetStringDecodeError, owned::DecodeWithLength},
+        pdus::owned::{
+            PduDecodeError,
+            errors::{BindTransmitterDecodeError, BindTransmitterDecodeErrorContext},
+        },
+        types::owned::COctetString,
+    };
+
     use super::*;
 
     #[test]
     fn encode_decode() {
         crate::tests::owned::encode_decode_with_length_test_instances::<Command>();
+    }
+
+    #[test]
+    fn decode_error_context() {
+        let mut bytes = BytesMut::from(
+            &[
+                // Header
+                0x00, 0x00, 0x00, 0x2E, // Command Length (46 bytes total)
+                0x00, 0x00, 0x00, 0x02, // Command ID (bind_transmitter)
+                0x00, 0x00, 0x00, 0x00, // Command Status (0 - OK)
+                0x00, 0x00, 0x00, 0x01, // Sequence Number (1)
+                // system_id: "SMPP3TEST\0"
+                0x53, 0x4D, 0x50, 0x50, 0x33, 0x54, 0x45, 0x53, 0x54, 0x00,
+                // password: "secret08" WRONG! not null terminated!
+                0x73, 0x65, 0x63, 0x72, 0x65, 0x74, 0x30, 0x38, // system_type: "SUBMIT1"
+                0x53, 0x55, 0x42, 0x4D, 0x49, 0x54, 0x31, 0x00, // interface_version
+                0x50, // addr_ton
+                0x01, // addr_npi
+                0x01, // addr_range
+                0x00,
+            ][..],
+        );
+
+        let error = Command::decode(&mut bytes.split_off(4), 46 - 4).unwrap_err();
+
+        let Some(Err(PduDecodeError::BindTransmitter(BindTransmitterDecodeError {
+            context:
+                BindTransmitterDecodeErrorContext {
+                    system_id: Some(Ok(system_id)),
+                    password: Some(Err(password_err)),
+                    ..
+                },
+        }))) = error.context.pdu
+        else {
+            panic!("Expected PduDecodeError with BindTransmitterDecodeError");
+        };
+
+        assert_eq!(
+            system_id,
+            COctetString::<1, 16>::from_static_slice(b"SMPP3TEST\0").unwrap()
+        );
+
+        assert!(matches!(
+            password_err,
+            COctetStringDecodeError::NotNullTerminated
+        ));
     }
 }
