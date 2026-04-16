@@ -110,3 +110,11 @@ Licensed under either of
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in the work by you, as defined in the Apache-2.0 license, shall
 be dual licensed as above, without any additional terms or conditions.
+
+## TODO
+
+- restore docs for the decode implementations
+- show an example of how to use the new decode error types instead of the deleted smpp_field example. do it in the Command tests
+- export the command decode error and the decode error context
+- reexport all decode error types in rusmpp
+- add docs to all generated decode error types
