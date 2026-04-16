@@ -362,14 +362,14 @@ fn quote_owned_decode_error(input: &DeriveInput, fields: &ValidFields) -> TokenS
     quote! {
         #[cfg(feature = "alloc")]
         #[non_exhaustive]
-        #[derive(Debug)]
+        #[derive(Debug, Clone)]
         pub struct #decode_error_context_struct_name {
             #(#decode_error_context_struct),*
         }
 
         #[cfg(feature = "alloc")]
         #[non_exhaustive]
-        #[derive(Debug)]
+        #[derive(Debug, Clone)]
         pub struct #decode_error_struct_name {
             pub context: #decode_error_context_struct_name
         }
