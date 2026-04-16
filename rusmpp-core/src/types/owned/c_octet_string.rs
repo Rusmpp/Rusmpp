@@ -362,7 +362,7 @@ impl<const MIN: usize, const MAX: usize> Decode for COctetString<MIN, MAX> {
             .iter()
             .take(MAX)
             .position(|&b| b == 0)
-            .ok_or_else(|| COctetStringDecodeError::NotNullTerminated)?;
+            .ok_or(COctetStringDecodeError::NotNullTerminated)?;
 
         let bytes = src.split_to(index + 1).freeze();
 
