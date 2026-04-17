@@ -3,10 +3,12 @@ use std::{fmt::Debug, ops::Deref, time::Duration};
 use bb8::{ManageConnection, Pool, RunError};
 use futures::{Stream, StreamExt};
 use rusmpp::pdus::{BindReceiver, BindTransceiver, BindTransmitter};
-use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::{mpsc::UnboundedSender, watch};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use crate::{Client, ConnectionBuilder, event::EventChannel};
+
+const TARGET: &str = "rusmppc::managed::client";
 
 #[derive(Debug)]
 pub enum ManagedEvent<E> {
@@ -39,14 +41,19 @@ where
     E::Event: Send + Sync + 'static,
 {
     pool: Pool<ClientConnectionManger<E>>,
+    // Used to tell the reconnecting background task to stop when the client is dropped.
+    _watch: watch::Receiver<()>,
 }
 
 impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedClient<E>
 where
     E::Event: Send + Sync + 'static,
 {
-    fn new(pool: Pool<ClientConnectionManger<E>>) -> Self {
-        Self { pool }
+    fn new(pool: Pool<ClientConnectionManger<E>>, watch: watch::Receiver<()>) -> Self {
+        Self {
+            pool,
+            _watch: watch,
+        }
     }
 
     /// Gets a connected [`Client`] from the managed connection.
@@ -104,6 +111,7 @@ pub struct ManagedConnectionBuilder<E: EventChannel + Clone + Send + Sync + 'sta
     builder: ConnectionBuilder<E>,
     connection_timeout: Duration,
     bind: BindMode,
+    auto_reconnect_interval: Option<Duration>,
 }
 
 impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E> {
@@ -112,7 +120,26 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E
             builder,
             connection_timeout: Duration::from_secs(30),
             bind,
+            auto_reconnect_interval: Some(Duration::from_secs(5)),
         }
+    }
+
+    pub fn auto_reconnect_interval(mut self, auto_reconnect_interval: Duration) -> Self {
+        self.auto_reconnect_interval = Some(auto_reconnect_interval);
+        self
+    }
+
+    pub fn no_auto_reconnect_interval(mut self) -> Self {
+        self.auto_reconnect_interval = None;
+        self
+    }
+
+    pub fn with_auto_reconnect_interval(
+        mut self,
+        auto_reconnect_interval: Option<Duration>,
+    ) -> Self {
+        self.auto_reconnect_interval = auto_reconnect_interval;
+        self
     }
 
     /// Sets the connection timeout used by the managed connection.
@@ -156,18 +183,45 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E
 
         let manager = ClientConnectionManger::new(self.builder, url.into(), self.bind, tx);
 
+        // TODO: add the error sink so that we can pipe the connection errors to the managed event stream as well.
         let pool = bb8::Pool::builder()
             .max_size(1)
+            .min_idle(1)
             .connection_timeout(self.connection_timeout)
             .idle_timeout(None)
             .max_lifetime(None)
             .build(manager)
             .await?;
 
-        // Trigger a connection
-        pool.get().await.ok();
+        let (w_tx, w_rx) = watch::channel(());
 
-        Ok((ManagedClient::new(pool), rx))
+        if let Some(interval) = self.auto_reconnect_interval {
+            let pool_c = pool.clone();
+            tokio::spawn(async move {
+                tracing::trace!(target: TARGET, ?interval, "Starting reconnect task");
+
+                loop {
+                    tokio::select! {
+                        _ = w_tx.closed() => {
+                            tracing::debug!(target: TARGET, "Stopping reconnect task");
+
+                            break;
+                        }
+                        _ = tokio::time::sleep(interval) => {
+                            tracing::trace!(target: TARGET, "Triggering reconnection");
+
+                            // Trigger a reconnection if the connection was closed
+
+                            pool_c.get().await.ok();
+                        }
+                    }
+                }
+
+                tracing::trace!(target: TARGET, "Reconnect task stopped");
+            });
+        }
+
+        Ok((ManagedClient::new(pool, w_rx), rx))
     }
 }
 
@@ -204,22 +258,35 @@ where
     type Error = crate::error::Error;
 
     async fn connect(&self) -> Result<Self::Connection, Self::Error> {
+        tracing::debug!(target: TARGET, "Connecting");
+
         let (client, mut events) = self.builder.clone().connect(&self.url).await?;
 
         let _ = self.tx.send(ManagedEvent::Connected);
 
+        tracing::debug!(target: TARGET, "Connected");
+
         match self.bind.clone() {
             BindMode::Transmitter(bind) => {
                 client.bind_transmitter(bind).await?;
+
                 let _ = self.tx.send(ManagedEvent::Bound);
+
+                tracing::debug!(target: TARGET, "Bound");
             }
             BindMode::Receiver(bind) => {
                 client.bind_receiver(bind).await?;
+
                 let _ = self.tx.send(ManagedEvent::Bound);
+
+                tracing::debug!(target: TARGET, "Bound");
             }
             BindMode::Transceiver(bind) => {
                 client.bind_transceiver(bind).await?;
+
                 let _ = self.tx.send(ManagedEvent::Bound);
+
+                tracing::debug!(target: TARGET, "Bound");
             }
             BindMode::None => {}
         }
@@ -232,6 +299,8 @@ where
             }
 
             let _ = tx.send(ManagedEvent::Disconnected);
+
+            tracing::warn!(target: TARGET, "Disconnected");
         });
 
         Ok(client)

@@ -20,8 +20,10 @@ use rusmppc::ConnectionBuilder;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn core::error::Error>> {
     tracing_subscriber::fmt()
-        .with_env_filter("managed_client=info,rusmpp=off,rusmppc=off")
+        .with_env_filter("managed_client=info,rusmpp=off,rusmppc=debug")
         .init();
+
+    tracing::info!("Connecting to SMPP server");
 
     let (client, mut events) = ConnectionBuilder::new()
         .managed()
@@ -33,8 +35,11 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
                 .build(),
         )
         .connection_timeout(Duration::from_secs(5))
+        .auto_reconnect_interval(Duration::from_secs(15))
         .connect("smpp://localhost:2775")
         .await?;
+
+    tracing::info!("Connected to SMPP server");
 
     let events = tokio::spawn(async move {
         while let Some(event) = events.next().await {
