@@ -98,6 +98,7 @@ impl EventChannel for DefaultEventChannel {
 }
 
 /// An [`EventChannel`] implementation that discards all events.
+#[derive(Clone)]
 pub struct DiscardEventChannel {
     // even if we don't use it, we should keep it alive to avoid closing the event stream
     // closing the event stream is associated with the connection being closed/dropped
@@ -131,6 +132,7 @@ impl EventChannel for DiscardEventChannel {
 }
 
 /// An [`EventChannel`] implementation that sends [`InsightEvent`]s through the event stream.
+#[derive(Clone)]
 pub struct InsightEventChannel {
     sender: tokio::sync::mpsc::UnboundedSender<InsightEvent>,
 }
