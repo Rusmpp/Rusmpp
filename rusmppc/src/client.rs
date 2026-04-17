@@ -1,3 +1,7 @@
+#![allow(clippy::result_large_err)]
+// This warning is triggered on `extract` macro that extracts a specific `Pdu` variant from a generic `Pdu`.
+// The `Ok` variant is the specific `Pdu` variant, while the `Err` variant is the generic `Pdu` that can be large.
+
 use std::{
     sync::{
         Arc,
