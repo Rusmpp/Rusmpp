@@ -32,6 +32,7 @@ where
         Self { pool }
     }
 
+    // TODO: we could return something like the RunError returned by pool.get_owned()
     pub async fn get(&self) -> Option<Client> {
         self.pool.get_owned().await.ok().map(|conn| conn.clone())
     }
