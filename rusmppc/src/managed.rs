@@ -97,6 +97,8 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> UnboundManagedConnectionBu
     }
 }
 
+// TODO: we have to find a way to trigger a reconnection when the events stream is closed.
+
 #[derive(Debug)]
 pub struct ManagedConnectionBuilder<E: EventChannel + Clone + Send + Sync + 'static> {
     builder: ConnectionBuilder<E>,
@@ -161,6 +163,9 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E
             .max_lifetime(None)
             .build(manager)
             .await?;
+
+        // Trigger a connection
+        pool.get().await.ok();
 
         Ok((ManagedClient::new(pool), rx))
     }
