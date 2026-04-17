@@ -21,8 +21,8 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
         .init();
 
     let (client, mut events) = ConnectionBuilder::new()
-        .managed("smpp://localhost:2775")
-        .connect()
+        .managed()
+        .connect("smpp://localhost:2775")
         .await?;
 
     let events = tokio::spawn(async move {

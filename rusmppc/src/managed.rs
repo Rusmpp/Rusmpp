@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use bb8::{ManageConnection, Pool};
 use futures::{Stream, StreamExt};
 use rusmpp::pdus::BindTransceiver;
@@ -28,28 +30,21 @@ where
 }
 
 #[derive(Debug)]
-pub struct ClientConnectionManger<E: EventChannel + Clone + Send + Sync + 'static> {
+pub struct ManagedConnectionBuilder<E: EventChannel + Clone + Send + Sync + 'static> {
     builder: ConnectionBuilder<E>,
-    url: String,
-    tx: Option<UnboundedSender<E::Event>>,
 }
 
-impl<E: EventChannel + Clone + Send + Sync + 'static> ClientConnectionManger<E> {
-    pub(crate) fn new(builder: ConnectionBuilder<E>, url: String) -> Self {
-        Self {
-            builder,
-            url,
-            tx: None,
-        }
+impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E> {
+    pub(crate) fn new(builder: ConnectionBuilder<E>) -> Self {
+        Self { builder }
     }
 
-    fn with_tx(mut self, tx: UnboundedSender<E::Event>) -> Self {
-        self.tx = Some(tx);
-        self
-    }
+    // TODO: this one takes an async function that returns a Result<AsyncRead + AsyncWrite, std::io::Error>
+    pub async fn connected(self) {}
 
     pub async fn connect(
         self,
+        url: impl Into<String>,
     ) -> Result<
         (
             ManagedClient<E>,
@@ -63,7 +58,7 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> ClientConnectionManger<E> 
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
         let rx = UnboundedReceiverStream::new(rx);
 
-        let manager = self.with_tx(tx);
+        let manager = ClientConnectionManger::new(self.builder, url.into(), tx);
 
         let pool = bb8::Pool::builder()
             .max_lifetime(None)
@@ -76,6 +71,19 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> ClientConnectionManger<E> 
     }
 }
 
+#[derive(Debug)]
+pub struct ClientConnectionManger<E: EventChannel + Clone + Send + Sync + 'static> {
+    builder: ConnectionBuilder<E>,
+    url: String,
+    tx: UnboundedSender<E::Event>,
+}
+
+impl<E: EventChannel + Clone + Send + Sync + 'static> ClientConnectionManger<E> {
+    fn new(builder: ConnectionBuilder<E>, url: String, tx: UnboundedSender<E::Event>) -> Self {
+        Self { builder, url, tx }
+    }
+}
+
 impl<E: EventChannel + Clone + Send + Sync + 'static> ManageConnection for ClientConnectionManger<E>
 where
     E::Event: Send + Sync + 'static,
@@ -85,10 +93,7 @@ where
     type Error = crate::error::Error;
 
     async fn connect(&self) -> Result<Self::Connection, Self::Error> {
-        let builder = self.builder.clone();
-        let url = self.url.clone();
-
-        let (client, mut events) = builder.connect(url).await?;
+        let (client, mut events) = self.builder.clone().connect(&self.url).await?;
 
         // TODO: we should move this out and let the user define what should happen.
         // and use it in the customizer maybe
@@ -100,9 +105,7 @@ where
 
         tokio::spawn(async move {
             while let Some(event) = events.next().await {
-                if let Some(tx) = &tx {
-                    let _ = tx.send(event);
-                }
+                let _ = tx.send(event);
             }
         });
 
