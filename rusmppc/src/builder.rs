@@ -13,7 +13,7 @@ use crate::{
     delay::TokioDelay,
     error::Error,
     event::{DefaultEventChannel, DiscardEventChannel, EventChannel, InsightEventChannel},
-    managed::ManagedConnectionBuilder,
+    managed::UnboundManagedConnectionBuilder,
 };
 
 /// Connection builder that discards all events.
@@ -177,12 +177,12 @@ impl<E: EventChannel> ConnectionBuilder<E> {
     }
 
     /// TODO
-    pub fn managed(self) -> ManagedConnectionBuilder<E>
+    pub fn managed(self) -> UnboundManagedConnectionBuilder<E>
     where
         E: EventChannel + Clone + Send + Sync + 'static,
         E::Event: Send + Sync + 'static,
     {
-        ManagedConnectionBuilder::new(self)
+        UnboundManagedConnectionBuilder::new(self)
     }
 }
 

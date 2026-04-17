@@ -8,20 +8,30 @@
 //! ```
 //!
 
-use std::time::Duration;
+use std::{str::FromStr, time::Duration};
 
 use futures::StreamExt;
-use rusmpp::pdus::SubmitSm;
+use rusmpp::{
+    pdus::{BindTransceiver, SubmitSm},
+    types::COctetString,
+};
 use rusmppc::ConnectionBuilder;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn core::error::Error>> {
     tracing_subscriber::fmt()
-        .with_env_filter("raw_client=info,rusmpp=off,rusmppc=debug")
+        .with_env_filter("managed_client=info,rusmpp=off,rusmppc=off")
         .init();
 
     let (client, mut events) = ConnectionBuilder::new()
         .managed()
+        .transceiver(
+            BindTransceiver::builder()
+                .system_id(COctetString::from_str("NfDfddEKVI0NCxO")?)
+                .password(COctetString::from_str("rEZYMq5j")?)
+                .system_type(COctetString::empty())
+                .build(),
+        )
         .connect("smpp://localhost:2775")
         .await?;
 
