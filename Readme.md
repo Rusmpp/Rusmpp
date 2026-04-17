@@ -115,6 +115,4 @@ be dual licensed as above, without any additional terms or conditions.
 
 - restore docs for the decode implementations
 - show an example of how to use the new decode error types instead of the deleted smpp_field example. do it in the Command tests
-- export the command decode error and the decode error context
-- reexport all decode error types in rusmpp
 - add docs to all generated decode error types

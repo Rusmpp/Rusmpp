@@ -39,7 +39,7 @@ embedded-io-adapters = { version = "0.6.2", default-features = false, features =
 ] }
 
 [features]
-default = []
+default = ["alloc"] # TODO: remove the default feature before merge
 # Enables the `alloc` crate.
 alloc = ["serde/alloc", "dep:bytes"]
 # Implements arbitrary's Arbitrary trait for fuzz testing.
