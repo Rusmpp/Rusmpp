@@ -32,6 +32,7 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
                 .system_type(COctetString::empty())
                 .build(),
         )
+        .connection_timeout(Duration::from_secs(5))
         .connect("smpp://localhost:2775")
         .await?;
 
@@ -44,14 +45,18 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
     });
 
     for _ in 0..10 {
-        let response = client
-            .get()
-            .await
-            .ok_or("Not connected")?
-            .submit_sm(SubmitSm::builder().build())
-            .await?;
+        tracing::info!("Getting a connected client");
 
-        tracing::info!(?response, "SubmitSm response");
+        match client.get().await {
+            Ok(client) => {
+                tracing::info!("Got a connected client, sending a SubmitSm command");
+
+                let response = client.submit_sm(SubmitSm::builder().build()).await?;
+
+                tracing::info!(?response, "SubmitSm response");
+            }
+            Err(err) => tracing::error!(?err, "Failed to get a connected client"),
+        }
 
         tokio::time::sleep(Duration::from_secs(3)).await;
     }

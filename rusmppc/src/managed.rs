@@ -1,6 +1,6 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, ops::Deref, time::Duration};
 
-use bb8::{ManageConnection, Pool};
+use bb8::{ManageConnection, Pool, RunError};
 use futures::{Stream, StreamExt};
 use rusmpp::pdus::{BindReceiver, BindTransceiver, BindTransmitter};
 use tokio::sync::mpsc::UnboundedSender;
@@ -14,6 +14,23 @@ pub enum ManagedEvent<E> {
     Bound,
     Disconnected,
     Event(E),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ManagedError {
+    #[error(transparent)]
+    Error(crate::error::Error),
+    #[error("Attempted to get a client but the provided timeout was exceeded")]
+    TimedOut,
+}
+
+impl From<RunError<crate::error::Error>> for ManagedError {
+    fn from(error: RunError<crate::error::Error>) -> Self {
+        match error {
+            RunError::User(e) => Self::Error(e),
+            RunError::TimedOut => Self::TimedOut,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -32,14 +49,22 @@ where
         Self { pool }
     }
 
-    // TODO: we could return something like the RunError returned by pool.get_owned()
-    pub async fn get(&self) -> Option<Client> {
-        self.pool.get_owned().await.ok().map(|conn| conn.clone())
+    /// Gets a connected [`Client`] from the managed connection.
+    pub async fn get(&self) -> Result<impl Deref<Target = Client>, ManagedError> {
+        let client = self.pool.get().await?;
+
+        Ok(client)
+    }
+
+    /// Gets an owned connected [`Client`] from the managed connection.
+    pub async fn get_owned(&self) -> Result<Client, ManagedError> {
+        self.get().await.map(|client| client.deref().clone())
     }
 }
 
 #[derive(Debug, Clone)]
 pub enum BindMode {
+    None,
     Transmitter(BindTransmitter),
     Receiver(BindReceiver),
     Transceiver(BindTransceiver),
@@ -66,17 +91,46 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> UnboundManagedConnectionBu
     pub fn transceiver(self, bind: BindTransceiver) -> ManagedConnectionBuilder<E> {
         ManagedConnectionBuilder::new(self.builder, BindMode::Transceiver(bind))
     }
+
+    pub fn unbound(self) -> ManagedConnectionBuilder<E> {
+        ManagedConnectionBuilder::new(self.builder, BindMode::None)
+    }
 }
 
 #[derive(Debug)]
 pub struct ManagedConnectionBuilder<E: EventChannel + Clone + Send + Sync + 'static> {
     builder: ConnectionBuilder<E>,
+    connection_timeout: Duration,
     bind: BindMode,
 }
 
 impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E> {
     pub(crate) fn new(builder: ConnectionBuilder<E>, bind: BindMode) -> Self {
-        Self { builder, bind }
+        Self {
+            builder,
+            connection_timeout: Duration::from_secs(30),
+            bind,
+        }
+    }
+
+    /// Sets the connection timeout used by the managed connection.
+    ///
+    /// Clients returned by [`ManagedClient::get`] will wait this long before giving up and
+    /// resolving with an error.
+    ///
+    /// Defaults to 30 seconds.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if `connection_timeout` is 0.
+    pub fn connection_timeout(mut self, connection_timeout: Duration) -> Self {
+        assert!(
+            connection_timeout > Duration::from_secs(0),
+            "connection_timeout must be non-zero"
+        );
+
+        self.connection_timeout = connection_timeout;
+        self
     }
 
     // TODO: this one takes an async function that returns a Result<AsyncRead + AsyncWrite, std::io::Error>
@@ -101,11 +155,12 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E
         let manager = ClientConnectionManger::new(self.builder, url.into(), self.bind, tx);
 
         let pool = bb8::Pool::builder()
-            .max_lifetime(None)
             .max_size(1)
+            .connection_timeout(self.connection_timeout)
+            .idle_timeout(None)
+            .max_lifetime(None)
             .build(manager)
-            .await
-            .unwrap();
+            .await?;
 
         Ok((ManagedClient::new(pool), rx))
     }
@@ -151,16 +206,18 @@ where
         match self.bind.clone() {
             BindMode::Transmitter(bind) => {
                 client.bind_transmitter(bind).await?;
+                let _ = self.tx.send(ManagedEvent::Bound);
             }
             BindMode::Receiver(bind) => {
                 client.bind_receiver(bind).await?;
+                let _ = self.tx.send(ManagedEvent::Bound);
             }
             BindMode::Transceiver(bind) => {
                 client.bind_transceiver(bind).await?;
+                let _ = self.tx.send(ManagedEvent::Bound);
             }
+            BindMode::None => {}
         }
-
-        let _ = self.tx.send(ManagedEvent::Bound);
 
         let tx = self.tx.clone();
 
