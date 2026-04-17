@@ -64,6 +64,7 @@ pub trait EventChannel: Send + 'static {
 }
 
 /// The default [`EventChannel`] implementation that sends [`Event`]s through the event stream.
+#[derive(Clone)]
 pub struct DefaultEventChannel {
     sender: tokio::sync::mpsc::UnboundedSender<Event>,
 }

@@ -46,6 +46,8 @@ hickory-resolver = { version = "0.25.2", default-features = false, features = [
     "system-config",
 ] }
 
+bb8 = { version = "0.9.1", default-features = false }
+
 [dev-dependencies]
 tokio = { version = "1.48.0", features = ["full"] }
 tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
@@ -98,6 +100,11 @@ required-features = []
 [[example]]
 name = "raw_client"
 path = "examples/raw_client.rs"
+required-features = []
+
+[[example]]
+name = "managed_client"
+path = "examples/managed_client.rs"
 required-features = []
 
 [[example]]
