@@ -4131,7 +4131,7 @@ impl From<rusmpp_types::GsmFeatures> for GsmFeatures {
     fn from(value: rusmpp_types::GsmFeatures) -> Self {
         match value {
             rusmpp_types::GsmFeatures::NotSelected => GsmFeatures::NotSelected(),
-            rusmpp_types::GsmFeatures::UdhiIndicator => GsmFeatures::UdhiIndicator(),
+            rusmpp_types::GsmFeatures::UdhIndicator => GsmFeatures::UdhiIndicator(),
             rusmpp_types::GsmFeatures::SetReplyPath => GsmFeatures::SetReplyPath(),
             rusmpp_types::GsmFeatures::SetUdhiAndReplyPath => GsmFeatures::SetUdhiAndReplyPath(),
             rusmpp_types::GsmFeatures::Other(inner) => GsmFeatures::Other(inner.into()),
