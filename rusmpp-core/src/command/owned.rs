@@ -161,6 +161,8 @@ impl PduBuilder {
 
 #[cfg(test)]
 mod tests {
+    use core::error::Error;
+
     use bytes::BytesMut;
 
     use crate::{
@@ -201,6 +203,22 @@ mod tests {
         );
 
         let error = Command::decode(&mut bytes.split_off(4), 46 - 4).unwrap_err();
+
+        let source = error
+            .source()
+            .expect("Expected error to have a source")
+            .downcast_ref::<PduDecodeError>()
+            .expect("Expected source error to be a PduDecodeError")
+            .source()
+            .expect("Expected error to have a source")
+            .downcast_ref::<BindTransmitterDecodeError>()
+            .expect("Expected source error to be a BindTransmitterDecodeError")
+            .source()
+            .expect("Expected error to have a source")
+            .downcast_ref::<COctetStringDecodeError>()
+            .expect("Expected source error to be a COctetStringDecodeError");
+
+        assert!(matches!(source, COctetStringDecodeError::NotNullTerminated));
 
         let Some(Err(PduDecodeError::BindTransmitter(BindTransmitterDecodeError {
             context:
