@@ -13,7 +13,7 @@ use crate::{
     delay::TokioDelay,
     error::Error,
     event::{DefaultEventChannel, DiscardEventChannel, EventChannel, InsightEventChannel},
-    managed::UnboundManagedConnectionBuilder,
+    managed_::UnboundManagedConnectionBuilder,
 };
 
 /// Connection builder that discards all events.

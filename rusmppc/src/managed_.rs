@@ -10,18 +10,26 @@ use crate::{Client, ConnectionBuilder, event::EventChannel};
 
 const TARGET: &str = "rusmppc::managed::client";
 
+/// TODO: docs
 #[derive(Debug)]
 pub enum ManagedEvent<E> {
+    /// TODO: docs
     Connected,
+    /// TODO: docs
     Bound,
+    /// TODO: docs
     Disconnected,
+    /// TODO: docs
     Event(E),
 }
 
+/// TODO: docs
 #[derive(Debug, thiserror::Error)]
 pub enum ManagedError {
+    /// TODO: docs
     #[error(transparent)]
     Error(crate::error::Error),
+    /// TODO: docs
     #[error("Attempted to get a client but the provided timeout was exceeded")]
     TimedOut,
 }
@@ -35,7 +43,8 @@ impl From<RunError<crate::error::Error>> for ManagedError {
     }
 }
 
-#[derive(Debug, Clone)]
+/// TODO: docs
+#[derive(Clone)]
 pub struct ManagedClient<E: EventChannel + Clone + Send + Sync + 'static>
 where
     E::Event: Send + Sync + 'static,
@@ -43,6 +52,15 @@ where
     pool: Pool<ClientConnectionManger<E>>,
     // Used to tell the reconnecting background task to stop when the client is dropped.
     _watch: watch::Receiver<()>,
+}
+
+impl<E: EventChannel + Clone + Send + Sync + 'static> Debug for ManagedClient<E>
+where
+    E::Event: Send + Sync + 'static,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ManagedClient").finish()
+    }
 }
 
 impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedClient<E>
@@ -70,7 +88,7 @@ where
 }
 
 #[derive(Debug, Clone)]
-pub enum BindMode {
+enum BindMode {
     None,
     Transmitter(BindTransmitter),
     Receiver(BindReceiver),
@@ -87,25 +105,28 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> UnboundManagedConnectionBu
         Self { builder }
     }
 
+    /// TODO: docs
     pub fn transmitter(self, bind: BindTransmitter) -> ManagedConnectionBuilder<E> {
         ManagedConnectionBuilder::new(self.builder, BindMode::Transmitter(bind))
     }
 
+    /// TODO: docs
     pub fn receiver(self, bind: BindReceiver) -> ManagedConnectionBuilder<E> {
         ManagedConnectionBuilder::new(self.builder, BindMode::Receiver(bind))
     }
 
+    /// TODO: docs
     pub fn transceiver(self, bind: BindTransceiver) -> ManagedConnectionBuilder<E> {
         ManagedConnectionBuilder::new(self.builder, BindMode::Transceiver(bind))
     }
 
+    /// TODO: docs
     pub fn unbound(self) -> ManagedConnectionBuilder<E> {
         ManagedConnectionBuilder::new(self.builder, BindMode::None)
     }
 }
 
 // TODO: we have to find a way to trigger a reconnection when the events stream is closed.
-
 #[derive(Debug)]
 pub struct ManagedConnectionBuilder<E: EventChannel + Clone + Send + Sync + 'static> {
     builder: ConnectionBuilder<E>,
@@ -115,7 +136,7 @@ pub struct ManagedConnectionBuilder<E: EventChannel + Clone + Send + Sync + 'sta
 }
 
 impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E> {
-    pub(crate) fn new(builder: ConnectionBuilder<E>, bind: BindMode) -> Self {
+    fn new(builder: ConnectionBuilder<E>, bind: BindMode) -> Self {
         Self {
             builder,
             connection_timeout: Duration::from_secs(30),
@@ -124,16 +145,19 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E
         }
     }
 
+    /// TODO: docs
     pub fn auto_reconnect_interval(mut self, auto_reconnect_interval: Duration) -> Self {
         self.auto_reconnect_interval = Some(auto_reconnect_interval);
         self
     }
 
+    /// TODO: docs
     pub fn no_auto_reconnect_interval(mut self) -> Self {
         self.auto_reconnect_interval = None;
         self
     }
 
+    /// TODO: docs
     pub fn with_auto_reconnect_interval(
         mut self,
         auto_reconnect_interval: Option<Duration>,
@@ -163,8 +187,10 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E
     }
 
     // TODO: this one takes an async function that returns a Result<AsyncRead + AsyncWrite, std::io::Error>
+    /// TODO: docs
     pub async fn connected(self) {}
 
+    /// TODO: docs
     pub async fn connect(
         self,
         url: impl Into<String>,
@@ -226,7 +252,7 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E
 }
 
 #[derive(Debug)]
-pub struct ClientConnectionManger<E: EventChannel + Clone + Send + Sync + 'static> {
+struct ClientConnectionManger<E: EventChannel + Clone + Send + Sync + 'static> {
     builder: ConnectionBuilder<E>,
     url: String,
     bind: BindMode,

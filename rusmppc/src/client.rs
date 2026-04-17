@@ -3,6 +3,7 @@
 // The `Ok` variant is the specific `Pdu` variant, while the `Err` variant is the generic `Pdu` that can be large.
 
 use std::{
+    fmt::Debug,
     sync::{
         Arc,
         atomic::{AtomicU32, Ordering},
@@ -34,9 +35,14 @@ const TARGET: &str = "rusmppc::client";
 /// `SMPP` Client.
 ///
 /// The client is a handle to communicate with the `SMPP` server through a managed connection in the background.
-#[derive(Debug)]
 pub struct Client {
     inner: Arc<ClientInner>,
+}
+
+impl Debug for Client {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Client").finish()
+    }
 }
 
 impl Clone for Client {

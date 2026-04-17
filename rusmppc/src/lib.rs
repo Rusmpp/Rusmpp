@@ -106,12 +106,15 @@ pub(crate) use action::Action;
 mod connection;
 
 mod builder;
-pub use builder::{
-    ConnectionBuilder, DefaultConnectionBuilder, DiscardConnectionBuilder, InsightConnectionBuilder,
-};
+pub use builder::ConnectionBuilder;
 
 mod event;
 pub use event::{Event, Insight, InsightEvent};
+
+pub mod channel {
+    //! Event channel types.
+    pub use super::event::{DefaultEventChannel, DiscardEventChannel, InsightEventChannel};
+}
 
 mod request;
 pub(crate) use request::{CloseRequest, RegisteredRequest, Request, UnregisteredRequest};
@@ -138,7 +141,11 @@ pub(crate) use tcp_stream::MaybeTlsStream;
 
 mod delay;
 
-mod managed;
+mod managed_;
+pub mod managed {
+    //! TODO: docs
+    pub use super::managed_::{ManagedClient, ManagedError, ManagedEvent};
+}
 
 #[cfg(test)]
 mod tests;
