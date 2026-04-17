@@ -6,7 +6,10 @@ use rusmpp::pdus::{BindReceiver, BindTransceiver, BindTransmitter};
 use tokio::sync::{mpsc::UnboundedSender, watch};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
-use crate::{Client, ConnectionBuilder, event::EventChannel};
+use crate::{
+    Client, ConnectionBuilder,
+    event::{DefaultEventChannel, EventChannel},
+};
 
 const TARGET: &str = "rusmppc::managed::client";
 
@@ -45,7 +48,7 @@ impl From<RunError<crate::error::Error>> for ManagedError {
 
 /// TODO: docs
 #[derive(Clone)]
-pub struct ManagedClient<E: EventChannel + Clone + Send + Sync + 'static>
+pub struct ManagedClient<E: EventChannel + Clone + Send + Sync + 'static = DefaultEventChannel>
 where
     E::Event: Send + Sync + 'static,
 {
