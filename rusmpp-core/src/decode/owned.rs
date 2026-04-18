@@ -4,7 +4,14 @@
 
 use bytes::BytesMut;
 
+/// Trait for defining the error type for all decoding traits.
+///
+/// - [`Decode`]
+/// - [`DecodeWithLength`]
+/// - [`DecodeWithKey`]
+/// - [`DecodeWithKeyOptional`]
 pub trait DecodeErrorType {
+    /// The error type for decoding.
     type Error;
 }
 
