@@ -1,4 +1,10 @@
-use std::{fmt::Debug, ops::Deref, pin::Pin, time::Duration};
+use std::{
+    fmt::Debug,
+    ops::Deref,
+    pin::Pin,
+    task::{Context, Poll},
+    time::Duration,
+};
 
 use bb8::{ManageConnection, Pool, RunError};
 use futures::{Stream, StreamExt};
@@ -345,31 +351,18 @@ where
         tracing::debug!(target: TARGET, "Connecting");
 
         let (client, mut events) = match self.connect.clone() {
-            Connect::Url(url) => {
-                self.builder
-                    .clone()
-                    .connect(url)
-                    .await
-                    .map(|(client, events)| {
-                        (
-                            client,
-                            Box::pin(events) as Pin<Box<dyn Stream<Item = E::Event> + Send>>,
-                        )
-                    })?
-            }
-            Connect::Connector(connector) => {
-                let stream = connector
-                    .connect()
-                    .await
-                    .map_err(crate::error::Error::Connect)?;
-
-                let (client, events) = self.builder.clone().connected(stream);
-
-                (
-                    client,
-                    Box::pin(events) as Pin<Box<dyn Stream<Item = E::Event> + Send>>,
-                )
-            }
+            Connect::Url(url) => self
+                .builder
+                .clone()
+                .connect(url)
+                .await
+                .map(|(client, events)| (client, EventStream::new_a(events)))?,
+            Connect::Connector(connector) => connector
+                .connect()
+                .await
+                .map_err(crate::error::Error::Connect)
+                .map(|stream| self.builder.clone().connected(stream))
+                .map(|(client, events)| (client, EventStream::new_b(events)))?,
         };
 
         let _ = self.tx.send(ManagedEvent::Connected);
@@ -461,5 +454,54 @@ where
 
     fn clone_box(&self) -> Box<dyn Connector> {
         Box::new(self.clone())
+    }
+}
+
+pin_project_lite::pin_project! {
+    pub struct EventStream<A, B, E> {
+        #[pin]
+        stream: StreamOrStream<A, B>,
+        _marker: std::marker::PhantomData<E>,
+    }
+}
+
+impl<A, B, E> EventStream<A, B, E> {
+    pub fn new_a(stream: A) -> Self {
+        Self {
+            stream: StreamOrStream::A { stream },
+            _marker: std::marker::PhantomData,
+        }
+    }
+
+    pub fn new_b(stream: B) -> Self {
+        Self {
+            stream: StreamOrStream::B { stream },
+            _marker: std::marker::PhantomData,
+        }
+    }
+}
+
+pin_project_lite::pin_project! {
+    #[project = StreamOrStreamProj]
+    pub enum StreamOrStream<A, B> {
+        A { #[pin] stream: A },
+        B { #[pin] stream: B },
+    }
+}
+
+impl<A, B, E> Stream for EventStream<A, B, E>
+where
+    A: Stream<Item = E>,
+    B: Stream<Item = E>,
+{
+    type Item = E;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let this = self.project();
+
+        match this.stream.project() {
+            StreamOrStreamProj::A { stream } => stream.poll_next(cx),
+            StreamOrStreamProj::B { stream } => stream.poll_next(cx),
+        }
     }
 }
