@@ -3,60 +3,51 @@
 // TODO: borrowed: keep the DecodeError for borrowed types. The borrowed version of the lib should be lightweight, and creating a custom decode error type like the owned version has its limitations because of the lifetimes and generic params.
 // TODO: refine the DecodeError.
 
-/// An error that can occur when decoding `SMPP` values.
+/// A generic error that can occur when decoding `SMPP` values.
 #[derive(Debug)]
+#[non_exhaustive]
 pub struct DecodeError {
     pub kind: DecodeErrorKind,
 }
 
 impl DecodeError {
     #[inline]
-    pub const fn new(kind: DecodeErrorKind) -> Self {
+    pub(crate) const fn new(kind: DecodeErrorKind) -> Self {
         Self { kind }
     }
 
     #[inline]
-    pub const fn kind(&self) -> DecodeErrorKind {
-        self.kind
-    }
-
-    #[inline]
-    pub const fn integer_decode_error(error: IntegerDecodeError) -> Self {
+    pub(crate) const fn integer_decode_error(error: IntegerDecodeError) -> Self {
         Self::new(DecodeErrorKind::IntegerDecodeError(error))
     }
 
     #[inline]
-    pub const fn c_octet_string_decode_error(error: COctetStringDecodeError) -> Self {
+    pub(crate) const fn c_octet_string_decode_error(error: COctetStringDecodeError) -> Self {
         Self::new(DecodeErrorKind::COctetStringDecodeError(error))
     }
 
     #[inline]
-    pub const fn octet_string_decode_error(error: OctetStringDecodeError) -> Self {
+    pub(crate) const fn octet_string_decode_error(error: OctetStringDecodeError) -> Self {
         Self::new(DecodeErrorKind::OctetStringDecodeError(error))
     }
 
     #[inline]
-    pub const fn any_octet_string_decode_error(error: AnyOctetStringDecodeError) -> Self {
+    pub(crate) const fn any_octet_string_decode_error(error: AnyOctetStringDecodeError) -> Self {
         Self::new(DecodeErrorKind::AnyOctetStringDecodeError(error))
     }
 
     #[inline]
-    pub const fn heapless_vec_decode_error(error: HeaplessVecDecodeError) -> Self {
+    pub(crate) const fn heapless_vec_decode_error(error: HeaplessVecDecodeError) -> Self {
         Self::new(DecodeErrorKind::HeaplessVecDecodeError(error))
     }
 
     #[inline]
-    pub const fn unsupported_key(key: u32) -> Self {
+    pub(crate) const fn unsupported_key(key: u32) -> Self {
         Self::new(DecodeErrorKind::UnsupportedKey { key })
     }
 
     #[inline]
-    pub const fn udh_decode_error(error: UdhDecodeError) -> Self {
-        Self::new(DecodeErrorKind::UdhDecodeError(error))
-    }
-
-    #[inline]
-    pub const fn concatenated_short_message_decode_error(
+    pub(crate) const fn concatenated_short_message_decode_error(
         error: ConcatenatedShortMessageDecodeError,
     ) -> Self {
         Self::new(DecodeErrorKind::UdhDecodeError(

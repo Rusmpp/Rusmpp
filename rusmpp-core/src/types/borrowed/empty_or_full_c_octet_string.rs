@@ -365,7 +365,7 @@ mod tests {
             let error = EmptyOrFullCOctetString::<6>::decode(bytes).unwrap_err();
 
             assert!(matches!(
-                error.kind(),
+                error.kind,
                 DecodeErrorKind::COctetStringDecodeError(
                     COctetStringDecodeError::UnexpectedEndOfBuffer
                 )
@@ -378,7 +378,7 @@ mod tests {
             let error = EmptyOrFullCOctetString::<2>::decode(bytes).unwrap_err();
 
             assert!(matches!(
-                error.kind(),
+                error.kind,
                 DecodeErrorKind::COctetStringDecodeError(
                     COctetStringDecodeError::NotNullTerminated
                 )
@@ -391,7 +391,7 @@ mod tests {
             let error = EmptyOrFullCOctetString::<5>::decode(bytes).unwrap_err();
 
             assert!(matches!(
-                error.kind(),
+                error.kind,
                 DecodeErrorKind::COctetStringDecodeError(
                     COctetStringDecodeError::NotNullTerminated,
                 )
@@ -404,7 +404,7 @@ mod tests {
             let error = EmptyOrFullCOctetString::<5>::decode(bytes).unwrap_err();
 
             assert!(matches!(
-                error.kind(),
+                error.kind,
                 DecodeErrorKind::COctetStringDecodeError(COctetStringDecodeError::TooFewBytes {
                     actual: 4,
                     min: 5,
@@ -418,7 +418,7 @@ mod tests {
             let error = EmptyOrFullCOctetString::<6>::decode(bytes).unwrap_err();
 
             assert!(matches!(
-                error.kind(),
+                error.kind,
                 DecodeErrorKind::COctetStringDecodeError(COctetStringDecodeError::NotAscii)
             ));
         }

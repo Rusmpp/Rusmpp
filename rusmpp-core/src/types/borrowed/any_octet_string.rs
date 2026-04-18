@@ -192,7 +192,7 @@ mod tests {
             let error = AnyOctetString::decode(bytes, 5).unwrap_err();
 
             assert!(matches!(
-                error.kind(),
+                error.kind,
                 DecodeErrorKind::AnyOctetStringDecodeError(
                     AnyOctetStringDecodeError::UnexpectedEndOfBuffer
                 )

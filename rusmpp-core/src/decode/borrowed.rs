@@ -547,7 +547,7 @@ mod tests {
 
         let error = u8::counted_move::<N>(buf, 5, 0).unwrap_err();
         assert!(matches!(
-            error.kind(),
+            error.kind,
             DecodeErrorKind::IntegerDecodeError(IntegerDecodeError::UnexpectedEndOfBuffer)
         ));
 
@@ -577,7 +577,7 @@ mod tests {
         let error = u32::counted_move::<N>(buf, 12, 0).unwrap_err();
 
         assert!(matches!(
-            error.kind(),
+            error.kind,
             DecodeErrorKind::IntegerDecodeError(IntegerDecodeError::UnexpectedEndOfBuffer)
         ));
 
@@ -615,7 +615,7 @@ mod tests {
         let error = COctetString::<'static, 1, 6>::counted_move::<N>(buf, 3, 0).unwrap_err();
 
         assert!(matches!(
-            error.kind(),
+            error.kind,
             DecodeErrorKind::COctetStringDecodeError(COctetStringDecodeError::NotNullTerminated)
         ));
 
@@ -654,7 +654,7 @@ mod tests {
         let error = Vec::<u8, N>::decode(buf, 5).unwrap_err();
 
         assert!(matches!(
-            error.kind(),
+            error.kind,
             DecodeErrorKind::HeaplessVecDecodeError(HeaplessVecDecodeError::UnexpectedEndOfBuffer)
         ));
 
@@ -684,7 +684,7 @@ mod tests {
         let error = Vec::<u32, N>::decode(buf, 50).unwrap_err();
 
         assert!(matches!(
-            error.kind(),
+            error.kind,
             DecodeErrorKind::HeaplessVecDecodeError(HeaplessVecDecodeError::UnexpectedEndOfBuffer)
         ));
 
@@ -722,7 +722,7 @@ mod tests {
         let error = Vec::<COctetString<1, 6>, N>::decode(buf, 11).unwrap_err();
 
         assert!(matches!(
-            error.kind(),
+            error.kind,
             DecodeErrorKind::COctetStringDecodeError(COctetStringDecodeError::NotNullTerminated)
         ));
 

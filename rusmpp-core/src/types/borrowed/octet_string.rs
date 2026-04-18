@@ -344,7 +344,7 @@ mod tests {
             let error = OctetString::<0, 6>::decode(bytes, 5).unwrap_err();
 
             assert!(matches!(
-                error.kind(),
+                error.kind,
                 DecodeErrorKind::OctetStringDecodeError(
                     OctetStringDecodeError::UnexpectedEndOfBuffer
                 )
@@ -357,7 +357,7 @@ mod tests {
             let error = OctetString::<0, 5>::decode(bytes, 15).unwrap_err();
 
             assert!(matches!(
-                error.kind(),
+                error.kind,
                 DecodeErrorKind::OctetStringDecodeError(OctetStringDecodeError::TooManyBytes {
                     actual: 15,
                     max: 5,
@@ -371,7 +371,7 @@ mod tests {
             let error = OctetString::<6, 10>::decode(bytes, 5).unwrap_err();
 
             assert!(matches!(
-                error.kind(),
+                error.kind,
                 DecodeErrorKind::OctetStringDecodeError(OctetStringDecodeError::TooFewBytes {
                     actual: 5,
                     min: 6,
