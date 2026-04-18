@@ -220,7 +220,7 @@ impl<'a, const MIN: usize, const MAX: usize> DecodeWithLength<'a> for OctetStrin
 
         if src.len() < length {
             return Err(DecodeError::octet_string_decode_error(
-                OctetStringDecodeError::UnexpectedEof,
+                OctetStringDecodeError::UnexpectedEndOfBuffer,
             ));
         }
 
@@ -345,7 +345,9 @@ mod tests {
 
             assert!(matches!(
                 error.kind(),
-                DecodeErrorKind::OctetStringDecodeError(OctetStringDecodeError::UnexpectedEof)
+                DecodeErrorKind::OctetStringDecodeError(
+                    OctetStringDecodeError::UnexpectedEndOfBuffer
+                )
             ));
         }
 

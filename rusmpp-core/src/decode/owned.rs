@@ -32,14 +32,14 @@ where
 /// An error that can occur when decoding a `Vec<T>`.
 #[derive(Debug, Copy, Clone)]
 pub enum VecDecodeError<E> {
-    UnexpectedEof,
+    UnexpectedEndOfBuffer,
     ItemDecodeError(E),
 }
 
 impl<E: core::fmt::Display> core::fmt::Display for VecDecodeError<E> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            VecDecodeError::UnexpectedEof => {
+            VecDecodeError::UnexpectedEndOfBuffer => {
                 write!(f, "Unexpected end of buffer")
             }
             VecDecodeError::ItemDecodeError(e) => write!(f, "Item decode error: {e}"),
@@ -227,7 +227,7 @@ impl<T: Decode> DecodeWithLength for alloc::vec::Vec<T> {
         }
 
         if length > src.len() {
-            return Err(VecDecodeError::UnexpectedEof);
+            return Err(VecDecodeError::UnexpectedEndOfBuffer);
         }
 
         let mut src = src.split_to(length);
@@ -276,7 +276,7 @@ mod tests {
         let mut buf = BytesMut::from(&[0, 1, 2][..]);
 
         let error = u8::counted(&mut buf, 5).unwrap_err();
-        assert!(matches!(error, IntegerDecodeError::UnexpectedEof));
+        assert!(matches!(error, IntegerDecodeError::UnexpectedEndOfBuffer));
 
         // Count is within the buffer
         let mut buf = BytesMut::from(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9][..]);
@@ -308,7 +308,7 @@ mod tests {
         // Actually 10 values, 12 will break
         let error = u32::counted(&mut buf, 12).unwrap_err();
 
-        assert!(matches!(error, IntegerDecodeError::UnexpectedEof));
+        assert!(matches!(error, IntegerDecodeError::UnexpectedEndOfBuffer));
 
         let mut buf = BytesMut::from(&b"Hello\0World\0"[..]);
 
@@ -379,7 +379,7 @@ mod tests {
 
         let error = Vec::<u8>::decode(&mut buf, 5).unwrap_err();
 
-        assert!(matches!(error, VecDecodeError::UnexpectedEof));
+        assert!(matches!(error, VecDecodeError::UnexpectedEndOfBuffer));
 
         // Length is within the buffer
         let mut buf = BytesMut::from(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9][..]);
@@ -409,7 +409,7 @@ mod tests {
         // Actually 40 bytes, 50 will break
         let error = Vec::<u32>::decode(&mut buf, 50).unwrap_err();
 
-        assert!(matches!(error, VecDecodeError::UnexpectedEof));
+        assert!(matches!(error, VecDecodeError::UnexpectedEndOfBuffer));
 
         let mut buf = BytesMut::from(&b"Hello\0World\0"[..]);
 

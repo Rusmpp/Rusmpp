@@ -218,7 +218,7 @@ impl DecodeErrorType for AnyOctetString {
 impl DecodeWithLength for AnyOctetString {
     fn decode(src: &mut BytesMut, length: usize) -> Result<(Self, usize), Self::Error> {
         if src.len() < length {
-            return Err(AnyOctetStringDecodeError::UnexpectedEof);
+            return Err(AnyOctetStringDecodeError::UnexpectedEndOfBuffer);
         }
 
         let bytes = src.split_to(length).freeze();
@@ -302,7 +302,10 @@ mod tests {
             let mut buf = BytesMut::new();
             let error = AnyOctetString::decode(&mut buf, 5).unwrap_err();
 
-            assert!(matches!(error, AnyOctetStringDecodeError::UnexpectedEof));
+            assert!(matches!(
+                error,
+                AnyOctetStringDecodeError::UnexpectedEndOfBuffer
+            ));
         }
 
         #[test]

@@ -129,7 +129,7 @@ impl<'a> DecodeWithLength<'a> for AnyOctetString<'a> {
     fn decode(src: &'a [u8], length: usize) -> Result<(Self, usize), DecodeError> {
         if src.len() < length {
             return Err(DecodeError::any_octet_string_decode_error(
-                AnyOctetStringDecodeError::UnexpectedEof,
+                AnyOctetStringDecodeError::UnexpectedEndOfBuffer,
             ));
         }
 
@@ -194,7 +194,7 @@ mod tests {
             assert!(matches!(
                 error.kind(),
                 DecodeErrorKind::AnyOctetStringDecodeError(
-                    AnyOctetStringDecodeError::UnexpectedEof
+                    AnyOctetStringDecodeError::UnexpectedEndOfBuffer
                 )
             ));
         }

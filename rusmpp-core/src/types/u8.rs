@@ -45,7 +45,7 @@ impl crate::decode::owned::Decode for u8 {
         use bytes::Buf;
 
         if src.is_empty() {
-            return Err(IntegerDecodeError::UnexpectedEof);
+            return Err(IntegerDecodeError::UnexpectedEndOfBuffer);
         }
 
         Ok((src.get_u8(), 1))
@@ -56,7 +56,7 @@ impl borrowed::Decode<'_> for u8 {
     fn decode(src: &[u8]) -> Result<(Self, usize), DecodeError> {
         if src.is_empty() {
             return Err(DecodeError::integer_decode_error(
-                IntegerDecodeError::UnexpectedEof,
+                IntegerDecodeError::UnexpectedEndOfBuffer,
             ));
         }
 

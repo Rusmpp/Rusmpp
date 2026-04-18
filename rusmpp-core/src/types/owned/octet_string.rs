@@ -308,7 +308,7 @@ impl<const MIN: usize, const MAX: usize> DecodeWithLength for OctetString<MIN, M
         }
 
         if src.len() < length {
-            return Err(OctetStringDecodeError::UnexpectedEof);
+            return Err(OctetStringDecodeError::UnexpectedEndOfBuffer);
         }
 
         let bytes = src.split_to(length).freeze();
@@ -453,7 +453,10 @@ mod tests {
             let mut buf = BytesMut::new();
             let error = OctetString::<0, 6>::decode(&mut buf, 5).unwrap_err();
 
-            assert!(matches!(error, OctetStringDecodeError::UnexpectedEof));
+            assert!(matches!(
+                error,
+                OctetStringDecodeError::UnexpectedEndOfBuffer
+            ));
         }
 
         #[test]

@@ -203,7 +203,7 @@ impl<'a, const N: usize> Decode<'a> for EmptyOrFullCOctetString<'a, N> {
         for i in 0..N {
             if i >= src.len() {
                 return Err(DecodeError::c_octet_string_decode_error(
-                    COctetStringDecodeError::UnexpectedEof,
+                    COctetStringDecodeError::UnexpectedEndOfBuffer,
                 ));
             }
 
@@ -366,7 +366,9 @@ mod tests {
 
             assert!(matches!(
                 error.kind(),
-                DecodeErrorKind::COctetStringDecodeError(COctetStringDecodeError::UnexpectedEof)
+                DecodeErrorKind::COctetStringDecodeError(
+                    COctetStringDecodeError::UnexpectedEndOfBuffer
+                )
             ));
         }
 

@@ -492,7 +492,7 @@ impl<'a, const N: usize, T: Decode<'a>> DecodeWithLength<'a> for heapless::vec::
 
         if length > src.len() {
             return Err(DecodeError::heapless_vec_decode_error(
-                HeaplessVecDecodeError::UnexpectedEof,
+                HeaplessVecDecodeError::UnexpectedEndOfBuffer,
             ));
         }
 
@@ -548,7 +548,7 @@ mod tests {
         let error = u8::counted_move::<N>(buf, 5, 0).unwrap_err();
         assert!(matches!(
             error.kind(),
-            DecodeErrorKind::IntegerDecodeError(IntegerDecodeError::UnexpectedEof)
+            DecodeErrorKind::IntegerDecodeError(IntegerDecodeError::UnexpectedEndOfBuffer)
         ));
 
         // Count is within the buffer
@@ -578,7 +578,7 @@ mod tests {
 
         assert!(matches!(
             error.kind(),
-            DecodeErrorKind::IntegerDecodeError(IntegerDecodeError::UnexpectedEof)
+            DecodeErrorKind::IntegerDecodeError(IntegerDecodeError::UnexpectedEndOfBuffer)
         ));
 
         let buf = b"Hello\0World\0";
@@ -655,7 +655,7 @@ mod tests {
 
         assert!(matches!(
             error.kind(),
-            DecodeErrorKind::HeaplessVecDecodeError(HeaplessVecDecodeError::UnexpectedEof)
+            DecodeErrorKind::HeaplessVecDecodeError(HeaplessVecDecodeError::UnexpectedEndOfBuffer)
         ));
 
         // Length is within the buffer
@@ -685,7 +685,7 @@ mod tests {
 
         assert!(matches!(
             error.kind(),
-            DecodeErrorKind::HeaplessVecDecodeError(HeaplessVecDecodeError::UnexpectedEof)
+            DecodeErrorKind::HeaplessVecDecodeError(HeaplessVecDecodeError::UnexpectedEndOfBuffer)
         ));
 
         let buf = b"Hello\0World\0";

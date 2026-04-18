@@ -50,7 +50,7 @@ impl crate::decode::owned::Decode for u32 {
         use bytes::Buf;
 
         if src.len() < 4 {
-            return Err(IntegerDecodeError::UnexpectedEof);
+            return Err(IntegerDecodeError::UnexpectedEndOfBuffer);
         }
 
         Ok((src.get_u32(), 4))
@@ -61,7 +61,7 @@ impl borrowed::Decode<'_> for u32 {
     fn decode(src: &[u8]) -> Result<(Self, usize), DecodeError> {
         if src.len() < 4 {
             return Err(DecodeError::integer_decode_error(
-                IntegerDecodeError::UnexpectedEof,
+                IntegerDecodeError::UnexpectedEndOfBuffer,
             ));
         }
 

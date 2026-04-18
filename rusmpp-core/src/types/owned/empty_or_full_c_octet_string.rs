@@ -302,7 +302,7 @@ impl<const N: usize> Decode for EmptyOrFullCOctetString<N> {
         Self::_ASSERT_VALID;
 
         if src.is_empty() {
-            return Err(COctetStringDecodeError::UnexpectedEof);
+            return Err(COctetStringDecodeError::UnexpectedEndOfBuffer);
         }
 
         let index = src
@@ -559,7 +559,10 @@ mod tests {
             let mut buf = BytesMut::new();
             let error = EmptyOrFullCOctetString::<6>::decode(&mut buf).unwrap_err();
 
-            assert!(matches!(error, COctetStringDecodeError::UnexpectedEof));
+            assert!(matches!(
+                error,
+                COctetStringDecodeError::UnexpectedEndOfBuffer
+            ));
         }
 
         #[test]
