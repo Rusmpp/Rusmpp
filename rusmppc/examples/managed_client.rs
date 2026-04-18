@@ -15,7 +15,7 @@ use rusmpp::{
     pdus::{BindTransceiver, SubmitSm},
     types::COctetString,
 };
-use rusmppc::{ConnectionBuilder, channel::DefaultEventChannel, managed::ManagedClient};
+use rusmppc::{ConnectionBuilder, managed::ManagedClient};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn core::error::Error>> {
@@ -25,7 +25,7 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
 
     tracing::info!("Connecting to SMPP server");
 
-    let (client, mut events): (ManagedClient<DefaultEventChannel>, _) = ConnectionBuilder::new()
+    let (client, mut events): (ManagedClient, _) = ConnectionBuilder::new()
         .managed()
         .transceiver(
             BindTransceiver::builder()

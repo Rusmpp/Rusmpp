@@ -1,3 +1,7 @@
+// This implementation in based on `bb8` pool.
+// The public api is relatively stable.
+// It should be possible to swap out the internal implementation without breaking the public api.
+
 use std::{
     fmt::Debug,
     ops::Deref,
@@ -15,11 +19,7 @@ use tokio::{
 };
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
-use crate::{
-    Client, ConnectionBuilder,
-    error::Error as RusmppcError,
-    event::{DefaultEventChannel, EventChannel},
-};
+use crate::{Client, ConnectionBuilder, error::Error as RusmppcError, event::EventChannel};
 
 const TARGET: &str = "rusmppc::managed::client";
 
@@ -57,30 +57,29 @@ impl From<RunError<RusmppcError>> for ManagedError {
 }
 
 /// TODO: docs
-#[derive(Clone)]
-pub struct ManagedClient<E: EventChannel + Clone + Send + Sync + 'static = DefaultEventChannel>
-where
-    E::Event: Send + Sync + 'static,
-{
-    pool: Pool<ClientConnectionManger<E>>,
+pub struct ManagedClient {
+    pool: Box<dyn ErasedPool>,
     // Used to tell the reconnecting background task to stop when the client is dropped.
     _watch: watch::Receiver<()>,
 }
 
-impl<E: EventChannel + Clone + Send + Sync + 'static> Debug for ManagedClient<E>
-where
-    E::Event: Send + Sync + 'static,
-{
+impl Clone for ManagedClient {
+    fn clone(&self) -> Self {
+        Self {
+            pool: self.pool.clone_box(),
+            _watch: self._watch.clone(),
+        }
+    }
+}
+
+impl Debug for ManagedClient {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ManagedClient").finish()
     }
 }
 
-impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedClient<E>
-where
-    E::Event: Send + Sync + 'static,
-{
-    fn new(pool: Pool<ClientConnectionManger<E>>, watch: watch::Receiver<()>) -> Self {
+impl ManagedClient {
+    fn new(pool: Box<dyn ErasedPool>, watch: watch::Receiver<()>) -> Self {
         Self {
             pool,
             _watch: watch,
@@ -88,15 +87,10 @@ where
     }
 
     /// Gets a connected [`Client`] from the managed connection.
-    pub async fn get(&self) -> Result<impl Deref<Target = Client>, ManagedError> {
+    pub async fn get(&self) -> Result<Client, ManagedError> {
         let client = self.pool.get().await?;
 
-        Ok(client)
-    }
-
-    /// Gets an owned connected [`Client`] from the managed connection.
-    pub async fn get_owned(&self) -> Result<Client, ManagedError> {
-        self.get().await.map(|client| client.deref().clone())
+        Ok(client.clone())
     }
 }
 
@@ -209,7 +203,7 @@ where
         connect: Connect,
     ) -> Result<
         (
-            ManagedClient<E>,
+            ManagedClient,
             impl Stream<Item = ManagedEvent<E::Event>> + Unpin + 'static,
         ),
         RusmppcError,
@@ -257,7 +251,7 @@ where
             });
         }
 
-        Ok((ManagedClient::new(pool, w_rx), rx))
+        Ok((ManagedClient::new(Box::new(pool), w_rx), rx))
     }
 
     /// TODO: docs
@@ -266,7 +260,7 @@ where
         f: F,
     ) -> Result<
         (
-            ManagedClient<E>,
+            ManagedClient,
             impl Stream<Item = ManagedEvent<E::Event>> + Unpin + 'static,
         ),
         RusmppcError,
@@ -285,7 +279,7 @@ where
         url: impl Into<String>,
     ) -> Result<
         (
-            ManagedClient<E>,
+            ManagedClient,
             impl Stream<Item = ManagedEvent<E::Event>> + Unpin + 'static,
         ),
         RusmppcError,
@@ -505,5 +499,46 @@ where
             StreamOrStreamProj::A { stream } => stream.poll_next(cx),
             StreamOrStreamProj::B { stream } => stream.poll_next(cx),
         }
+    }
+}
+
+// We erase the pool to get rid of the generics in the `ManagedClient`.
+#[allow(clippy::type_complexity)]
+trait ErasedPool: Send + Sync {
+    fn get<'a>(
+        &'a self,
+    ) -> Pin<
+        Box<
+            dyn Future<Output = Result<Box<dyn Deref<Target = Client> + 'a>, ManagedError>>
+                + Send
+                + 'a,
+        >,
+    >;
+
+    fn clone_box(&self) -> Box<dyn ErasedPool>;
+}
+
+impl<E> ErasedPool for Pool<ClientConnectionManger<E>>
+where
+    E: EventChannel + Clone + Send + Sync + 'static,
+    E::Event: Send + Sync + 'static,
+{
+    fn get<'a>(
+        &'a self,
+    ) -> Pin<
+        Box<
+            dyn Future<Output = Result<Box<dyn Deref<Target = Client> + 'a>, ManagedError>>
+                + Send
+                + 'a,
+        >,
+    > {
+        Box::pin(async move {
+            let conn = self.get().await?;
+            Ok(Box::new(conn) as Box<dyn Deref<Target = Client> + 'a>)
+        })
+    }
+
+    fn clone_box(&self) -> Box<dyn ErasedPool> {
+        Box::new(self.clone())
     }
 }
