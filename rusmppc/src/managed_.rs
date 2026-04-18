@@ -17,6 +17,7 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use crate::{
     Client, ConnectionBuilder,
+    error::Error as RusmppcError,
     event::{DefaultEventChannel, EventChannel},
 };
 
@@ -40,14 +41,14 @@ pub enum ManagedEvent<E> {
 pub enum ManagedError {
     /// TODO: docs
     #[error(transparent)]
-    Error(crate::error::Error),
+    Error(RusmppcError),
     /// TODO: docs
     #[error("Attempted to get a client but the provided timeout was exceeded")]
     TimedOut,
 }
 
-impl From<RunError<crate::error::Error>> for ManagedError {
-    fn from(error: RunError<crate::error::Error>) -> Self {
+impl From<RunError<RusmppcError>> for ManagedError {
+    fn from(error: RunError<RusmppcError>) -> Self {
         match error {
             RunError::User(e) => Self::Error(e),
             RunError::TimedOut => Self::TimedOut,
@@ -197,7 +198,12 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E
         self.connection_timeout = connection_timeout;
         self
     }
+}
 
+impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E>
+where
+    E::Event: Send + Sync + 'static,
+{
     async fn run(
         self,
         connect: Connect,
@@ -206,11 +212,8 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E
             ManagedClient<E>,
             impl Stream<Item = ManagedEvent<E::Event>> + Unpin + 'static,
         ),
-        crate::error::Error,
-    >
-    where
-        E::Event: Send + Sync + 'static,
-    {
+        RusmppcError,
+    > {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
         let rx = UnboundedReceiverStream::new(rx);
 
@@ -258,20 +261,22 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E
     }
 
     /// TODO: docs
-    pub async fn connected(
+    pub async fn connect_fn<F, Fut, S>(
         self,
-        connector: impl Connector,
+        f: F,
     ) -> Result<
         (
             ManagedClient<E>,
             impl Stream<Item = ManagedEvent<E::Event>> + Unpin + 'static,
         ),
-        crate::error::Error,
+        RusmppcError,
     >
     where
-        E::Event: Send + Sync + 'static,
+        F: Fn() -> Fut + Clone + Send + Sync + 'static,
+        Fut: Future<Output = Result<S, std::io::Error>> + Send + 'static,
+        S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
     {
-        self.run(Connect::Connector(Box::new(connector))).await
+        self.run(Connect::Connector(Box::new(f))).await
     }
 
     /// TODO: docs
@@ -283,11 +288,8 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E
             ManagedClient<E>,
             impl Stream<Item = ManagedEvent<E::Event>> + Unpin + 'static,
         ),
-        crate::error::Error,
-    >
-    where
-        E::Event: Send + Sync + 'static,
-    {
+        RusmppcError,
+    > {
         self.run(Connect::Url(url.into())).await
     }
 }
@@ -345,7 +347,7 @@ where
 {
     type Connection = Client;
 
-    type Error = crate::error::Error;
+    type Error = RusmppcError;
 
     async fn connect(&self) -> Result<Self::Connection, Self::Error> {
         tracing::debug!(target: TARGET, "Connecting");
@@ -360,7 +362,7 @@ where
             Connect::Connector(connector) => connector
                 .connect()
                 .await
-                .map_err(crate::error::Error::Connect)
+                .map_err(RusmppcError::Connect)
                 .map(|stream| self.builder.clone().connected(stream))
                 .map(|(client, events)| (client, EventStream::new_b(events)))?,
         };
@@ -412,7 +414,7 @@ where
     async fn is_valid(&self, conn: &mut Self::Connection) -> Result<(), Self::Error> {
         conn.is_active()
             .then_some(())
-            .ok_or(crate::error::Error::ConnectionClosed)
+            .ok_or(RusmppcError::ConnectionClosed)
     }
 
     fn has_broken(&self, conn: &mut Self::Connection) -> bool {
@@ -420,12 +422,12 @@ where
     }
 }
 
-pub trait UnpinAsyncReadWrite: AsyncRead + AsyncWrite + Unpin + Send {}
+trait UnpinAsyncReadWrite: AsyncRead + AsyncWrite + Unpin + Send {}
 
 impl<T: AsyncRead + AsyncWrite + Unpin + Send> UnpinAsyncReadWrite for T {}
 
 #[allow(clippy::type_complexity)]
-pub trait Connector: Send + Sync + 'static {
+trait Connector: Send + Sync + 'static {
     fn connect(
         &self,
     ) -> Pin<Box<dyn Future<Output = Result<Box<dyn UnpinAsyncReadWrite>, std::io::Error>> + Send>>;
