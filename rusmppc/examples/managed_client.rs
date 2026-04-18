@@ -36,7 +36,8 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
         )
         .connection_timeout(Duration::from_secs(5))
         .auto_reconnect_interval(Duration::from_secs(15))
-        .connect("smpp://localhost:2775")
+        //.connect("smpp://localhost:2775")
+        .connected(|| async { tokio::net::TcpStream::connect("localhost:2775").await })
         .await?;
 
     tracing::info!("Connected to SMPP server");

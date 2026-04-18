@@ -1,9 +1,12 @@
-use std::{fmt::Debug, ops::Deref, time::Duration};
+use std::{fmt::Debug, ops::Deref, pin::Pin, time::Duration};
 
 use bb8::{ManageConnection, Pool, RunError};
 use futures::{Stream, StreamExt};
 use rusmpp::pdus::{BindReceiver, BindTransceiver, BindTransmitter};
-use tokio::sync::{mpsc::UnboundedSender, watch};
+use tokio::{
+    io::{AsyncRead, AsyncWrite},
+    sync::{mpsc::UnboundedSender, watch},
+};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use crate::{
@@ -189,14 +192,9 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E
         self
     }
 
-    // TODO: this one takes an async function that returns a Result<AsyncRead + AsyncWrite, std::io::Error>
-    /// TODO: docs
-    pub async fn connected(self) {}
-
-    /// TODO: docs
-    pub async fn connect(
+    async fn run(
         self,
-        url: impl Into<String>,
+        connect: Connect,
     ) -> Result<
         (
             ManagedClient<E>,
@@ -210,7 +208,7 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
         let rx = UnboundedReceiverStream::new(rx);
 
-        let manager = ClientConnectionManger::new(self.builder, url.into(), self.bind, tx);
+        let manager = ClientConnectionManger::new(self.builder, connect, self.bind, tx);
 
         // TODO: add the error sink so that we can pipe the connection errors to the managed event stream as well.
         let pool = bb8::Pool::builder()
@@ -252,12 +250,69 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E
 
         Ok((ManagedClient::new(pool, w_rx), rx))
     }
+
+    /// TODO: docs
+    pub async fn connected(
+        self,
+        connector: impl Connector,
+    ) -> Result<
+        (
+            ManagedClient<E>,
+            impl Stream<Item = ManagedEvent<E::Event>> + Unpin + 'static,
+        ),
+        crate::error::Error,
+    >
+    where
+        E::Event: Send + Sync + 'static,
+    {
+        self.run(Connect::Connector(Box::new(connector))).await
+    }
+
+    /// TODO: docs
+    pub async fn connect(
+        self,
+        url: impl Into<String>,
+    ) -> Result<
+        (
+            ManagedClient<E>,
+            impl Stream<Item = ManagedEvent<E::Event>> + Unpin + 'static,
+        ),
+        crate::error::Error,
+    >
+    where
+        E::Event: Send + Sync + 'static,
+    {
+        self.run(Connect::Url(url.into())).await
+    }
+}
+
+enum Connect {
+    Url(String),
+    Connector(Box<dyn Connector>),
+}
+
+impl Clone for Connect {
+    fn clone(&self) -> Self {
+        match self {
+            Connect::Url(url) => Connect::Url(url.clone()),
+            Connect::Connector(connector) => Connect::Connector(connector.clone_box()),
+        }
+    }
+}
+
+impl Debug for Connect {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Connect::Url(url) => f.debug_tuple("Url").field(url).finish(),
+            Connect::Connector(_) => f.debug_tuple("Connector").field(&"<connector>").finish(),
+        }
+    }
 }
 
 #[derive(Debug)]
 struct ClientConnectionManger<E: EventChannel + Clone + Send + Sync + 'static> {
     builder: ConnectionBuilder<E>,
-    url: String,
+    connect: Connect,
     bind: BindMode,
     tx: UnboundedSender<ManagedEvent<E::Event>>,
 }
@@ -265,13 +320,13 @@ struct ClientConnectionManger<E: EventChannel + Clone + Send + Sync + 'static> {
 impl<E: EventChannel + Clone + Send + Sync + 'static> ClientConnectionManger<E> {
     fn new(
         builder: ConnectionBuilder<E>,
-        url: String,
+        connect: Connect,
         bind: BindMode,
         tx: UnboundedSender<ManagedEvent<E::Event>>,
     ) -> Self {
         Self {
             builder,
-            url,
+            connect,
             bind,
             tx,
         }
@@ -289,7 +344,33 @@ where
     async fn connect(&self) -> Result<Self::Connection, Self::Error> {
         tracing::debug!(target: TARGET, "Connecting");
 
-        let (client, mut events) = self.builder.clone().connect(&self.url).await?;
+        let (client, mut events) = match self.connect.clone() {
+            Connect::Url(url) => {
+                self.builder
+                    .clone()
+                    .connect(url)
+                    .await
+                    .map(|(client, events)| {
+                        (
+                            client,
+                            Box::pin(events) as Pin<Box<dyn Stream<Item = E::Event> + Send>>,
+                        )
+                    })?
+            }
+            Connect::Connector(connector) => {
+                let stream = connector
+                    .connect()
+                    .await
+                    .map_err(crate::error::Error::Connect)?;
+
+                let (client, events) = self.builder.clone().connected(stream);
+
+                (
+                    client,
+                    Box::pin(events) as Pin<Box<dyn Stream<Item = E::Event> + Send>>,
+                )
+            }
+        };
 
         let _ = self.tx.send(ManagedEvent::Connected);
 
@@ -343,5 +424,42 @@ where
 
     fn has_broken(&self, conn: &mut Self::Connection) -> bool {
         conn.is_closed()
+    }
+}
+
+pub trait UnpinAsyncReadWrite: AsyncRead + AsyncWrite + Unpin + Send {}
+
+impl<T: AsyncRead + AsyncWrite + Unpin + Send> UnpinAsyncReadWrite for T {}
+
+#[allow(clippy::type_complexity)]
+pub trait Connector: Send + Sync + 'static {
+    fn connect(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn UnpinAsyncReadWrite>, std::io::Error>> + Send>>;
+
+    fn clone_box(&self) -> Box<dyn Connector>;
+}
+
+impl<F, Fut, S> Connector for F
+where
+    F: Fn() -> Fut + Clone + Send + Sync + 'static,
+    Fut: Future<Output = Result<S, std::io::Error>> + Send + 'static,
+    S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
+{
+    fn connect(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn UnpinAsyncReadWrite>, std::io::Error>> + Send>>
+    {
+        let fut = (self)();
+
+        Box::pin(async move {
+            let stream = fut.await?;
+
+            Ok(Box::new(stream) as Box<dyn UnpinAsyncReadWrite>)
+        })
+    }
+
+    fn clone_box(&self) -> Box<dyn Connector> {
+        Box::new(self.clone())
     }
 }
