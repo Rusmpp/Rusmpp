@@ -167,9 +167,9 @@ impl<'a> crate::encode::Encode for SubmitSmResp<'a> {
 impl<'a> crate::decode::borrowed::Decode<'a> for SubmitSmResp<'a> {
     fn decode(src: &'a [u8]) -> Result<(Self, usize), crate::decode::DecodeError> {
         let size = 0;
-        let (message_id, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::message_id,
+        let (message_id, size) = crate::decode::borrowed::DecodeExt::decode_move(
+            src,
+            size,
         )?;
         Ok((Self { message_id }, size))
     }

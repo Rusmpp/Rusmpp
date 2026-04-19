@@ -202,7 +202,9 @@ impl<'a, const N: usize> Decode<'a> for EmptyOrFullCOctetString<'a, N> {
 
         for i in 0..N {
             if i >= src.len() {
-                return Err(DecodeError::unexpected_eof());
+                return Err(DecodeError::c_octet_string_decode_error(
+                    COctetStringDecodeError::UnexpectedEndOfBuffer,
+                ));
             }
 
             let bytes = &src[..i + 1];
@@ -362,7 +364,12 @@ mod tests {
             let bytes = b"";
             let error = EmptyOrFullCOctetString::<6>::decode(bytes).unwrap_err();
 
-            assert!(matches!(error.kind(), DecodeErrorKind::UnexpectedEof));
+            assert!(matches!(
+                error.kind,
+                DecodeErrorKind::COctetStringDecodeError(
+                    COctetStringDecodeError::UnexpectedEndOfBuffer
+                )
+            ));
         }
 
         #[test]
@@ -371,7 +378,7 @@ mod tests {
             let error = EmptyOrFullCOctetString::<2>::decode(bytes).unwrap_err();
 
             assert!(matches!(
-                error.kind(),
+                error.kind,
                 DecodeErrorKind::COctetStringDecodeError(
                     COctetStringDecodeError::NotNullTerminated
                 )
@@ -384,7 +391,7 @@ mod tests {
             let error = EmptyOrFullCOctetString::<5>::decode(bytes).unwrap_err();
 
             assert!(matches!(
-                error.kind(),
+                error.kind,
                 DecodeErrorKind::COctetStringDecodeError(
                     COctetStringDecodeError::NotNullTerminated,
                 )
@@ -397,7 +404,7 @@ mod tests {
             let error = EmptyOrFullCOctetString::<5>::decode(bytes).unwrap_err();
 
             assert!(matches!(
-                error.kind(),
+                error.kind,
                 DecodeErrorKind::COctetStringDecodeError(COctetStringDecodeError::TooFewBytes {
                     actual: 4,
                     min: 5,
@@ -411,7 +418,7 @@ mod tests {
             let error = EmptyOrFullCOctetString::<6>::decode(bytes).unwrap_err();
 
             assert!(matches!(
-                error.kind(),
+                error.kind,
                 DecodeErrorKind::COctetStringDecodeError(COctetStringDecodeError::NotAscii)
             ));
         }

@@ -275,26 +275,20 @@ for Command<'a, N> {
         length: usize,
     ) -> Result<(Self, usize), crate::decode::DecodeError> {
         let size = 0;
-        let (id, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::id,
+        let (id, size) = crate::decode::borrowed::DecodeExt::decode_move(src, size)?;
+        let (command_status, size) = crate::decode::borrowed::DecodeExt::decode_move(
+            src,
+            size,
         )?;
-        let (command_status, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::command_status,
+        let (sequence_number, size) = crate::decode::borrowed::DecodeExt::decode_move(
+            src,
+            size,
         )?;
-        let (sequence_number, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::sequence_number,
-        )?;
-        let (pdu, size) = crate::decode::DecodeErrorExt::map_as_source(
-                crate::decode::borrowed::DecodeWithKeyOptionalExt::decode_move(
-                    id,
-                    src,
-                    length.saturating_sub(size),
-                    size,
-                ),
-                crate::fields::SmppField::pdu,
+        let (pdu, size) = crate::decode::borrowed::DecodeWithKeyOptionalExt::decode_move(
+                id,
+                src,
+                length.saturating_sub(size),
+                size,
             )?
             .map(|(this, size)| (Some(this), size))
             .unwrap_or((None, size));

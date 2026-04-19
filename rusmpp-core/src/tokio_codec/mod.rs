@@ -9,7 +9,7 @@ use tokio_util::{
 };
 
 use crate::{
-    command::owned::Command,
+    command::owned::{Command, CommandDecodeError},
     decode::owned::DecodeWithLength,
     encode::{Length, owned::Encode},
     logging::{debug, error, trace},
@@ -145,7 +145,7 @@ pub enum DecodeError {
     /// I/O error.
     Io(std::io::Error),
     /// Decode error.
-    Decode(crate::decode::DecodeError),
+    Decode(std::boxed::Box<CommandDecodeError>),
     /// Minimum command length not met.
     MinLength { actual: usize, min: usize },
     /// Maximum command length exceeded.
@@ -275,7 +275,7 @@ impl Decoder for CommandCodec {
 
                             self.decode_length();
 
-                            return Err(DecodeError::Decode(err));
+                            return Err(DecodeError::Decode(std::boxed::Box::new(err)));
                         }
                     };
 

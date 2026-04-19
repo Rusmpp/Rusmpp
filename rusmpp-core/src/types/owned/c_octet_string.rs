@@ -4,7 +4,10 @@ use alloc::{string::String, string::ToString, vec::Vec};
 use bytes::{BufMut, Bytes, BytesMut};
 
 use crate::{
-    decode::{COctetStringDecodeError, DecodeError, owned::Decode},
+    decode::{
+        COctetStringDecodeError,
+        owned::{Decode, DecodeErrorType},
+    },
     encode::{Encode, Length, owned::Encode as BEncode},
     types::c_octet_string::Error,
 };
@@ -340,29 +343,31 @@ impl<const MIN: usize, const MAX: usize> BEncode for COctetString<MIN, MAX> {
     }
 }
 
+impl<const MIN: usize, const MAX: usize> DecodeErrorType for COctetString<MIN, MAX> {
+    type Error = COctetStringDecodeError;
+}
+
 impl<const MIN: usize, const MAX: usize> Decode for COctetString<MIN, MAX> {
-    fn decode(src: &mut BytesMut) -> Result<(Self, usize), DecodeError> {
+    fn decode(src: &mut BytesMut) -> Result<(Self, usize), Self::Error> {
         Self::_ASSERT_VALID;
 
         if src.len() < MIN {
-            return Err(DecodeError::c_octet_string_decode_error(
-                COctetStringDecodeError::TooFewBytes {
-                    actual: src.len(),
-                    min: MIN,
-                },
-            ));
+            return Err(COctetStringDecodeError::TooFewBytes {
+                actual: src.len(),
+                min: MIN,
+            });
         }
 
-        let index = src.iter().take(MAX).position(|&b| b == 0).ok_or_else(|| {
-            DecodeError::c_octet_string_decode_error(COctetStringDecodeError::NotNullTerminated)
-        })?;
+        let index = src
+            .iter()
+            .take(MAX)
+            .position(|&b| b == 0)
+            .ok_or(COctetStringDecodeError::NotNullTerminated)?;
 
         let bytes = src.split_to(index + 1).freeze();
 
         if !bytes.is_ascii() {
-            return Err(DecodeError::c_octet_string_decode_error(
-                COctetStringDecodeError::NotAscii,
-            ));
+            return Err(COctetStringDecodeError::NotAscii);
         }
 
         let size = bytes.len();
@@ -640,8 +645,6 @@ mod tests {
     }
 
     mod decode {
-        use crate::decode::DecodeErrorKind;
-
         use super::*;
 
         #[test]
@@ -650,11 +653,8 @@ mod tests {
             let error = COctetString::<1, 6>::decode(&mut buf).unwrap_err();
 
             assert!(matches!(
-                error.kind(),
-                DecodeErrorKind::COctetStringDecodeError(COctetStringDecodeError::TooFewBytes {
-                    actual: 0,
-                    min: 1,
-                })
+                error,
+                COctetStringDecodeError::TooFewBytes { actual: 0, min: 1 }
             ));
         }
 
@@ -663,12 +663,7 @@ mod tests {
             let mut buf = BytesMut::from(&b"hi"[..]);
             let error = COctetString::<1, 6>::decode(&mut buf).unwrap_err();
 
-            assert!(matches!(
-                error.kind(),
-                DecodeErrorKind::COctetStringDecodeError(
-                    COctetStringDecodeError::NotNullTerminated
-                )
-            ));
+            assert!(matches!(error, COctetStringDecodeError::NotNullTerminated));
         }
 
         #[test]
@@ -676,12 +671,7 @@ mod tests {
             let mut buf = BytesMut::from(&b"Hello\0"[..]);
             let error = COctetString::<1, 5>::decode(&mut buf).unwrap_err();
 
-            assert!(matches!(
-                error.kind(),
-                DecodeErrorKind::COctetStringDecodeError(
-                    COctetStringDecodeError::NotNullTerminated
-                )
-            ));
+            assert!(matches!(error, COctetStringDecodeError::NotNullTerminated));
         }
 
         #[test]
@@ -690,11 +680,8 @@ mod tests {
             let error = COctetString::<10, 20>::decode(&mut buf).unwrap_err();
 
             assert!(matches!(
-                error.kind(),
-                DecodeErrorKind::COctetStringDecodeError(COctetStringDecodeError::TooFewBytes {
-                    actual: 6,
-                    min: 10,
-                })
+                error,
+                COctetStringDecodeError::TooFewBytes { actual: 6, min: 10 }
             ));
         }
 
@@ -703,10 +690,7 @@ mod tests {
             let mut buf = BytesMut::from(&b"Hell\xF0\0"[..]);
             let error = COctetString::<1, 6>::decode(&mut buf).unwrap_err();
 
-            assert!(matches!(
-                error.kind(),
-                DecodeErrorKind::COctetStringDecodeError(COctetStringDecodeError::NotAscii)
-            ));
+            assert!(matches!(error, COctetStringDecodeError::NotAscii));
         }
 
         #[test]

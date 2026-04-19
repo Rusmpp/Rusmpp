@@ -1,18 +1,41 @@
 //! `SMPP` values.
 
 pub mod parts {
-    pub use super::broadcast_content_type::BroadcastContentTypeParts;
-    pub use super::broadcast_frequency_interval::BroadcastFrequencyIntervalParts;
-    pub use super::broadcast_rep_num::BroadcastRepNumParts;
-    pub use super::callback_num_pres_ind::CallbackNumPresIndParts;
-    pub use super::esm_class::EsmClassParts;
-    pub use super::its_session_info::ItsSessionInfoParts;
-    pub use super::ms_msg_wait_facilities::MsMsgWaitFacilitiesParts;
-    pub use super::ms_validity::{MsValidityInformationParts, MsValidityParts};
-    pub use super::network_error_code::NetworkErrorCodeParts;
-    pub use super::priority_flag::PriorityFlagParts;
-    pub use super::registered_delivery::RegisteredDeliveryParts;
-    pub use super::user_message_reference::UserMessageReferenceParts;
+    pub use super::{
+        broadcast_content_type::BroadcastContentTypeParts,
+        broadcast_frequency_interval::BroadcastFrequencyIntervalParts,
+        broadcast_rep_num::BroadcastRepNumParts,
+        callback_num_pres_ind::CallbackNumPresIndParts,
+        esm_class::EsmClassParts,
+        its_session_info::ItsSessionInfoParts,
+        ms_msg_wait_facilities::MsMsgWaitFacilitiesParts,
+        ms_validity::{MsValidityInformationParts, MsValidityParts},
+        network_error_code::NetworkErrorCodeParts,
+        priority_flag::PriorityFlagParts,
+        registered_delivery::RegisteredDeliveryParts,
+        user_message_reference::UserMessageReferenceParts,
+    };
+}
+
+pub mod errors {
+    pub use super::{
+        broadcast_content_type::{
+            BroadcastContentTypeDecodeError, BroadcastContentTypeDecodeErrorContext,
+        },
+        broadcast_frequency_interval::{
+            BroadcastFrequencyIntervalDecodeError, BroadcastFrequencyIntervalDecodeErrorContext,
+        },
+        broadcast_rep_num::{BroadcastRepNumDecodeError, BroadcastRepNumDecodeErrorContext},
+        its_session_info::{ItsSessionInfoDecodeError, ItsSessionInfoDecodeErrorContext},
+        ms_validity::{
+            MsValidityDecodeError, MsValidityDecodeErrorContext, MsValidityInformationDecodeError,
+            MsValidityInformationDecodeErrorContext,
+        },
+        network_error_code::{NetworkErrorCodeDecodeError, NetworkErrorCodeDecodeErrorContext},
+        user_message_reference::{
+            UserMessageReferenceDecodeError, UserMessageReferenceDecodeErrorContext,
+        },
+    };
 }
 
 mod addr_subunit;
@@ -165,7 +188,9 @@ pub mod borrowed {
     }
 
     pub use super::broadcast_area_identifier::borrowed::BroadcastAreaIdentifier;
-    pub use super::dest_address::borrowed::{DestAddress, DistributionListName, SmeAddress};
+    pub use super::dest_address::borrowed::{
+        DestAddress, DestAddressValue, DistributionListName, SmeAddress,
+    };
     pub use super::message_payload::borrowed::MessagePayload;
     pub use super::service_type::borrowed::ServiceType;
     pub use super::sub_address::borrowed::Subaddress;
@@ -178,18 +203,38 @@ pub mod owned {
     //! Owned `SMPP` values.
 
     pub mod parts {
-        pub use super::super::broadcast_area_identifier::owned::BroadcastAreaIdentifierParts;
-        pub use super::super::dest_address::owned::{DistributionListNameParts, SmeAddressParts};
-        pub use super::super::message_payload::owned::MessagePayloadParts;
-        pub use super::super::service_type::owned::ServiceTypeParts;
-        pub use super::super::sub_address::owned::SubaddressParts;
-        pub use super::super::unsuccess_sme::owned::UnsuccessSmeParts;
+        pub use super::super::{
+            broadcast_area_identifier::owned::BroadcastAreaIdentifierParts,
+            dest_address::owned::{DistributionListNameParts, SmeAddressParts},
+            message_payload::owned::MessagePayloadParts,
+            service_type::owned::ServiceTypeParts,
+            sub_address::owned::SubaddressParts,
+            unsuccess_sme::owned::UnsuccessSmeParts,
+        };
     }
 
-    pub use super::broadcast_area_identifier::owned::BroadcastAreaIdentifier;
-    pub use super::dest_address::owned::{DestAddress, DistributionListName, SmeAddress};
-    pub use super::message_payload::owned::MessagePayload;
-    pub use super::service_type::owned::ServiceType;
-    pub use super::sub_address::owned::Subaddress;
-    pub use super::unsuccess_sme::owned::UnsuccessSme;
+    pub mod errors {
+        pub use super::super::{
+            broadcast_area_identifier::owned::{
+                BroadcastAreaIdentifierDecodeError, BroadcastAreaIdentifierDecodeErrorContext,
+            },
+            dest_address::owned::{
+                DistributionListNameDecodeError, DistributionListNameDecodeErrorContext,
+                SmeAddressDecodeError, SmeAddressDecodeErrorContext,
+            },
+            message_payload::owned::{MessagePayloadDecodeError, MessagePayloadDecodeErrorContext},
+            service_type::owned::{ServiceTypeDecodeError, ServiceTypeDecodeErrorContext},
+            sub_address::owned::{SubaddressDecodeError, SubaddressDecodeErrorContext},
+            unsuccess_sme::owned::{UnsuccessSmeDecodeError, UnsuccessSmeDecodeErrorContext},
+        };
+    }
+
+    pub use super::{
+        broadcast_area_identifier::owned::BroadcastAreaIdentifier,
+        dest_address::owned::{DestAddress, DestAddressValue, DistributionListName, SmeAddress},
+        message_payload::owned::MessagePayload,
+        service_type::owned::ServiceType,
+        sub_address::owned::Subaddress,
+        unsuccess_sme::owned::UnsuccessSme,
+    };
 }

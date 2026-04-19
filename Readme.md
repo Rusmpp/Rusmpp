@@ -91,7 +91,6 @@ See the [examples](https://github.com/Rusmpp/Rusmpp/tree/main/rusmpp/examples) d
 ## Features
 
 - `tokio-codec`: Implements [`Encoder`](https://docs.rs/tokio-util/latest/tokio_util/codec/trait.Encoder.html) and [`Decoder`](https://docs.rs/tokio-util/latest/tokio_util/codec/trait.Decoder.html) traits.
-- `verbose`: Enables verbose error reports.
 - `extra`: Enables encoding/decoding and concatenation support for `SubmitSm`.
 - `serde`: Implements [`Serialize`](https://docs.rs/serde/latest/serde/trait.Serialize.html) trait for all SMPP types.
 - `serde-deserialize-unchecked`: Implements [`Deserialize`](https://docs.rs/serde/latest/serde/trait.Deserialize.html) trait for all SMPP types, but does not check the validity of the data. Use with caution.

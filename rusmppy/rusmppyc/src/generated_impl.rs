@@ -1100,7 +1100,7 @@ impl From<g::GsmFeatures> for GsmFeatures {
     fn from(value: g::GsmFeatures) -> Self {
         match value {
             g::GsmFeatures::NotSelected() => Self::NotSelected,
-            g::GsmFeatures::UdhiIndicator() => Self::UdhiIndicator,
+            g::GsmFeatures::UdhiIndicator() => Self::UdhIndicator,
             g::GsmFeatures::SetReplyPath() => Self::SetReplyPath,
             g::GsmFeatures::SetUdhiAndReplyPath() => Self::SetUdhiAndReplyPath,
             g::GsmFeatures::Other(value) => Self::Other(value),

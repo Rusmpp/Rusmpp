@@ -219,7 +219,9 @@ impl<'a, const MIN: usize, const MAX: usize> DecodeWithLength<'a> for OctetStrin
         }
 
         if src.len() < length {
-            return Err(DecodeError::unexpected_eof());
+            return Err(DecodeError::octet_string_decode_error(
+                OctetStringDecodeError::UnexpectedEndOfBuffer,
+            ));
         }
 
         let bytes = &src[..length];
@@ -341,7 +343,12 @@ mod tests {
             let bytes = b"";
             let error = OctetString::<0, 6>::decode(bytes, 5).unwrap_err();
 
-            assert!(matches!(error.kind(), DecodeErrorKind::UnexpectedEof));
+            assert!(matches!(
+                error.kind,
+                DecodeErrorKind::OctetStringDecodeError(
+                    OctetStringDecodeError::UnexpectedEndOfBuffer
+                )
+            ));
         }
 
         #[test]
@@ -350,7 +357,7 @@ mod tests {
             let error = OctetString::<0, 5>::decode(bytes, 15).unwrap_err();
 
             assert!(matches!(
-                error.kind(),
+                error.kind,
                 DecodeErrorKind::OctetStringDecodeError(OctetStringDecodeError::TooManyBytes {
                     actual: 15,
                     max: 5,
@@ -364,7 +371,7 @@ mod tests {
             let error = OctetString::<6, 10>::decode(bytes, 5).unwrap_err();
 
             assert!(matches!(
-                error.kind(),
+                error.kind,
                 DecodeErrorKind::OctetStringDecodeError(OctetStringDecodeError::TooFewBytes {
                     actual: 5,
                     min: 6,

@@ -235,21 +235,15 @@ for SubmitSm<'a, N> {
         length: usize,
     ) -> Result<(Self, usize), crate::decode::DecodeError> {
         let size = 0;
-        let (other, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::other,
+        let (other, size) = crate::decode::borrowed::DecodeExt::decode_move(src, size)?;
+        let (sm_length, size) = crate::decode::borrowed::DecodeExt::decode_move(
+            src,
+            size,
         )?;
-        let (sm_length, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::sm_length,
-        )?;
-        let (short_message, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeWithLengthExt::decode_move(
-                src,
-                sm_length as usize,
-                size,
-            ),
-            crate::fields::SmppField::short_message,
+        let (short_message, size) = crate::decode::borrowed::DecodeWithLengthExt::decode_move(
+            src,
+            sm_length as usize,
+            size,
         )?;
         Ok((
             Self {

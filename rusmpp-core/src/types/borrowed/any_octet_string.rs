@@ -1,5 +1,5 @@
 use crate::{
-    decode::{DecodeError, borrowed::DecodeWithLength},
+    decode::{AnyOctetStringDecodeError, DecodeError, borrowed::DecodeWithLength},
     encode::{Encode, Length},
 };
 
@@ -128,7 +128,9 @@ impl crate::encode::owned::Encode for AnyOctetString<'_> {
 impl<'a> DecodeWithLength<'a> for AnyOctetString<'a> {
     fn decode(src: &'a [u8], length: usize) -> Result<(Self, usize), DecodeError> {
         if src.len() < length {
-            return Err(DecodeError::unexpected_eof());
+            return Err(DecodeError::any_octet_string_decode_error(
+                AnyOctetStringDecodeError::UnexpectedEndOfBuffer,
+            ));
         }
 
         let bytes = &src[..length];
@@ -189,7 +191,12 @@ mod tests {
             let bytes = b"";
             let error = AnyOctetString::decode(bytes, 5).unwrap_err();
 
-            assert!(matches!(error.kind(), DecodeErrorKind::UnexpectedEof));
+            assert!(matches!(
+                error.kind,
+                DecodeErrorKind::AnyOctetStringDecodeError(
+                    AnyOctetStringDecodeError::UnexpectedEndOfBuffer
+                )
+            ));
         }
 
         #[test]

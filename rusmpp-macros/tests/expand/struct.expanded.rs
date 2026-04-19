@@ -223,18 +223,15 @@ impl<'a> crate::encode::Encode for CancelSm<'a> {
 impl<'a> crate::decode::borrowed::Decode<'a> for CancelSm<'a> {
     fn decode(src: &'a [u8]) -> Result<(Self, usize), crate::decode::DecodeError> {
         let size = 0;
-        let (service_type, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::service_type,
+        let (service_type, size) = crate::decode::borrowed::DecodeExt::decode_move(
+            src,
+            size,
         )?;
-        let (message_id, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::message_id,
+        let (message_id, size) = crate::decode::borrowed::DecodeExt::decode_move(
+            src,
+            size,
         )?;
-        let (other, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::other,
-        )?;
+        let (other, size) = crate::decode::borrowed::DecodeExt::decode_move(src, size)?;
         Ok((
             Self {
                 service_type,

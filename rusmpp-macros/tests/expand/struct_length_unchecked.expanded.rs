@@ -198,17 +198,11 @@ impl<'a> crate::decode::borrowed::DecodeWithLength<'a> for BroadcastAreaIdentifi
         length: usize,
     ) -> Result<(Self, usize), crate::decode::DecodeError> {
         let size = 0;
-        let (format, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::format,
-        )?;
-        let (area, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeWithLengthExt::decode_move(
-                src,
-                length.saturating_sub(size),
-                size,
-            ),
-            crate::fields::SmppField::area,
+        let (format, size) = crate::decode::borrowed::DecodeExt::decode_move(src, size)?;
+        let (area, size) = crate::decode::borrowed::DecodeWithLengthExt::decode_move(
+            src,
+            length.saturating_sub(size),
+            size,
         )?;
         Ok((Self { format, area }, size))
     }

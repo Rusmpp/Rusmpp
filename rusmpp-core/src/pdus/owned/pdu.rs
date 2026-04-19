@@ -3,13 +3,14 @@ use bytes::BytesMut;
 use crate::{
     CommandId,
     decode::{
-        DecodeError, DecodeResultExt,
-        owned::{Decode, DecodeWithKeyOptional, DecodeWithLength},
+        AnyOctetStringDecodeError, DecodeResultExt,
+        owned::{Decode, DecodeErrorType, DecodeWithKeyOptional, DecodeWithLength},
     },
     encode::Length,
     types::owned::AnyOctetString,
 };
 
+use super::errors::*;
 use super::*;
 
 /// `SMPP` PDU.
@@ -351,6 +352,170 @@ impl crate::encode::owned::Encode for Pdu {
     }
 }
 
+#[derive(Debug, Clone, thiserror::Error)]
+pub enum PduDecodeError {
+    #[error("BindTransmitter decode error: {0}")]
+    BindTransmitter(
+        #[from]
+        #[source]
+        BindTransmitterDecodeError,
+    ),
+    #[error("BindTransmitterResp decode error: {0}")]
+    BindTransmitterResp(
+        #[from]
+        #[source]
+        BindTransmitterRespDecodeError,
+    ),
+    #[error("BindReceiver decode error: {0}")]
+    BindReceiver(
+        #[from]
+        #[source]
+        BindReceiverDecodeError,
+    ),
+    #[error("BindReceiverResp decode error: {0}")]
+    BindReceiverResp(
+        #[from]
+        #[source]
+        BindReceiverRespDecodeError,
+    ),
+    #[error("BindTransceiver decode error: {0}")]
+    BindTransceiver(
+        #[from]
+        #[source]
+        BindTransceiverDecodeError,
+    ),
+    #[error("BindTransceiverResp decode error: {0}")]
+    BindTransceiverResp(
+        #[from]
+        #[source]
+        BindTransceiverRespDecodeError,
+    ),
+    #[error("Outbind decode error: {0}")]
+    Outbind(
+        #[from]
+        #[source]
+        OutbindDecodeError,
+    ),
+    #[error("AlertNotification decode error: {0}")]
+    AlertNotification(
+        #[from]
+        #[source]
+        AlertNotificationDecodeError,
+    ),
+    #[error("SubmitSm decode error: {0}")]
+    SubmitSm(
+        #[from]
+        #[source]
+        SubmitSmDecodeError,
+    ),
+    #[error("SubmitSmResp decode error: {0}")]
+    SubmitSmResp(
+        #[from]
+        #[source]
+        SubmitSmRespDecodeError,
+    ),
+    #[error("QuerySm decode error: {0}")]
+    QuerySm(
+        #[from]
+        #[source]
+        QuerySmDecodeError,
+    ),
+    #[error("QuerySmResp decode error: {0}")]
+    QuerySmResp(
+        #[from]
+        #[source]
+        QuerySmRespDecodeError,
+    ),
+    #[error("DeliverSm decode error: {0}")]
+    DeliverSm(
+        #[from]
+        #[source]
+        DeliverSmDecodeError,
+    ),
+    #[error("DeliverSmResp decode error: {0}")]
+    DeliverSmResp(
+        #[from]
+        #[source]
+        DeliverSmRespDecodeError,
+    ),
+    #[error("DataSm decode error: {0}")]
+    DataSm(
+        #[from]
+        #[source]
+        DataSmDecodeError,
+    ),
+    #[error("DataSmResp decode error: {0}")]
+    DataSmResp(
+        #[from]
+        #[source]
+        DataSmRespDecodeError,
+    ),
+    #[error("CancelSm decode error: {0}")]
+    CancelSm(
+        #[from]
+        #[source]
+        CancelSmDecodeError,
+    ),
+    #[error("ReplaceSm decode error: {0}")]
+    ReplaceSm(
+        #[from]
+        #[source]
+        ReplaceSmDecodeError,
+    ),
+    #[error("SubmitMulti decode error: {0}")]
+    SubmitMulti(
+        #[from]
+        #[source]
+        SubmitMultiDecodeError,
+    ),
+    #[error("SubmitMultiResp decode error: {0}")]
+    SubmitMultiResp(
+        #[from]
+        #[source]
+        SubmitMultiRespDecodeError,
+    ),
+    #[error("BroadcastSm decode error: {0}")]
+    BroadcastSm(
+        #[from]
+        #[source]
+        BroadcastSmDecodeError,
+    ),
+    #[error("BroadcastSmResp decode error: {0}")]
+    BroadcastSmResp(
+        #[from]
+        #[source]
+        BroadcastSmRespDecodeError,
+    ),
+    #[error("QueryBroadcastSm decode error: {0}")]
+    QueryBroadcastSm(
+        #[from]
+        #[source]
+        QueryBroadcastSmDecodeError,
+    ),
+    #[error("QueryBroadcastSmResp decode error: {0}")]
+    QueryBroadcastSmResp(
+        #[from]
+        #[source]
+        QueryBroadcastSmRespDecodeError,
+    ),
+    #[error("CancelBroadcastSm decode error: {0}")]
+    CancelBroadcastSm(
+        #[from]
+        #[source]
+        CancelBroadcastSmDecodeError,
+    ),
+    #[error("Other decode error: {0}")]
+    Other(
+        #[from]
+        #[source]
+        AnyOctetStringDecodeError,
+    ),
+}
+
+impl DecodeErrorType for Pdu {
+    type Error = PduDecodeError;
+}
+
 impl DecodeWithKeyOptional for Pdu {
     type Key = CommandId;
 
@@ -358,7 +523,7 @@ impl DecodeWithKeyOptional for Pdu {
         key: Self::Key,
         src: &mut BytesMut,
         length: usize,
-    ) -> Result<Option<(Self, usize)>, DecodeError> {
+    ) -> Result<Option<(Self, usize)>, Self::Error> {
         if length == 0 {
             let body = match key {
                 CommandId::Unbind => Pdu::Unbind,

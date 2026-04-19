@@ -127,34 +127,52 @@ fn quote_decode(
             let decode_type = fields.decode_type();
 
             match impl_type {
-                DecodeImplementation::Owned => match decode_type {
-                    DecodeType::Decode => Ok(quote_owned_decode(input, &fields)),
-                    DecodeType::DecodeWithLength => {
-                        Ok(quote_owned_decode_with_length(input, &fields))
-                    }
-                },
-                DecodeImplementation::Borrowed => match decode_type {
-                    DecodeType::Decode => Ok(quote_borrowed_decode(input, &fields)),
-                    DecodeType::DecodeWithLength => {
-                        Ok(quote_borrowed_decode_with_length(input, &fields))
-                    }
-                },
+                DecodeImplementation::Owned => {
+                    let decode_error = quote_owned_decode_error(input, &fields);
+                    let decode = match decode_type {
+                        DecodeType::Decode => quote_owned_decode(input, &fields),
+                        DecodeType::DecodeWithLength => {
+                            quote_owned_decode_with_length(input, &fields)
+                        }
+                    };
+
+                    Ok(quote! {
+                        #decode_error
+                        #decode
+                    })
+                }
+                DecodeImplementation::Borrowed => {
+                    let decode = match decode_type {
+                        DecodeType::Decode => quote_borrowed_decode(input, &fields),
+                        DecodeType::DecodeWithLength => {
+                            quote_borrowed_decode_with_length(input, &fields)
+                        }
+                    };
+
+                    Ok(quote! {
+                        #decode
+                    })
+                }
                 DecodeImplementation::All => match decode_type {
                     DecodeType::Decode => {
+                        let decode_error = quote_owned_decode_error(input, &fields);
                         let quote_borrowed_decode = quote_borrowed_decode(input, &fields);
                         let quote_owned_decode = quote_owned_decode(input, &fields);
 
                         Ok(quote! {
+                            #decode_error
                             #quote_borrowed_decode
                             #quote_owned_decode
                         })
                     }
                     DecodeType::DecodeWithLength => {
+                        let decode_error = quote_owned_decode_error(input, &fields);
                         let quote_borrowed_decode =
                             quote_borrowed_decode_with_length(input, &fields);
                         let quote_owned_decode = quote_owned_decode_with_length(input, &fields);
 
                         Ok(quote! {
+                            #decode_error
                             #quote_borrowed_decode
                             #quote_owned_decode
                         })
@@ -186,39 +204,16 @@ fn quote_borrowed_decode(input: &DeriveInput, fields: &ValidFields) -> TokenStre
         input.generics.split_for_impl().0.to_token_stream()
     };
 
-    let skipped_field_exists = fields.fields.iter().any(|f| f.attrs.skip());
-    let fields_names = fields.fields.iter().filter(|f| !f.attrs.skip()).map(|f| {
-        f.field
-            .ident
-            .as_ref()
-            .expect("Named fields must have idents")
-    });
-
-    let fields = fields.fields.iter().map(|f| f.quote_borrowed_decode());
-
-    let constructor = if skipped_field_exists {
-        quote! {
-            Self::new(
-                #(#fields_names),*
-            )
-        }
-    } else {
-        quote! {
-            Self {
-                #(#fields_names),*
-            }
-        }
-    };
+    let fields_names = fields.names();
+    let fields = fields.quote_borrowed_decode();
 
     quote! {
         impl #impl_generics crate::decode::borrowed::Decode<'a> for #name #ty_generics #where_clause {
             fn decode(src: &'a [u8]) -> Result<(Self, usize), crate::decode::DecodeError> {
                 let size = 0;
-                #(
-                    #fields
-                )*
+                #(#fields)*
 
-                Ok((#constructor, size))
+                Ok((Self {#(#fields_names),*}, size))
             }
         }
     }
@@ -226,48 +221,25 @@ fn quote_borrowed_decode(input: &DeriveInput, fields: &ValidFields) -> TokenStre
 
 fn quote_owned_decode(input: &DeriveInput, fields: &ValidFields) -> TokenStream {
     let name = &input.ident;
+    let decode_error_context_struct_name = decode_error_context_struct_name(name);
     let (impl_generics, ty_generics, where_clause) = &input.generics.split_for_impl();
 
-    let skipped_field_exists = fields.fields.iter().any(|f| f.attrs.skip());
-    let fields_names = fields.fields.iter().filter(|f| !f.attrs.skip()).map(|f| {
-        f.field
-            .ident
-            .as_ref()
-            .expect("Named fields must have idents")
-    });
-
-    let fields = fields.fields.iter().map(|f| f.quote_owned_decode());
-
-    let constructor = if skipped_field_exists {
-        quote! {
-            Self::new(
-                #(#fields_names),*
-            )
-        }
-    } else {
-        quote! {
-            Self {
-                #(#fields_names),*
-            }
-        }
-    };
+    let fields_names = fields.names();
+    let fields = fields.quote_owned_decode(decode_error_context_struct_name);
 
     quote! {
         #[cfg(feature = "alloc")]
         impl #impl_generics crate::decode::owned::Decode for #name #ty_generics #where_clause {
-            fn decode(src: &mut ::bytes::BytesMut) -> Result<(Self, usize), crate::decode::DecodeError> {
+            fn decode(src: &mut ::bytes::BytesMut) -> Result<(Self, usize), Self::Error> {
                 let size = 0;
-                #(
-                    #fields
-                )*
+                #(#fields)*
 
-                Ok((#constructor, size))
+                Ok((Self {#(#fields_names),*}, size))
             }
         }
     }
 }
 
-// XXX: Skipped fields are not used here
 fn quote_borrowed_decode_with_length(input: &DeriveInput, fields: &ValidFields) -> TokenStream {
     let name = &input.ident;
 
@@ -288,14 +260,8 @@ fn quote_borrowed_decode_with_length(input: &DeriveInput, fields: &ValidFields) 
         input.generics.split_for_impl().0.to_token_stream()
     };
 
-    let fields_names = fields.fields.iter().filter(|f| !f.attrs.skip()).map(|f| {
-        f.field
-            .ident
-            .as_ref()
-            .expect("Named fields must have idents")
-    });
-
-    let fields = fields.fields.iter().map(|f| f.quote_borrowed_decode());
+    let fields_names = fields.names();
+    let fields = fields.quote_borrowed_decode();
 
     quote! {
         impl #impl_generics crate::decode::borrowed::DecodeWithLength<'a> for #name #ty_generics #where_clause {
@@ -313,24 +279,18 @@ fn quote_borrowed_decode_with_length(input: &DeriveInput, fields: &ValidFields) 
     }
 }
 
-// XXX: Skipped fields are not used here
 fn quote_owned_decode_with_length(input: &DeriveInput, fields: &ValidFields) -> TokenStream {
     let name = &input.ident;
+    let decode_error_context_struct_name = decode_error_context_struct_name(name);
     let (impl_generics, ty_generics, where_clause) = &input.generics.split_for_impl();
 
-    let fields_names = fields.fields.iter().filter(|f| !f.attrs.skip()).map(|f| {
-        f.field
-            .ident
-            .as_ref()
-            .expect("Named fields must have idents")
-    });
-
-    let fields = fields.fields.iter().map(|f| f.quote_owned_decode());
+    let fields_names = fields.names();
+    let fields = fields.quote_owned_decode(decode_error_context_struct_name);
 
     quote! {
         #[cfg(feature = "alloc")]
         impl #impl_generics crate::decode::owned::DecodeWithLength for #name #ty_generics #where_clause {
-            fn decode(src: &mut ::bytes::BytesMut, length: usize) -> Result<(Self, usize), crate::decode::DecodeError> {
+            fn decode(src: &mut ::bytes::BytesMut, length: usize) -> Result<(Self, usize), Self::Error> {
                 let size = 0;
                 #(
                     #fields
@@ -340,6 +300,107 @@ fn quote_owned_decode_with_length(input: &DeriveInput, fields: &ValidFields) -> 
                     #(#fields_names),*
                  }, size))
             }
+        }
+    }
+}
+
+fn decode_error_context_struct_name(name: &Ident) -> Ident {
+    Ident::new(&format!("{}DecodeErrorContext", name), name.span())
+}
+
+fn quote_owned_decode_error(input: &DeriveInput, fields: &ValidFields) -> TokenStream {
+    let name = &input.ident;
+
+    let decode_error_struct_name = Ident::new(&format!("{}DecodeError", name), name.span());
+
+    let decode_error_context_struct_name = decode_error_context_struct_name(name);
+
+    let decode_error_struct_context_field_names_and_types_and_attrs =
+        fields.fields.iter().map(|f| {
+            let name = f.name();
+            let ty = f.ty();
+            let attrs = &f.attrs;
+
+            (name, ty, attrs)
+        });
+
+    let source_checks = fields.names().map(|name| {
+        quote! {
+            if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self.context.#name {
+                return ::core::option::Option::Some(
+                    err as &(dyn ::core::error::Error + 'static)
+                );
+            }
+        }
+    });
+
+    let display_error_fields = fields.names().map(|name| {
+        let name_string = name.to_string();
+
+        quote! {
+            if let ::core::option::Option::Some(::core::result::Result::Err(err)) = &self.context.#name {
+                write!(f, "{}: {}", #name_string, err)?;
+                write!(f, " }}")?;
+
+                return Ok(())
+            }
+        }
+    });
+
+    let decode_error_context_struct = decode_error_struct_context_field_names_and_types_and_attrs
+        .clone()
+        .map(|(ident, ty, attrs)| {
+            let error_ty = if attrs.is_count() {
+                ty.flatten()
+            } else {
+                ty
+            };
+
+            quote! { pub #ident: ::core::option::Option<::core::result::Result<#ty, <#error_ty as crate::decode::owned::DecodeErrorType>::Error>> }
+        });
+
+    quote! {
+        #[cfg(feature = "alloc")]
+        #[non_exhaustive]
+        #[derive(Debug, Clone)]
+        pub struct #decode_error_context_struct_name {
+            #(#decode_error_context_struct),*
+        }
+
+        #[cfg(feature = "alloc")]
+        #[non_exhaustive]
+        #[derive(Debug, Clone)]
+        pub struct #decode_error_struct_name {
+            pub context: #decode_error_context_struct_name
+        }
+
+        #[cfg(feature = "alloc")]
+        impl ::core::fmt::Display for #decode_error_struct_name {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                write!(f, "Failed to decode {} {{ ", stringify!(#name))?;
+
+                #(#display_error_fields)*
+
+                write!(f, " }}")
+            }
+        }
+
+        #[cfg(feature = "alloc")]
+        impl ::core::error::Error for #decode_error_struct_name {
+            fn source(&self) -> Option<&(dyn ::core::error::Error + 'static)> {
+                #(#source_checks)*
+
+                ::core::option::Option::None
+            }
+
+            fn cause(&self) -> Option<&dyn ::core::error::Error> {
+                self.source()
+            }
+        }
+
+        #[cfg(feature = "alloc")]
+        impl crate::decode::owned::DecodeErrorType for #name {
+            type Error = #decode_error_struct_name;
         }
     }
 }
@@ -401,7 +462,6 @@ impl StructAttributes {
 }
 
 struct FieldAttributes {
-    skip_decode: bool,
     length: Option<Length>,
     key: Option<Ident>,
     count: Option<Ident>,
@@ -409,7 +469,6 @@ struct FieldAttributes {
 
 impl FieldAttributes {
     fn extract(field: &Field) -> syn::Result<Self> {
-        let mut skip_decode = false;
         let mut length = None;
         let mut key = None;
         let mut count = None;
@@ -420,27 +479,26 @@ impl FieldAttributes {
             }
 
             attr.parse_nested_meta(|meta| {
-                if meta.path.is_ident("skip_decode") {
-                    skip_decode = true;
-                } else if meta.path.is_ident("length") {
+                if meta.path.is_ident("length") {
                     let value = meta.value()?;
 
-                    if let Ok(lit) = value.parse() {
-                        if let Lit::Str(s) = lit {
-                            match s.value().as_str() {
-                                "unchecked" => length = Some(Length::Unchecked),
-                                "checked" => length = Some(Length::Checked),
-                                _ => {
-                                    return Err(meta.error(
-                                    "length must be \"unchecked\", \"checked\", or an identifier",
-                                ));
-                                }
-                            }
+                    if let Ok(Lit::Str(s)) = value.parse::<Lit>() {
+                        match s.value().as_str() {
+                            "unchecked" => length = Some(Length::Unchecked),
+                            "checked" => length = Some(Length::Checked),
+                            _ => return Err(meta.error("invalid length string literal")),
                         }
+                        return Ok(());
                     }
 
-                    if length.is_none() {
-                        let ident: Ident = value.parse()?;
+                    let ident: Ident = value.parse()?;
+
+                    if meta.input.peek(syn::Token![-]) {
+                        let _: syn::Token![-] = meta.input.parse()?;
+                        let value: usize = meta.input.parse::<syn::LitInt>()?.base10_parse()?;
+
+                        length = Some(Length::IdentSubtracted { ident, value });
+                    } else {
                         length = Some(Length::Ident(ident));
                     }
                 } else if meta.path.is_ident("key") {
@@ -457,32 +515,11 @@ impl FieldAttributes {
             })?;
         }
 
-        Ok(Self {
-            skip_decode,
-            length,
-            key,
-            count,
-        })
+        Ok(Self { length, key, count })
     }
 
     fn validated(self) -> syn::Result<ValidFieldAttributes> {
-        let Self {
-            skip_decode,
-            length,
-            key,
-            count,
-        } = self;
-
-        if skip_decode {
-            if length.is_some() || key.is_some() || count.is_some() {
-                return Err(syn::Error::new(
-                    proc_macro2::Span::call_site(),
-                    "skip_decode cannot be combined with length, key, or count",
-                ));
-            }
-
-            return Ok(ValidFieldAttributes::SkipDecode);
-        }
+        let Self { length, key, count } = self;
 
         match (length, key, count) {
             (Some(Length::Unchecked), None, None) => Ok(ValidFieldAttributes::LengthUnchecked),
@@ -490,6 +527,7 @@ impl FieldAttributes {
             (Some(Length::Ident(length)), None, None) => Ok(ValidFieldAttributes::LengthIdent {
                 length_ident: length,
             }),
+            (None, Some(key), None) => Ok(ValidFieldAttributes::Key { key_ident: key }),
             (Some(Length::Unchecked), Some(key), None) => {
                 Ok(ValidFieldAttributes::KeyLengthUnchecked { key_ident: key })
             }
@@ -497,6 +535,13 @@ impl FieldAttributes {
                 Ok(ValidFieldAttributes::KeyLengthIdent {
                     key_ident: key,
                     length_ident: length,
+                })
+            }
+            (Some(Length::IdentSubtracted { ident, value }), Some(key), None) => {
+                Ok(ValidFieldAttributes::KeyLengthIdentSubtracted {
+                    key_ident: key,
+                    length_ident: ident,
+                    length_value: value,
                 })
             }
             (None, None, Some(count)) => Ok(ValidFieldAttributes::Count { count_ident: count }),
@@ -513,12 +558,11 @@ enum Length {
     Unchecked,
     Checked,
     Ident(Ident),
+    IdentSubtracted { ident: Ident, value: usize },
 }
 
 enum ValidFieldAttributes {
     None,
-    /// `#[rusmpp(skip_decode)]`
-    SkipDecode,
     /// `#[rusmpp(length = "unchecked")]`
     LengthUnchecked,
     /// `#[rusmpp(length = "checked")]`
@@ -526,6 +570,10 @@ enum ValidFieldAttributes {
     /// `#[rusmpp(length = ident)]`
     LengthIdent {
         length_ident: Ident,
+    },
+    /// `#[rusmpp(key = ident)]`
+    Key {
+        key_ident: Ident,
     },
     /// `#[rusmpp(key = ident, length = "unchecked")]`
     KeyLengthUnchecked {
@@ -535,6 +583,12 @@ enum ValidFieldAttributes {
     KeyLengthIdent {
         key_ident: Ident,
         length_ident: Ident,
+    },
+    /// `#[rusmpp(key = ident, length = ident - 1)]`
+    KeyLengthIdentSubtracted {
+        key_ident: Ident,
+        length_ident: Ident,
+        length_value: usize,
     },
     /// `#[rusmpp(count = ident)]`
     Count {
@@ -554,8 +608,8 @@ impl ValidFieldAttributes {
         )
     }
 
-    const fn skip(&self) -> bool {
-        matches!(self, Self::SkipDecode)
+    const fn is_count(&self) -> bool {
+        matches!(self, Self::Count { .. })
     }
 }
 
@@ -565,42 +619,40 @@ struct ValidField<'a> {
 }
 
 impl ValidField<'_> {
-    fn quote_borrowed_decode(&self) -> TokenStream {
-        let name = self
-            .field
+    fn name(&self) -> &Ident {
+        self.field
             .ident
             .as_ref()
-            .expect("Named fields must have idents");
+            .expect("Named field must have ident")
+    }
+
+    fn ty(&self) -> &syn::Type {
+        &self.field.ty
+    }
+
+    fn quote_borrowed_decode(&self) -> TokenStream {
+        let name = self.name();
 
         match &self.attrs {
             ValidFieldAttributes::None => quote! {
-                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(
-                    crate::decode::borrowed::DecodeExt::decode_move(src, size),
-                    crate::fields::SmppField::#name,
-                )?;
+                let (#name, size) = crate::decode::borrowed::DecodeExt::decode_move(src, size)?;
             },
-            ValidFieldAttributes::SkipDecode => quote! {},
             ValidFieldAttributes::LengthUnchecked => quote! {
-                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::borrowed::DecodeWithLengthExt::decode_move(
-                    src, length.saturating_sub(size), size
-                ),crate::fields::SmppField::#name)?;
+                let (#name, size) = crate::decode::borrowed::DecodeWithLengthExt::decode_move(src, length.saturating_sub(size), size)?;
             },
             ValidFieldAttributes::LengthChecked => quote! {
-                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::borrowed::DecodeExt::length_checked_decode_move(
-                    src, length.saturating_sub(size), size
-                ),crate::fields::SmppField::#name)?
+                let (#name, size) = crate::decode::borrowed::DecodeExt::length_checked_decode_move(src, length.saturating_sub(size), size)?
                 .map(|(this, size)| (Some(this), size))
                 .unwrap_or((None, size));
             },
             ValidFieldAttributes::LengthIdent { length_ident } => quote! {
-                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::borrowed::DecodeWithLengthExt::decode_move(
-                    src, #length_ident as usize, size
-                ),crate::fields::SmppField::#name)?;
+                let (#name, size) = crate::decode::borrowed::DecodeWithLengthExt::decode_move(src, #length_ident as usize, size)?;
+            },
+            ValidFieldAttributes::Key { key_ident } => quote! {
+                let (#name, size) = crate::decode::borrowed::DecodeWithKeyExt::no_length_decode_move(#key_ident, src, size)?;
             },
             ValidFieldAttributes::KeyLengthUnchecked { key_ident } => quote! {
-                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::borrowed::DecodeWithKeyOptionalExt::decode_move(
-                    #key_ident, src, length.saturating_sub(size), size
-                ),crate::fields::SmppField::#name)?
+                let (#name, size) = crate::decode::borrowed::DecodeWithKeyOptionalExt::decode_move(#key_ident, src, length.saturating_sub(size), size)?
                 .map(|(this, size)| (Some(this), size))
                 .unwrap_or((None, size));
             },
@@ -608,74 +660,154 @@ impl ValidField<'_> {
                 key_ident,
                 length_ident,
             } => quote! {
-                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::borrowed::DecodeWithKeyExt::optional_length_checked_decode_move(
-                    #key_ident, src, #length_ident as usize, size
-                ),crate::fields::SmppField::#name)?
+                let (#name, size) = crate::decode::borrowed::DecodeWithKeyExt::optional_length_checked_decode_move(#key_ident, src, #length_ident as usize, size)?
+                .map(|(this, size)| (Some(this), size))
+                .unwrap_or((None, size));
+            },
+            ValidFieldAttributes::KeyLengthIdentSubtracted {
+                key_ident,
+                length_ident,
+                length_value,
+            } => quote! {
+                let _length = (#length_ident as usize).saturating_sub(#length_value);
+
+                let (#name, size) = crate::decode::borrowed::DecodeWithKeyExt::optional_length_checked_decode_move(#key_ident, src, _length, size)?
                 .map(|(this, size)| (Some(this), size))
                 .unwrap_or((None, size));
             },
             ValidFieldAttributes::Count { count_ident } => quote! {
-                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::borrowed::DecodeExt::counted_move(
-                    src, #count_ident as usize, size
-                ),crate::fields::SmppField::#name)?;
+                let (#name, size) = crate::decode::borrowed::DecodeExt::counted_move(src, #count_ident as usize, size)?;
             },
         }
     }
 
-    fn quote_owned_decode(&self) -> TokenStream {
+    fn quote_owned_decode(&self, decode_error_context: TokenStream) -> TokenStream {
         let name = self
             .field
             .ident
             .as_ref()
             .expect("Named fields must have idents");
 
-        match &self.attrs {
+        let decode = match &self.attrs {
             ValidFieldAttributes::None => quote! {
-                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(
-                    crate::decode::owned::DecodeExt::decode_move(src, size),
-                    crate::fields::SmppField::#name,
-                )?;
+                let (#name, size) =  match crate::decode::owned::DecodeExt::decode_move(src, size) {
+                    Ok(ok) => ok,
+                    Err(err) => {
+                        #decode_error_context
+
+                        return Err(Self::Error { context });
+                    }
+                };
             },
-            ValidFieldAttributes::SkipDecode => quote! {},
             ValidFieldAttributes::LengthUnchecked => quote! {
-                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::owned::DecodeWithLengthExt::decode_move(
-                    src, length.saturating_sub(size), size
-                ),crate::fields::SmppField::#name)?;
+                let (#name, size) = match crate::decode::owned::DecodeWithLengthExt::decode_move(src, length.saturating_sub(size), size) {
+                    Ok(ok) => ok,
+                    Err(err) => {
+                        #decode_error_context
+
+                        return Err(Self::Error { context });
+                    }
+                };
             },
             ValidFieldAttributes::LengthChecked => quote! {
-                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::owned::DecodeExt::length_checked_decode_move(
-                    src, length.saturating_sub(size), size
-                ),crate::fields::SmppField::#name)?
-                .map(|(this, size)| (Some(this), size))
-                .unwrap_or((None, size));
+                let opt = match crate::decode::owned::DecodeExt::length_checked_decode_move(src, length.saturating_sub(size), size) {
+                    Ok(ok) => ok,
+                    Err(err) => {
+                        #decode_error_context
+
+                        return Err(Self::Error { context });
+                    }
+                };
+
+                let (#name, size) = opt
+                    .map(|(this, size)| (Some(this), size))
+                    .unwrap_or((None, size));
             },
             ValidFieldAttributes::LengthIdent { length_ident } => quote! {
-                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::owned::DecodeWithLengthExt::decode_move(
-                    src, #length_ident as usize, size
-                ),crate::fields::SmppField::#name)?;
+                let (#name, size) = match crate::decode::owned::DecodeWithLengthExt::decode_move(src, #length_ident as usize, size) {
+                    Ok(ok) => ok,
+                    Err(err) => {
+                        #decode_error_context
+
+                        return Err(Self::Error { context });
+                    }
+                };
+            },
+            ValidFieldAttributes::Key { key_ident } => quote! {
+                let (#name, size) = match crate::decode::owned::DecodeWithKeyExt::no_length_decode_move(#key_ident, src, size) {
+                    Ok(ok) => ok,
+                    Err(err) => {
+                        #decode_error_context
+
+                        return Err(Self::Error { context });
+                    }
+                };
             },
             ValidFieldAttributes::KeyLengthUnchecked { key_ident } => quote! {
-                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::owned::DecodeWithKeyOptionalExt::decode_move(
-                    #key_ident, src, length.saturating_sub(size), size
-                ),crate::fields::SmppField::#name)?
-                .map(|(this, size)| (Some(this), size))
-                .unwrap_or((None, size));
+                let opt = match crate::decode::owned::DecodeWithKeyOptionalExt::decode_move(#key_ident, src, length.saturating_sub(size), size) {
+                    Ok(ok) => ok,
+                    Err(err) => {
+                        #decode_error_context
+
+                        return Err(Self::Error { context });
+                    }
+                };
+
+                let (#name, size) = opt
+                    .map(|(this, size)| (Some(this), size))
+                    .unwrap_or((None, size));
             },
             ValidFieldAttributes::KeyLengthIdent {
                 key_ident,
                 length_ident,
             } => quote! {
-                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::owned::DecodeWithKeyExt::optional_length_checked_decode_move(
-                    #key_ident, src, #length_ident as usize, size
-                ),crate::fields::SmppField::#name)?
-                .map(|(this, size)| (Some(this), size))
-                .unwrap_or((None, size));
+                let opt = match crate::decode::owned::DecodeWithKeyExt::optional_length_checked_decode_move(#key_ident, src, #length_ident as usize, size) {
+                    Ok(ok) => ok,
+                    Err(err) => {
+                        #decode_error_context
+
+                        return Err(Self::Error { context });
+                    }
+                };
+
+                let (#name, size) = opt
+                    .map(|(this, size)| (Some(this), size))
+                    .unwrap_or((None, size));
+            },
+            ValidFieldAttributes::KeyLengthIdentSubtracted {
+                key_ident,
+                length_ident,
+                length_value,
+            } => quote! {
+                let _length = (#length_ident as usize).saturating_sub(#length_value);
+
+                let opt = match crate::decode::owned::DecodeWithKeyExt::optional_length_checked_decode_move(#key_ident, src, _length, size) {
+                    Ok(ok) => ok,
+                    Err(err) => {
+                        #decode_error_context
+
+                        return Err(Self::Error { context });
+                    }
+                };
+
+                let (#name, size) = opt
+                    .map(|(this, size)| (Some(this), size))
+                    .unwrap_or((None, size));
             },
             ValidFieldAttributes::Count { count_ident } => quote! {
-                let (#name, size) = crate::decode::DecodeErrorExt::map_as_source(crate::decode::owned::DecodeExt::counted_move(
-                    src, #count_ident as usize, size
-                ),crate::fields::SmppField::#name)?;
+                let (#name, size) = match crate::decode::owned::DecodeExt::counted_move(src, #count_ident as usize, size) {
+                    Ok(ok) => ok,
+                    Err(err) => {
+                        #decode_error_context
+
+                        return Err(Self::Error { context });
+                    }
+                };
             },
+        };
+
+        quote! {
+            #decode
         }
     }
 }
@@ -693,6 +825,69 @@ impl ValidFields<'_> {
             .any(|f| f.attrs.requires_decode_with_length())
             .then_some(DecodeType::DecodeWithLength)
             .unwrap_or(DecodeType::Decode)
+    }
+
+    fn names(&self) -> impl Iterator<Item = &Ident> {
+        self.fields.iter().map(|f| {
+            f.field
+                .ident
+                .as_ref()
+                .expect("Named fields must have idents")
+        })
+    }
+
+    fn quote_decode_error_context(
+        &self,
+        decode_error_context_struct_name: Ident,
+    ) -> impl Iterator<Item = TokenStream> + '_ {
+        let names = self.names().collect::<Vec<_>>();
+
+        names
+            .clone()
+            .into_iter()
+            .enumerate()
+            .map(move |(err_index, _)| {
+                let assignments = names.iter().enumerate().map(|(i, name)| {
+                    if i < err_index {
+                        quote! {
+                            #name: ::core::option::Option::Some(
+                                ::core::result::Result::Ok(#name)
+                            )
+                        }
+                    } else if i == err_index {
+                        quote! {
+                            #name: ::core::option::Option::Some(
+                                ::core::result::Result::Err(err)
+                            )
+                        }
+                    } else {
+                        quote! {
+                            #name: ::core::option::Option::None
+                        }
+                    }
+                });
+
+                quote! {
+                    let context = #decode_error_context_struct_name {
+                        #(#assignments),*
+                    };
+                }
+            })
+    }
+
+    fn quote_borrowed_decode(&self) -> impl Iterator<Item = TokenStream> + '_ {
+        self.fields.iter().map(|f| f.quote_borrowed_decode())
+    }
+
+    fn quote_owned_decode(
+        &self,
+        decode_error_context_struct_name: Ident,
+    ) -> impl Iterator<Item = TokenStream> + '_ {
+        let contexts = self.quote_decode_error_context(decode_error_context_struct_name);
+        self.fields
+            .iter()
+            .zip(contexts)
+            .map(|(f, context)| f.quote_owned_decode(context))
     }
 }
 
@@ -722,6 +917,39 @@ fn quote_test(input: &DeriveInput, test_attrs: &TestAttributes) -> TokenStream {
                     }
                 }
             }
+        }
+    }
+}
+
+trait TypeExt {
+    /// Flattens the type if the field is an `Option<T>` or `Vec<T>`, returning `T`. Otherwise, returns the original type.
+    ///
+    /// used with `counted` fields to extract the inner type and use the error type of the inner type and not the `Vec` itself.
+    fn flatten(&self) -> &syn::Type;
+}
+
+impl TypeExt for &syn::Type {
+    fn flatten(&self) -> &syn::Type {
+        {
+            if let syn::Type::Path(type_path) = self {
+                if type_path.qself.is_none() {
+                    if let Some(last_segment) = type_path.path.segments.last() {
+                        if last_segment.ident == "Option" || last_segment.ident == "Vec" {
+                            if let syn::PathArguments::AngleBracketed(args) =
+                                &last_segment.arguments
+                            {
+                                if args.args.len() == 1 {
+                                    if let syn::GenericArgument::Type(inner_ty) = &args.args[0] {
+                                        return inner_ty;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            self
         }
     }
 }

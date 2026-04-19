@@ -44,7 +44,7 @@ impl EsmClass {
             messaging_mode: self.messaging_mode,
             message_type: self.message_type,
             ansi41_specific: self.ansi41_specific,
-            gsm_features: GsmFeatures::UdhiIndicator,
+            gsm_features: GsmFeatures::UdhIndicator,
         }
     }
 }
@@ -136,7 +136,7 @@ pub enum GsmFeatures {
     #[default]
     NotSelected = 0b00_00_00_00,
     /// UDH Indicator.
-    UdhiIndicator = 0b01_00_00_00,
+    UdhIndicator = 0b01_00_00_00,
     /// Set Reply Path (only relevant for GSM network).
     SetReplyPath = 0b10_00_00_00,
     /// Set UDHI and Reply Path (only relevant for GSM network).
@@ -158,13 +158,13 @@ mod tests {
                     MessagingMode::Forward,
                     MessageType::ShortMessageContainsIntermediateDeliveryNotification,
                     Ansi41Specific::ShortMessageContainsConversationAbort,
-                    GsmFeatures::UdhiIndicator,
+                    GsmFeatures::UdhIndicator,
                 ),
                 Self::new(
                     MessagingMode::Datagram,
                     MessageType::ShortMessageContainsMCDeliveryReceipt,
                     Ansi41Specific::ShortMessageContainsUserAcknowledgment,
-                    GsmFeatures::UdhiIndicator,
+                    GsmFeatures::UdhIndicator,
                 ),
             ]
         }

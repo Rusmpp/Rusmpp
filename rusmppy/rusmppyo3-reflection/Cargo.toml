@@ -7,7 +7,6 @@ publish = false
 [dependencies]
 rusmpp = { path = "../../rusmpp", default-features = false, features = [
     "serde-deserialize-unchecked",
-    "verbose",
 ] }
 serde-reflection = "0.5.0"
 serde-generate = "0.32.0"

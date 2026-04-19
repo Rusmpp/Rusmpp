@@ -437,7 +437,7 @@ mod tests {
             let error = COctetString::<1, 6>::decode(bytes).unwrap_err();
 
             assert!(matches!(
-                error.kind(),
+                error.kind,
                 DecodeErrorKind::COctetStringDecodeError(COctetStringDecodeError::TooFewBytes {
                     actual: 0,
                     min: 1,
@@ -451,7 +451,7 @@ mod tests {
             let error = COctetString::<1, 6>::decode(bytes).unwrap_err();
 
             assert!(matches!(
-                error.kind(),
+                error.kind,
                 DecodeErrorKind::COctetStringDecodeError(
                     COctetStringDecodeError::NotNullTerminated
                 )
@@ -464,7 +464,7 @@ mod tests {
             let error = COctetString::<1, 5>::decode(bytes).unwrap_err();
 
             assert!(matches!(
-                error.kind(),
+                error.kind,
                 DecodeErrorKind::COctetStringDecodeError(
                     COctetStringDecodeError::NotNullTerminated
                 )
@@ -477,7 +477,7 @@ mod tests {
             let error = COctetString::<10, 20>::decode(bytes).unwrap_err();
 
             assert!(matches!(
-                error.kind(),
+                error.kind,
                 DecodeErrorKind::COctetStringDecodeError(COctetStringDecodeError::TooFewBytes {
                     actual: 6,
                     min: 10,
@@ -491,7 +491,7 @@ mod tests {
             let error = COctetString::<1, 6>::decode(bytes).unwrap_err();
 
             assert!(matches!(
-                error.kind(),
+                error.kind,
                 DecodeErrorKind::COctetStringDecodeError(COctetStringDecodeError::NotAscii)
             ));
         }

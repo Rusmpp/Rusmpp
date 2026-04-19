@@ -243,21 +243,15 @@ for SubmitMulti<'a, N> {
         length: usize,
     ) -> Result<(Self, usize), crate::decode::DecodeError> {
         let size = 0;
-        let (other, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::other,
+        let (other, size) = crate::decode::borrowed::DecodeExt::decode_move(src, size)?;
+        let (number_of_dests, size) = crate::decode::borrowed::DecodeExt::decode_move(
+            src,
+            size,
         )?;
-        let (number_of_dests, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::number_of_dests,
-        )?;
-        let (dest_address, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeExt::counted_move(
-                src,
-                number_of_dests as usize,
-                size,
-            ),
-            crate::fields::SmppField::dest_address,
+        let (dest_address, size) = crate::decode::borrowed::DecodeExt::counted_move(
+            src,
+            number_of_dests as usize,
+            size,
         )?;
         Ok((
             Self {

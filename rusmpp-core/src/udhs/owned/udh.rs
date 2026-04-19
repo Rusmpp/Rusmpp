@@ -2,8 +2,8 @@ use rusmpp_macros::Rusmpp;
 
 use crate::{
     decode::{
-        DecodeError, DecodeResultExt,
-        owned::{Decode, DecodeWithKey, DecodeWithLength},
+        AnyOctetStringDecodeError, ConcatenatedShortMessageDecodeError, DecodeResultExt,
+        owned::{Decode, DecodeErrorType, DecodeWithKey, DecodeWithLength},
     },
     encode::Length,
     types::owned::AnyOctetString,
@@ -15,13 +15,16 @@ use crate::{
 
 /// User Data Header (UDH).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
-#[rusmpp(decode = skip, test = skip)]
+#[rusmpp(decode = owned, test = skip)]
 pub struct Udh {
     /// UDH length (excluding the length field itself).
     length: u8,
     /// UDH identifier.
     id: UdhId,
     /// UDH value.
+    // XXX: the length of the value is `self.length` - `self.id.length()`
+    // `self.id.length()` is always `1`
+    #[rusmpp(key = id, length = length - 1)]
     value: Option<UdhValue>,
 }
 
@@ -117,6 +120,24 @@ impl crate::encode::owned::Encode for UdhValue {
     }
 }
 
+#[derive(Debug, Clone, thiserror::Error)]
+pub enum UdhValueDecodeError {
+    #[error("ConcatenatedShortMessage8Bit decode error: {0}")]
+    ConcatenatedShortMessage8Bit(#[source] ConcatenatedShortMessageDecodeError),
+    #[error("ConcatenatedShortMessage16Bit decode error: {0}")]
+    ConcatenatedShortMessage16Bit(#[source] ConcatenatedShortMessageDecodeError),
+    #[error("Other decode error: {0}")]
+    Other(
+        #[from]
+        #[source]
+        AnyOctetStringDecodeError,
+    ),
+}
+
+impl DecodeErrorType for UdhValue {
+    type Error = UdhValueDecodeError;
+}
+
 impl DecodeWithKey for UdhValue {
     type Key = UdhId;
 
@@ -124,53 +145,23 @@ impl DecodeWithKey for UdhValue {
         key: Self::Key,
         src: &mut bytes::BytesMut,
         length: usize,
-    ) -> Result<(Self, usize), DecodeError> {
+    ) -> Result<(Self, usize), Self::Error> {
         let (value, size) = match key {
-            UdhId::ConcatenatedShortMessages8Bit => {
-                Decode::decode(src).map_decoded(Self::ConcatenatedShortMessage8Bit)?
-            }
-            UdhId::ConcatenatedShortMessages16Bit => {
-                Decode::decode(src).map_decoded(Self::ConcatenatedShortMessage16Bit)?
-            }
-            other => {
-                DecodeWithLength::decode(src, length).map_decoded(|value| UdhValue::Other {
+            UdhId::ConcatenatedShortMessages8Bit => Decode::decode(src)
+                .map_decoded(Self::ConcatenatedShortMessage8Bit)
+                .map_err(Self::Error::ConcatenatedShortMessage8Bit)?,
+            UdhId::ConcatenatedShortMessages16Bit => Decode::decode(src)
+                .map_decoded(Self::ConcatenatedShortMessage16Bit)
+                .map_err(Self::Error::ConcatenatedShortMessage16Bit)?,
+            other => DecodeWithLength::decode(src, length)
+                .map_decoded(|value| UdhValue::Other {
                     udh_id: other,
                     value,
-                })?
-            }
+                })
+                .map_err(Self::Error::Other)?,
         };
 
         Ok((value, size))
-    }
-}
-
-impl Decode for Udh {
-    fn decode(src: &mut bytes::BytesMut) -> Result<(Self, usize), DecodeError> {
-        let size = 0;
-        let (length, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::owned::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::udh_length,
-        )?;
-        let (id, size): (UdhId, usize) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::owned::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::udh_id,
-        )?;
-
-        let value_length = (length as usize).saturating_sub(id.length());
-
-        let (value, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::owned::DecodeWithKeyExt::optional_length_checked_decode_move(
-                id,
-                src,
-                value_length,
-                size,
-            ),
-            crate::fields::SmppField::udh_value,
-        )?
-        .map(|(this, size)| (Some(this), size))
-        .unwrap_or((None, size));
-
-        Ok((Self { length, id, value }, size))
     }
 }
 

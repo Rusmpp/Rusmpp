@@ -3,7 +3,10 @@ use alloc::{string::String, string::ToString, vec::Vec};
 use bytes::{BufMut, Bytes, BytesMut};
 
 use crate::{
-    decode::{DecodeError, OctetStringDecodeError, owned::DecodeWithLength},
+    decode::{
+        OctetStringDecodeError,
+        owned::{DecodeErrorType, DecodeWithLength},
+    },
     encode::{Encode, Length, owned::Encode as BEncode},
     types::octet_string::Error,
 };
@@ -282,30 +285,30 @@ impl<const MIN: usize, const MAX: usize> BEncode for OctetString<MIN, MAX> {
     }
 }
 
+impl<const MIN: usize, const MAX: usize> DecodeErrorType for OctetString<MIN, MAX> {
+    type Error = OctetStringDecodeError;
+}
+
 impl<const MIN: usize, const MAX: usize> DecodeWithLength for OctetString<MIN, MAX> {
-    fn decode(src: &mut BytesMut, length: usize) -> Result<(Self, usize), DecodeError> {
+    fn decode(src: &mut BytesMut, length: usize) -> Result<(Self, usize), Self::Error> {
         Self::_ASSERT_VALID;
 
         if length > MAX {
-            return Err(DecodeError::octet_string_decode_error(
-                OctetStringDecodeError::TooManyBytes {
-                    actual: length,
-                    max: MAX,
-                },
-            ));
+            return Err(OctetStringDecodeError::TooManyBytes {
+                actual: length,
+                max: MAX,
+            });
         }
 
         if length < MIN {
-            return Err(DecodeError::octet_string_decode_error(
-                OctetStringDecodeError::TooFewBytes {
-                    actual: length,
-                    min: MIN,
-                },
-            ));
+            return Err(OctetStringDecodeError::TooFewBytes {
+                actual: length,
+                min: MIN,
+            });
         }
 
         if src.len() < length {
-            return Err(DecodeError::unexpected_eof());
+            return Err(OctetStringDecodeError::UnexpectedEndOfBuffer);
         }
 
         let bytes = src.split_to(length).freeze();
@@ -443,8 +446,6 @@ mod tests {
     }
 
     mod decode {
-        use crate::decode::DecodeErrorKind;
-
         use super::*;
 
         #[test]
@@ -452,7 +453,10 @@ mod tests {
             let mut buf = BytesMut::new();
             let error = OctetString::<0, 6>::decode(&mut buf, 5).unwrap_err();
 
-            assert!(matches!(error.kind(), DecodeErrorKind::UnexpectedEof));
+            assert!(matches!(
+                error,
+                OctetStringDecodeError::UnexpectedEndOfBuffer
+            ));
         }
 
         #[test]
@@ -461,11 +465,8 @@ mod tests {
             let error = OctetString::<0, 5>::decode(&mut buf, 15).unwrap_err();
 
             assert!(matches!(
-                error.kind(),
-                DecodeErrorKind::OctetStringDecodeError(OctetStringDecodeError::TooManyBytes {
-                    actual: 15,
-                    max: 5,
-                },)
+                error,
+                OctetStringDecodeError::TooManyBytes { actual: 15, max: 5 }
             ));
         }
 
@@ -475,11 +476,8 @@ mod tests {
             let error = OctetString::<6, 10>::decode(&mut buf, 5).unwrap_err();
 
             assert!(matches!(
-                error.kind(),
-                DecodeErrorKind::OctetStringDecodeError(OctetStringDecodeError::TooFewBytes {
-                    actual: 5,
-                    min: 6,
-                },)
+                error,
+                OctetStringDecodeError::TooFewBytes { actual: 5, min: 6 }
             ));
         }
 

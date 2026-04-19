@@ -387,17 +387,15 @@ mod tests {
                     .unwrap()
                     .build(),
                 Self::builder()
-                    .push_dest_address(DestAddress::SmeAddress(SmeAddress::new(
+                    .push_dest_address(DestAddress::new(SmeAddress::new(
                         Ton::International,
                         Npi::Isdn,
                         COctetString::new(b"1234567890123456789\0").unwrap(),
                     )))
                     .unwrap()
-                    .push_dest_address(DestAddress::DistributionListName(
-                        DistributionListName::new(
-                            COctetString::new(b"1234567890123456789\0").unwrap(),
-                        ),
-                    ))
+                    .push_dest_address(DestAddress::new(DistributionListName::new(
+                        COctetString::new(b"1234567890123456789\0").unwrap(),
+                    ),))
                     .unwrap()
                     .short_message(OctetString::new(b"Short Message").unwrap())
                     .push_tlv(MessageSubmissionRequestTlvValue::MessagePayload(
@@ -439,12 +437,12 @@ mod tests {
         let submit_sm = SubmitMulti::<'static, 16>::builder()
             .dest_address(
                 [
-                    DestAddress::SmeAddress(SmeAddress::new(
+                    DestAddress::new(SmeAddress::new(
                         Ton::International,
                         Npi::Isdn,
                         COctetString::new(b"1234567890123456789\0").unwrap(),
                     )),
-                    DestAddress::DistributionListName(DistributionListName::new(
+                    DestAddress::new(DistributionListName::new(
                         COctetString::new(b"1234567890123456789\0").unwrap(),
                     )),
                 ]
@@ -456,15 +454,15 @@ mod tests {
         assert_eq!(submit_sm.dest_address().len(), 2);
 
         let submit_sm = SubmitMulti::<'static, 16>::builder()
-            .push_dest_address(DestAddress::SmeAddress(SmeAddress::new(
+            .push_dest_address(DestAddress::new(SmeAddress::new(
                 Ton::International,
                 Npi::Isdn,
                 COctetString::new(b"1234567890123456789\0").unwrap(),
             )))
             .unwrap()
-            .push_dest_address(DestAddress::DistributionListName(
-                DistributionListName::new(COctetString::new(b"1234567890123456789\0").unwrap()),
-            ))
+            .push_dest_address(DestAddress::new(DistributionListName::new(
+                COctetString::new(b"1234567890123456789\0").unwrap(),
+            )))
             .unwrap()
             .build();
 
@@ -472,15 +470,15 @@ mod tests {
         assert_eq!(submit_sm.dest_address().len(), 2);
 
         let submit_sm = SubmitMulti::<'static, 16>::builder()
-            .push_dest_address(DestAddress::SmeAddress(SmeAddress::new(
+            .push_dest_address(DestAddress::new(SmeAddress::new(
                 Ton::International,
                 Npi::Isdn,
                 COctetString::new(b"1234567890123456789\0").unwrap(),
             )))
             .unwrap()
-            .push_dest_address(DestAddress::DistributionListName(
-                DistributionListName::new(COctetString::new(b"1234567890123456789\0").unwrap()),
-            ))
+            .push_dest_address(DestAddress::new(DistributionListName::new(
+                COctetString::new(b"1234567890123456789\0").unwrap(),
+            )))
             .unwrap()
             .clear_dest_address()
             .build();

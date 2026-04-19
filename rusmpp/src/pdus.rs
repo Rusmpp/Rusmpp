@@ -8,6 +8,10 @@ pub mod parts {
     pub use rusmpp_core::pdus::owned::parts::*;
 }
 
+pub mod errors {
+    pub use rusmpp_core::pdus::owned::errors::*;
+}
+
 pub use rusmpp_core::pdus::owned::{
     AlertNotification, BindAny, BindReceiver, BindReceiverResp, BindTransceiver,
     BindTransceiverResp, BindTransmitter, BindTransmitterResp, BroadcastSm, BroadcastSmResp,

@@ -26,6 +26,7 @@ tokio-util = { version = "0.7.16", default-features = false, features = [
     "codec",
 ], optional = true }
 tracing = { version = "0.1.41", default-features = false, optional = true }
+thiserror = { version = "2", default-features = false }
 
 [dev-dependencies]
 strum = "0.27.2"
@@ -41,8 +42,6 @@ embedded-io-adapters = { version = "0.6.2", default-features = false, features =
 default = []
 # Enables the `alloc` crate.
 alloc = ["serde/alloc", "dep:bytes"]
-# Enables verbose DecodeError with DecodeErrorSource.
-verbose = ["alloc"]
 # Implements arbitrary's Arbitrary trait for fuzz testing.
 arbitrary = ["dep:arbitrary"]
 

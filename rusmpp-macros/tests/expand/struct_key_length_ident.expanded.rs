@@ -219,22 +219,16 @@ impl<'a> crate::encode::Encode for Tlv<'a> {
 impl<'a> crate::decode::borrowed::Decode<'a> for Tlv<'a> {
     fn decode(src: &'a [u8]) -> Result<(Self, usize), crate::decode::DecodeError> {
         let size = 0;
-        let (tag, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::tag,
+        let (tag, size) = crate::decode::borrowed::DecodeExt::decode_move(src, size)?;
+        let (value_length, size) = crate::decode::borrowed::DecodeExt::decode_move(
+            src,
+            size,
         )?;
-        let (value_length, size) = crate::decode::DecodeErrorExt::map_as_source(
-            crate::decode::borrowed::DecodeExt::decode_move(src, size),
-            crate::fields::SmppField::value_length,
-        )?;
-        let (value, size) = crate::decode::DecodeErrorExt::map_as_source(
-                crate::decode::borrowed::DecodeWithKeyExt::optional_length_checked_decode_move(
-                    tag,
-                    src,
-                    value_length as usize,
-                    size,
-                ),
-                crate::fields::SmppField::value,
+        let (value, size) = crate::decode::borrowed::DecodeWithKeyExt::optional_length_checked_decode_move(
+                tag,
+                src,
+                value_length as usize,
+                size,
             )?
             .map(|(this, size)| (Some(this), size))
             .unwrap_or((None, size));
