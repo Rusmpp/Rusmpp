@@ -376,7 +376,7 @@ pub trait DecodeExt<'a>: Decode<'a> {
             let (item, size_) = Self::decode(&src[size..])?;
 
             vec.push(item).map_err(|_| {
-                DecodeError::heapless_vec_decode_error(HeaplessVecDecodeError::TooManyElements {
+                DecodeError::heapless_vec_decode_error(HeaplessVecDecodeError::TooManyItems {
                     max: N,
                 })
             })?;
@@ -506,7 +506,7 @@ impl<'a, const N: usize, T: Decode<'a>> DecodeWithLength<'a> for heapless::vec::
             size += size_;
 
             vec.push(item).map_err(|_| {
-                DecodeError::heapless_vec_decode_error(HeaplessVecDecodeError::TooManyElements {
+                DecodeError::heapless_vec_decode_error(HeaplessVecDecodeError::TooManyItems {
                     max: N,
                 })
             })?;
@@ -518,7 +518,6 @@ impl<'a, const N: usize, T: Decode<'a>> DecodeWithLength<'a> for heapless::vec::
 
 #[cfg(test)]
 mod tests {
-
     use heapless::vec::Vec;
 
     use crate::{

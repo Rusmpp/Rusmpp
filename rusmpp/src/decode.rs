@@ -2,5 +2,5 @@
 
 pub use rusmpp_core::decode::{
     AnyOctetStringDecodeError, COctetStringDecodeError, ConcatenatedShortMessageDecodeError,
-    IntegerDecodeError, OctetStringDecodeError, UdhDecodeError, owned::*,
+    IntegerDecodeError, OctetStringDecodeError, UdhDecodeError, VecDecodeError, owned::*,
 };

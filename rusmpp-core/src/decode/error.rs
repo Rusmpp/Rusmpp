@@ -1,8 +1,3 @@
-// TODO: name all errors with the suffix "Error" for consistency.
-// TODO: owned: make decode traits return the DecodeErrorType::Error instead of DecodeError.
-// TODO: borrowed: keep the DecodeError for borrowed types. The borrowed version of the lib should be lightweight, and creating a custom decode error type like the owned version has its limitations because of the lifetimes and generic params.
-// TODO: refine the DecodeError.
-
 /// A generic error that can occur when decoding `SMPP` values.
 #[derive(Debug)]
 #[non_exhaustive]
@@ -65,14 +60,15 @@ pub enum DecodeErrorKind {
     OctetStringDecodeError(OctetStringDecodeError),
     AnyOctetStringDecodeError(AnyOctetStringDecodeError),
     HeaplessVecDecodeError(HeaplessVecDecodeError),
-    UnsupportedKey { key: u32 },
     UdhDecodeError(UdhDecodeError),
+    UnsupportedKey { key: u32 },
 }
 
 /// An error that can occur when decoding a `Integer`.
 #[derive(Debug, Copy, Clone)]
 #[non_exhaustive]
 pub enum IntegerDecodeError {
+    /// Unexpected end of buffer.
     UnexpectedEndOfBuffer,
 }
 
@@ -80,9 +76,13 @@ pub enum IntegerDecodeError {
 #[derive(Debug, Copy, Clone)]
 #[non_exhaustive]
 pub enum COctetStringDecodeError {
+    /// The number of bytes is less than the minimum required.
     TooFewBytes { actual: usize, min: usize },
+    /// The bytes are not ASCII.
     NotAscii,
+    /// The bytes are not null terminated.
     NotNullTerminated,
+    /// Unexpected end of buffer.
     UnexpectedEndOfBuffer,
 }
 
@@ -90,8 +90,11 @@ pub enum COctetStringDecodeError {
 #[derive(Debug, Copy, Clone)]
 #[non_exhaustive]
 pub enum OctetStringDecodeError {
+    /// The number of bytes exceeds the maximum allowed.
     TooManyBytes { actual: usize, max: usize },
+    /// The number of bytes is less than the minimum required.
     TooFewBytes { actual: usize, min: usize },
+    /// Unexpected end of buffer.
     UnexpectedEndOfBuffer,
 }
 
@@ -99,19 +102,19 @@ pub enum OctetStringDecodeError {
 #[derive(Debug, Copy, Clone)]
 #[non_exhaustive]
 pub enum AnyOctetStringDecodeError {
+    /// Unexpected end of buffer.
     UnexpectedEndOfBuffer,
 }
 
 /// An error that can occur when decoding a `heapless::Vec<T>`.
 #[derive(Debug, Copy, Clone)]
 pub enum HeaplessVecDecodeError {
+    /// Unexpected end of buffer.
     UnexpectedEndOfBuffer,
-    /// An error that can occur when decoding a fixed size of elements.
+    /// An error that can occur when decoding a fixed size of items.
     ///
     /// E.g. decoding `[T; N]` where `N` is the fixed size. Mostly while decoding arrays of `TLVs`.
-    TooManyElements {
-        max: usize,
-    },
+    TooManyItems { max: usize },
 }
 
 /// An error that can occur when decoding a `UDH`.
@@ -143,6 +146,15 @@ pub enum ConcatenatedShortMessageDecodeError {
         actual: usize,
         min: usize,
     },
+}
+
+/// An error that can occur when decoding a `Vec<T>`.
+#[derive(Debug, Copy, Clone)]
+pub enum VecDecodeError<E> {
+    /// Unexpected end of buffer.
+    UnexpectedEndOfBuffer,
+    /// Item decode error.
+    ItemDecodeError(E),
 }
 
 impl core::fmt::Display for DecodeError {
@@ -188,7 +200,9 @@ impl core::fmt::Display for DecodeErrorKind {
             DecodeErrorKind::COctetStringDecodeError(e) => write!(f, "COctetString error: {e}"),
             DecodeErrorKind::OctetStringDecodeError(e) => write!(f, "OctetString error: {e}"),
             DecodeErrorKind::AnyOctetStringDecodeError(e) => write!(f, "AnyOctetString error: {e}"),
-            DecodeErrorKind::HeaplessVecDecodeError(e) => write!(f, "Vec decode error: {e}"),
+            DecodeErrorKind::HeaplessVecDecodeError(e) => {
+                write!(f, "Heapless vec decode error: {e}")
+            }
             DecodeErrorKind::UnsupportedKey { key } => write!(f, "Unsupported key: {key}"),
             DecodeErrorKind::UdhDecodeError(e) => write!(f, "UDH decode error: {e}"),
         }
@@ -258,8 +272,8 @@ impl core::fmt::Display for HeaplessVecDecodeError {
             HeaplessVecDecodeError::UnexpectedEndOfBuffer => {
                 write!(f, "Unexpected end of buffer")
             }
-            HeaplessVecDecodeError::TooManyElements { max } => {
-                write!(f, "Too many elements. max: {max}")
+            HeaplessVecDecodeError::TooManyItems { max } => {
+                write!(f, "Too many items. max: {max}")
             }
         }
     }
@@ -316,8 +330,26 @@ impl core::fmt::Display for ConcatenatedShortMessageDecodeError {
 
 impl core::error::Error for ConcatenatedShortMessageDecodeError {}
 
-#[doc(hidden)]
-pub trait DecodeResultExt<T, E> {
+impl<E: core::fmt::Display> core::fmt::Display for VecDecodeError<E> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            VecDecodeError::UnexpectedEndOfBuffer => {
+                write!(f, "Unexpected end of buffer")
+            }
+            VecDecodeError::ItemDecodeError(e) => write!(f, "Item decode error: {e}"),
+        }
+    }
+}
+
+impl<E> From<E> for VecDecodeError<E> {
+    fn from(value: E) -> Self {
+        VecDecodeError::ItemDecodeError(value)
+    }
+}
+
+impl<E: core::error::Error> core::error::Error for VecDecodeError<E> {}
+
+pub(crate) trait DecodeResultExt<T, E> {
     fn map_decoded<F, U>(self, op: F) -> Result<(U, usize), E>
     where
         F: FnOnce(T) -> U;

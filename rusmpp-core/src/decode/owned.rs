@@ -1,7 +1,6 @@
 //! Traits for decoding `SMPP` values with owned data.
 
-// TODO: restore the docs
-
+use super::error::VecDecodeError;
 use bytes::BytesMut;
 
 /// Trait for defining the error type for all decoding traits.
@@ -28,32 +27,6 @@ where
 {
     type Error = VecDecodeError<T::Error>;
 }
-
-/// An error that can occur when decoding a `Vec<T>`.
-#[derive(Debug, Copy, Clone)]
-pub enum VecDecodeError<E> {
-    UnexpectedEndOfBuffer,
-    ItemDecodeError(E),
-}
-
-impl<E: core::fmt::Display> core::fmt::Display for VecDecodeError<E> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            VecDecodeError::UnexpectedEndOfBuffer => {
-                write!(f, "Unexpected end of buffer")
-            }
-            VecDecodeError::ItemDecodeError(e) => write!(f, "Item decode error: {e}"),
-        }
-    }
-}
-
-impl<E> From<E> for VecDecodeError<E> {
-    fn from(value: E) -> Self {
-        VecDecodeError::ItemDecodeError(value)
-    }
-}
-
-impl<E: core::error::Error> core::error::Error for VecDecodeError<E> {}
 
 /// Trait for decoding `SMPP` values from a buffer.
 pub trait Decode: DecodeErrorType + Sized {
