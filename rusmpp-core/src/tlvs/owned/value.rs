@@ -1,7 +1,7 @@
 use bytes::BytesMut;
 
 use crate::{
-    CommandStatus,
+    CommandStatus, Sealed,
     decode::{
         AnyOctetStringDecodeError, COctetStringDecodeError, DecodeResultExt, IntegerDecodeError,
         OctetStringDecodeError,
@@ -196,6 +196,8 @@ impl TlvValue {
         }
     }
 }
+
+impl Sealed for TlvValue {}
 
 impl Length for TlvValue {
     fn length(&self) -> usize {

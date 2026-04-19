@@ -2,6 +2,7 @@ use bytes::BytesMut;
 use rusmpp_macros::Rusmpp;
 
 use crate::{
+    Sealed,
     decode::{
         DecodeResultExt,
         owned::{Decode, DecodeErrorType, DecodeWithKey},
@@ -64,6 +65,8 @@ impl DestAddressValue {
         }
     }
 }
+
+impl Sealed for DestAddressValue {}
 
 impl Length for DestAddressValue {
     fn length(&self) -> usize {

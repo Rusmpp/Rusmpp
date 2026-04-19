@@ -1,6 +1,7 @@
 use rusmpp_macros::Rusmpp;
 
 use crate::{
+    Sealed,
     decode::{
         AnyOctetStringDecodeError, ConcatenatedShortMessageDecodeError, DecodeResultExt,
         owned::{Decode, DecodeErrorType, DecodeWithKey, DecodeWithLength},
@@ -89,6 +90,8 @@ impl UdhValue {
         }
     }
 }
+
+impl Sealed for UdhValue {}
 
 impl Length for UdhValue {
     fn length(&self) -> usize {

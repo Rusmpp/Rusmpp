@@ -7,9 +7,12 @@
 //! single octet with the value 0x05
 
 use crate::{
+    Sealed,
     decode::{DecodeError, IntegerDecodeError, borrowed},
     encode::{Encode, Length},
 };
+
+impl Sealed for u8 {}
 
 impl Length for u8 {
     fn length(&self) -> usize {

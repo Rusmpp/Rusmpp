@@ -8,6 +8,7 @@ use crate::{
         owned::{DecodeErrorType, DecodeWithLength},
     },
     encode::{Encode, Length, owned::Encode as BEncode},
+    Sealed,
     types::octet_string::Error,
 };
 
@@ -264,6 +265,8 @@ impl<const MIN: usize, const MAX: usize> core::ops::Deref for OctetString<MIN, M
         &self.bytes
     }
 }
+
+impl<const MIN: usize, const MAX: usize> Sealed for OctetString<MIN, MAX> {}
 
 impl<const MIN: usize, const MAX: usize> Length for OctetString<MIN, MAX> {
     fn length(&self) -> usize {

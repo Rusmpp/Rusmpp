@@ -1,1 +1,1 @@
-pub(crate) trait Sealed {}
+pub trait Sealed {}

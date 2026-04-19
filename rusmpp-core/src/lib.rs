@@ -62,4 +62,4 @@ pub mod tokio_codec;
 pub mod udhs;
 
 mod sealed;
-pub(crate) use sealed::Sealed;
+use sealed::Sealed;

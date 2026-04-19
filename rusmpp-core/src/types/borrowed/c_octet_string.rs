@@ -3,6 +3,7 @@
 use crate::{
     decode::{COctetStringDecodeError, DecodeError, borrowed::Decode},
     encode::{Encode, Length},
+    Sealed,
     types::c_octet_string::Error,
 };
 
@@ -218,6 +219,8 @@ impl<const MIN: usize, const MAX: usize> core::ops::Deref for COctetString<'_, M
         self.bytes
     }
 }
+
+impl<const MIN: usize, const MAX: usize> Sealed for COctetString<'_, MIN, MAX> {}
 
 impl<const MIN: usize, const MAX: usize> Length for COctetString<'_, MIN, MAX> {
     fn length(&self) -> usize {

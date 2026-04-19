@@ -1,6 +1,7 @@
 use crate::{
     decode::{AnyOctetStringDecodeError, DecodeError, borrowed::DecodeWithLength},
     encode::{Encode, Length},
+    Sealed,
 };
 
 /// No fixed size [`OctetString`](struct@crate::types::borrowed::octet_string::OctetString).
@@ -101,6 +102,8 @@ impl core::ops::Deref for AnyOctetString<'_> {
         self.bytes
     }
 }
+
+impl Sealed for AnyOctetString<'_> {}
 
 impl Length for AnyOctetString<'_> {
     fn length(&self) -> usize {

@@ -1,6 +1,7 @@
 use rusmpp_macros::Rusmpp;
 
 use crate::{
+    Sealed,
     decode::{
         DecodeError, DecodeResultExt,
         borrowed::{Decode, DecodeWithKey},
@@ -61,6 +62,8 @@ impl<'a> DestAddressValue<'a> {
         }
     }
 }
+
+impl<'a> Sealed for DestAddressValue<'a> {}
 
 impl<'a> Length for DestAddressValue<'a> {
     fn length(&self) -> usize {

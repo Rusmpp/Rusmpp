@@ -7,9 +7,12 @@
 //! be encoded as 2 octets with the value 0xA312
 
 use crate::{
+    Sealed,
     decode::{DecodeError, IntegerDecodeError, borrowed},
     encode::{Encode, Length},
 };
+
+impl Sealed for u16 {}
 
 impl Length for u16 {
     fn length(&self) -> usize {

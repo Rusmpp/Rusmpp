@@ -9,7 +9,10 @@
 use crate::{
     decode::{DecodeError, IntegerDecodeError, borrowed},
     encode::{Encode, Length},
+    Sealed,
 };
+
+impl Sealed for u32 {}
 
 impl Length for u32 {
     fn length(&self) -> usize {

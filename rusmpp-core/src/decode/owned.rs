@@ -1,7 +1,10 @@
 //! Traits for decoding `SMPP` values with owned data.
 
-use super::error::VecDecodeError;
 use bytes::BytesMut;
+
+use crate::Sealed;
+
+use super::error::VecDecodeError;
 
 /// Trait for defining the error type for all decoding traits.
 ///
@@ -9,7 +12,7 @@ use bytes::BytesMut;
 /// - [`DecodeWithLength`]
 /// - [`DecodeWithKey`]
 /// - [`DecodeWithKeyOptional`]
-pub trait DecodeErrorType {
+pub trait DecodeErrorType: Sealed {
     /// The error type for decoding.
     type Error;
 }
@@ -29,13 +32,13 @@ where
 }
 
 /// Trait for decoding `SMPP` values from a buffer.
-pub trait Decode: DecodeErrorType + Sized {
+pub trait Decode: DecodeErrorType + Sized + Sealed {
     /// Decode a value from a buffer.
     fn decode(src: &mut BytesMut) -> Result<(Self, usize), Self::Error>;
 }
 
 /// Trait for decoding `SMPP` values from a buffer with a specified length.
-pub trait DecodeWithLength: DecodeErrorType + Sized {
+pub trait DecodeWithLength: DecodeErrorType + Sized + Sealed {
     /// Decode a value from a buffer, with a specified length
     fn decode(src: &mut BytesMut, length: usize) -> Result<(Self, usize), Self::Error>;
 }
@@ -48,7 +51,7 @@ impl<T: Decode> DecodeWithLength for T {
 }
 
 /// Trait for decoding `SMPP` values from a buffer with a specified key and length.
-pub trait DecodeWithKey: DecodeErrorType + Sized {
+pub trait DecodeWithKey: DecodeErrorType + Sized + Sealed {
     type Key;
 
     /// Decode a value from a buffer, using a key to determine the type.
@@ -60,7 +63,7 @@ pub trait DecodeWithKey: DecodeErrorType + Sized {
 }
 
 /// Trait for decoding optional `SMPP` values from a buffer with a specified key and length.
-pub trait DecodeWithKeyOptional: DecodeErrorType + Sized {
+pub trait DecodeWithKeyOptional: DecodeErrorType + Sized + Sealed {
     type Key;
 
     /// Decode an optional value from a buffer, using a key to determine the type.
@@ -71,8 +74,7 @@ pub trait DecodeWithKeyOptional: DecodeErrorType + Sized {
     ) -> Result<Option<(Self, usize)>, Self::Error>;
 }
 
-#[doc(hidden)]
-pub trait DecodeExt: Decode {
+pub(crate) trait DecodeExt: Decode {
     fn decode_move(src: &mut BytesMut, size: usize) -> Result<(Self, usize), Self::Error> {
         Self::decode(src).map(|(this, size_)| (this, size + size_))
     }
@@ -127,8 +129,7 @@ pub trait DecodeExt: Decode {
 
 impl<T: Decode> DecodeExt for T {}
 
-#[doc(hidden)]
-pub trait DecodeWithLengthExt: DecodeWithLength {
+pub(crate) trait DecodeWithLengthExt: DecodeWithLength {
     fn decode_move(
         src: &mut BytesMut,
         length: usize,
@@ -140,8 +141,7 @@ pub trait DecodeWithLengthExt: DecodeWithLength {
 
 impl<T: DecodeWithLength> DecodeWithLengthExt for T {}
 
-#[doc(hidden)]
-pub trait DecodeWithKeyExt: DecodeWithKey {
+pub(crate) trait DecodeWithKeyExt: DecodeWithKey {
     /// Decode a value from a buffer, using a key to determine the type.
     ///
     /// If the length is 0, return `None`.
@@ -178,8 +178,7 @@ pub trait DecodeWithKeyExt: DecodeWithKey {
 
 impl<T: DecodeWithKey> DecodeWithKeyExt for T {}
 
-#[doc(hidden)]
-pub trait DecodeWithKeyOptionalExt: DecodeWithKeyOptional {
+pub(crate) trait DecodeWithKeyOptionalExt: DecodeWithKeyOptional {
     fn decode_move(
         key: Self::Key,
         src: &mut BytesMut,

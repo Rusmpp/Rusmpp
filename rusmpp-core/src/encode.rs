@@ -1,5 +1,7 @@
 //! Traits for encoding `SMPP` values.
 
+use crate::Sealed;
+
 /// Trait for determining the length of `SMPP` values.
 ///
 /// # Implementation
@@ -28,7 +30,7 @@
 ///
 /// assert_eq!(foo.length(), 7);
 /// ```
-pub trait Length {
+pub trait Length: Sealed {
     fn length(&self) -> usize;
 }
 
@@ -96,11 +98,15 @@ pub trait EncodeExt: Encode {
 
 impl<T: Encode> EncodeExt for T {}
 
+impl<T: Sealed> Sealed for Option<T> {}
+
 impl<T: Length> Length for Option<T> {
     fn length(&self) -> usize {
         self.as_ref().map(Length::length).unwrap_or(0)
     }
 }
+
+impl<T: Sealed> Sealed for &[T] {}
 
 impl<T: Length> Length for &[T] {
     fn length(&self) -> usize {
@@ -110,11 +116,17 @@ impl<T: Length> Length for &[T] {
 
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+impl<T: Sealed> Sealed for alloc::vec::Vec<T> {}
+
+#[cfg(feature = "alloc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl<T: Length> Length for alloc::vec::Vec<T> {
     fn length(&self) -> usize {
         self.as_slice().length()
     }
 }
+
+impl<T: Sealed, const N: usize> Sealed for heapless::vec::Vec<T, N> {}
 
 impl<T: Length, const N: usize> Length for heapless::vec::Vec<T, N> {
     fn length(&self) -> usize {

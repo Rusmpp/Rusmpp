@@ -9,6 +9,7 @@ use crate::{
         owned::{Decode, DecodeErrorType},
     },
     encode::{Encode, Length, owned::Encode as BEncode},
+    Sealed,
     types::empty_or_full_c_octet_string::Error,
 };
 
@@ -272,6 +273,8 @@ impl<const N: usize> core::ops::Deref for EmptyOrFullCOctetString<N> {
         &self.bytes
     }
 }
+
+impl<const N: usize> Sealed for EmptyOrFullCOctetString<N> {}
 
 impl<const N: usize> Length for EmptyOrFullCOctetString<N> {
     fn length(&self) -> usize {

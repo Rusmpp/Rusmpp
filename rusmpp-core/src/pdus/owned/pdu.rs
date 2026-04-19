@@ -7,6 +7,7 @@ use crate::{
         owned::{Decode, DecodeErrorType, DecodeWithKeyOptional, DecodeWithLength},
     },
     encode::Length,
+    Sealed,
     types::owned::AnyOctetString,
 };
 
@@ -228,6 +229,8 @@ impl Pdu {
         }
     }
 }
+
+impl Sealed for Pdu {}
 
 impl Length for Pdu {
     fn length(&self) -> usize {
