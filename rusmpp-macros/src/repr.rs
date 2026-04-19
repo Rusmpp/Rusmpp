@@ -35,6 +35,12 @@ impl ReprType {
 }
 
 impl Repr {
+    fn quote_sealed_impl(&self, name: &Ident) -> TokenStream {
+        quote! {
+            impl crate::Sealed for #name {}
+        }
+    }
+
     fn quote_length_impl(&self, name: &Ident) -> TokenStream {
         let repr_ident = &self.ident;
 
@@ -195,6 +201,7 @@ impl Repr {
         let _ = from_into_attrs;
         let name = &input.ident;
 
+        let sealed_impl = self.quote_sealed_impl(name);
         let length_impl = self.quote_length_impl(name);
         let encode_impl = self.quote_encode_impl(name);
         let decode_impl = self.quote_decode_impl(name, decode_attrs);
@@ -207,6 +214,7 @@ impl Repr {
         };
 
         quote! {
+            #sealed_impl
             #length_impl
             #encode_impl
             #decode_impl
