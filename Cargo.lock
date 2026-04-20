@@ -2618,6 +2618,7 @@ dependencies = [
  "humantime-serde",
  "pin-project-lite",
  "rusmpp",
+ "rusmpps-lib",
  "serde",
  "serde_yaml",
  "thiserror 2.0.17",
@@ -2626,6 +2627,19 @@ dependencies = [
  "tokio-util",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "rusmpps-lib"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "futures",
+ "rusmpp",
+ "rusmppc",
+ "thiserror 2.0.17",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

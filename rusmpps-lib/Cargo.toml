@@ -1,0 +1,17 @@
+[package]
+name = "rusmpps-lib"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rusmppc = { path = "../rusmppc" }
+rusmpp = { path = "../rusmpp", default-features = false, features = [
+    "tokio-codec",
+    "tracing",
+    "verbose",
+] }
+tokio = { version = "1.47.1", features = ["full"] }
+futures = "0.3.31"
+tracing = "0.1.41"
+anyhow = "1"
+thiserror = "2.0.12"
