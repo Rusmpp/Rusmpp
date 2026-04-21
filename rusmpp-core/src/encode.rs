@@ -8,7 +8,7 @@ pub trait Length: Sealed {
 }
 
 /// Trait for encoding `SMPP` values into a slice.
-pub trait Encode: Length {
+pub trait Encode: Length + Sealed {
     /// Encode a value into a slice.
     ///
     /// Implementors are allowed to panic if the slice is not big enough to hold the encoded value. If `dst.len()` < [`Length::length`]
@@ -93,10 +93,12 @@ pub mod owned {
 
     use bytes::BytesMut;
 
+    use crate::Sealed;
+
     use super::Length;
 
     /// Trait for encoding `SMPP` values into a buffer.
-    pub trait Encode: Length {
+    pub trait Encode: Length + Sealed {
         /// Encode a value into a destination buffer.
         ///
         /// Implementors are allowed to panic if the slice is not big enough to hold the encoded value. If `dst.capacity()` < [`Length::length`]
