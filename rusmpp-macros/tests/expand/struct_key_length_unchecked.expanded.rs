@@ -105,6 +105,7 @@ impl Command {
         }
     }
 }
+impl crate::Sealed for Command {}
 impl crate::encode::Length for Command {
     fn length(&self) -> usize {
         let mut length = 0;
@@ -240,6 +241,7 @@ impl<'a, const N: usize> Command<'a, N> {
         }
     }
 }
+impl<'a, const N: usize> crate::Sealed for Command<'a, N> {}
 impl<'a, const N: usize> crate::encode::Length for Command<'a, N> {
     fn length(&self) -> usize {
         let mut length = 0;

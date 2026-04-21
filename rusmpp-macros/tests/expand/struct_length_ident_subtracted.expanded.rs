@@ -87,6 +87,7 @@ impl Udh {
         }
     }
 }
+impl crate::Sealed for Udh {}
 impl crate::encode::Length for Udh {
     fn length(&self) -> usize {
         let mut length = 0;
@@ -194,6 +195,7 @@ impl<'a, const N: usize> Udh<'a, N> {
         }
     }
 }
+impl<'a, const N: usize> crate::Sealed for Udh<'a, N> {}
 impl<'a, const N: usize> crate::encode::Length for Udh<'a, N> {
     fn length(&self) -> usize {
         let mut length = 0;

@@ -79,6 +79,7 @@ impl BroadcastAreaIdentifier {
         }
     }
 }
+impl crate::Sealed for BroadcastAreaIdentifier {}
 impl crate::encode::Length for BroadcastAreaIdentifier {
     fn length(&self) -> usize {
         let mut length = 0;
@@ -176,6 +177,7 @@ impl<'a> BroadcastAreaIdentifier<'a> {
         }
     }
 }
+impl<'a> crate::Sealed for BroadcastAreaIdentifier<'a> {}
 impl<'a> crate::encode::Length for BroadcastAreaIdentifier<'a> {
     fn length(&self) -> usize {
         let mut length = 0;

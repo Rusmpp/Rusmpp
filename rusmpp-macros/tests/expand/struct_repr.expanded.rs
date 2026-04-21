@@ -75,6 +75,7 @@ impl CallbackNumPresInd {
         }
     }
 }
+impl crate::Sealed for CallbackNumPresInd {}
 impl crate::encode::Length for CallbackNumPresInd {
     fn length(&self) -> usize {
         u8::from(*self).length()
