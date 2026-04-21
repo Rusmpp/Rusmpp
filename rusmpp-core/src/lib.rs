@@ -60,3 +60,6 @@ pub mod framez;
 pub mod tokio_codec;
 
 pub mod udhs;
+
+mod sealed;
+use sealed::Sealed;

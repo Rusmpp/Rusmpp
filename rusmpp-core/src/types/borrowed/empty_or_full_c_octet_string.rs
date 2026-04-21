@@ -1,6 +1,7 @@
 #![allow(path_statements)]
 
 use crate::{
+    Sealed,
     decode::{COctetStringDecodeError, DecodeError, borrowed::Decode},
     encode::{Encode, Length},
     types::empty_or_full_c_octet_string::Error,
@@ -172,6 +173,8 @@ impl<const N: usize> core::ops::Deref for EmptyOrFullCOctetString<'_, N> {
         self.bytes
     }
 }
+
+impl<const N: usize> Sealed for EmptyOrFullCOctetString<'_, N> {}
 
 impl<const N: usize> Length for EmptyOrFullCOctetString<'_, N> {
     fn length(&self) -> usize {

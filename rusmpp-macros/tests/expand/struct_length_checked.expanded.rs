@@ -84,6 +84,7 @@ impl MsValidity {
         }
     }
 }
+impl crate::Sealed for MsValidity {}
 impl crate::encode::Length for MsValidity {
     fn length(&self) -> usize {
         let mut length = 0;

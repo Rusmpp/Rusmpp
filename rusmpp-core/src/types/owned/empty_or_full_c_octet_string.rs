@@ -4,6 +4,7 @@ use alloc::{string::String, string::ToString, vec::Vec};
 use bytes::{BufMut, Bytes, BytesMut};
 
 use crate::{
+    Sealed,
     decode::{
         COctetStringDecodeError,
         owned::{Decode, DecodeErrorType},
@@ -272,6 +273,8 @@ impl<const N: usize> core::ops::Deref for EmptyOrFullCOctetString<N> {
         &self.bytes
     }
 }
+
+impl<const N: usize> Sealed for EmptyOrFullCOctetString<N> {}
 
 impl<const N: usize> Length for EmptyOrFullCOctetString<N> {
     fn length(&self) -> usize {

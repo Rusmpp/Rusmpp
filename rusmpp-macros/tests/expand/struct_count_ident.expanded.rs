@@ -95,6 +95,7 @@ impl SubmitMulti {
         }
     }
 }
+impl crate::Sealed for SubmitMulti {}
 impl crate::encode::Length for SubmitMulti {
     fn length(&self) -> usize {
         let mut length = 0;
@@ -214,6 +215,7 @@ impl<'a, const N: usize> SubmitMulti<'a, N> {
         }
     }
 }
+impl<'a, const N: usize> crate::Sealed for SubmitMulti<'a, N> {}
 impl<'a, const N: usize> crate::encode::Length for SubmitMulti<'a, N> {
     fn length(&self) -> usize {
         let mut length = 0;

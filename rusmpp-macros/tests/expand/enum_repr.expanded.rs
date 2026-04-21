@@ -28,6 +28,7 @@ impl ::core::fmt::Debug for DestFlag {
         }
     }
 }
+impl crate::Sealed for DestFlag {}
 impl crate::encode::Length for DestFlag {
     fn length(&self) -> usize {
         u8::from(*self).length()

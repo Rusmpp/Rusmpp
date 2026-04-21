@@ -1,94 +1,21 @@
 //! Traits for encoding `SMPP` values.
 
+use crate::Sealed;
+
 /// Trait for determining the length of `SMPP` values.
-///
-/// # Implementation
-///
-/// ```rust
-/// # use rusmpp_core::encode::{Encode, Length};
-///
-/// struct Foo {
-///     a: u8,
-///     b: u16,
-///     c: u32,
-/// }
-///
-/// impl Length for Foo {
-///     fn length(&self) -> usize {
-///         self.a.length() + self.b.length() + self.c.length()
-///     }
-/// }
-///
-/// let foo = Foo {
-///     a: 0x01,
-///     b: 0x0203,
-///     c: 0x04050607,
-/// };
-///
-///
-/// assert_eq!(foo.length(), 7);
-/// ```
-pub trait Length {
+pub trait Length: Sealed {
     fn length(&self) -> usize;
 }
 
 /// Trait for encoding `SMPP` values into a slice.
-///
-/// # Implementation
-///
-/// ```rust
-/// # use rusmpp_core::encode::{Encode, Length};
-///
-/// struct Foo {
-///     a: u8,
-///     b: u16,
-///     c: u32,
-/// }
-///
-/// impl Length for Foo {
-///     fn length(&self) -> usize {
-///         self.a.length() + self.b.length() + self.c.length()
-///     }
-/// }
-///
-/// impl Encode for Foo {
-///     fn encode(&self, dst: &mut [u8]) -> usize {
-///         let mut size = 0;
-///
-///         size += self.a.encode(&mut dst[size..]);
-///         size += self.b.encode(&mut dst[size..]);
-///         size += self.c.encode(&mut dst[size..]);
-///
-///         size
-///     }
-/// }
-///
-/// let foo = Foo {
-///     a: 0x01,
-///     b: 0x0203,
-///     c: 0x04050607,
-/// };
-///
-/// let buf = &mut [0u8; 1024];
-///
-/// assert!(buf.len() >= foo.length());
-///
-/// let size = foo.encode(buf);
-///
-/// let expected = &[0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07];
-///
-/// assert_eq!(size, 7);
-/// assert_eq!(&buf[..size], expected);
-/// ```
-pub trait Encode: Length {
+pub trait Encode: Length + Sealed {
     /// Encode a value into a slice.
     ///
     /// Implementors are allowed to panic if the slice is not big enough to hold the encoded value. If `dst.len()` < [`Length::length`]
     fn encode(&self, dst: &mut [u8]) -> usize;
 }
 
-#[doc(hidden)]
-pub trait EncodeExt: Encode {
+pub(crate) trait EncodeExt: Encode {
     fn encode_move(&self, dst: &mut [u8], size: usize) -> usize {
         size + self.encode(&mut dst[size..])
     }
@@ -96,11 +23,15 @@ pub trait EncodeExt: Encode {
 
 impl<T: Encode> EncodeExt for T {}
 
+impl<T: Sealed> Sealed for Option<T> {}
+
 impl<T: Length> Length for Option<T> {
     fn length(&self) -> usize {
         self.as_ref().map(Length::length).unwrap_or(0)
     }
 }
+
+impl<T: Sealed> Sealed for &[T] {}
 
 impl<T: Length> Length for &[T] {
     fn length(&self) -> usize {
@@ -110,11 +41,17 @@ impl<T: Length> Length for &[T] {
 
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+impl<T: Sealed> Sealed for alloc::vec::Vec<T> {}
+
+#[cfg(feature = "alloc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl<T: Length> Length for alloc::vec::Vec<T> {
     fn length(&self) -> usize {
         self.as_slice().length()
     }
 }
+
+impl<T: Sealed, const N: usize> Sealed for heapless::vec::Vec<T, N> {}
 
 impl<T: Length, const N: usize> Length for heapless::vec::Vec<T, N> {
     fn length(&self) -> usize {
@@ -156,55 +93,12 @@ pub mod owned {
 
     use bytes::BytesMut;
 
+    use crate::Sealed;
+
     use super::Length;
 
     /// Trait for encoding `SMPP` values into a buffer.
-    ///
-    /// # Implementation
-    ///
-    /// ```rust
-    /// # use bytes::BytesMut;
-    /// # use rusmpp_core::encode::{owned::Encode, Length};
-    ///
-    /// struct Foo {
-    ///     a: u8,
-    ///     b: u16,
-    ///     c: u32,
-    /// }
-    ///
-    /// impl Length for Foo {
-    ///     fn length(&self) -> usize {
-    ///         self.a.length() + self.b.length() + self.c.length()
-    ///     }
-    /// }
-    ///
-    /// impl Encode for Foo {
-    ///     fn encode(&self, dst: &mut BytesMut) {
-    ///         self.a.encode(dst);
-    ///         self.b.encode(dst);
-    ///         self.c.encode(dst);
-    ///     }
-    /// }
-    ///
-    /// let foo = Foo {
-    ///     a: 0x01,
-    ///     b: 0x0203,
-    ///     c: 0x04050607,
-    /// };
-    ///
-    /// let mut buf = BytesMut::with_capacity(1024);
-    ///
-    /// assert!(buf.capacity() >= foo.length());
-    ///
-    /// foo.encode(&mut buf);
-    ///
-    /// let expected = &[0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07];
-    ///
-    /// let buf = buf.split_to(foo.length());
-    ///
-    /// assert_eq!(&buf[..], expected);
-    /// ```
-    pub trait Encode: Length {
+    pub trait Encode: Length + Sealed {
         /// Encode a value into a destination buffer.
         ///
         /// Implementors are allowed to panic if the slice is not big enough to hold the encoded value. If `dst.capacity()` < [`Length::length`]

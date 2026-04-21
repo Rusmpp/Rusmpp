@@ -34,6 +34,7 @@ pub fn derive_rusmpp_for_struct(
         return Ok(expanded);
     }
 
+    let sealed = quote_sealed(input);
     let length = quote_length(input, fields_named);
     let encode = quote_encode(input, fields_named);
     let decode = quote_decode(input, fields_named, &struct_attrs.decode_attrs)?;
@@ -41,6 +42,7 @@ pub fn derive_rusmpp_for_struct(
 
     let expanded = quote! {
         #parts
+        #sealed
         #length
         #encode
         #decode
@@ -48,6 +50,15 @@ pub fn derive_rusmpp_for_struct(
     };
 
     Ok(expanded)
+}
+
+fn quote_sealed(input: &DeriveInput) -> TokenStream {
+    let name = &input.ident;
+    let (impl_generics, ty_generics, where_clause) = &input.generics.split_for_impl();
+
+    quote! {
+        impl #impl_generics crate::Sealed for #name #ty_generics #where_clause {}
+    }
 }
 
 fn quote_length(input: &DeriveInput, fields_named: &FieldsNamed) -> TokenStream {

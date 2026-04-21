@@ -1,15 +1,18 @@
 //! Traits for decoding `SMPP` values with borrowed data.
 
-use crate::decode::{DecodeError, HeaplessVecDecodeError};
+use crate::{
+    Sealed,
+    decode::{DecodeError, HeaplessVecDecodeError},
+};
 
 /// Trait for decoding `SMPP` values from a slice.
-pub trait Decode<'a>: 'a + Sized {
+pub trait Decode<'a>: 'a + Sized + Sealed {
     /// Decode a value from a slice.
     fn decode(src: &'a [u8]) -> Result<(Self, usize), DecodeError>;
 }
 
 /// Trait for decoding `SMPP` values from a slice with a specified length.
-pub trait DecodeWithLength<'a>: 'a + Sized {
+pub trait DecodeWithLength<'a>: 'a + Sized + Sealed {
     /// Decode a value from a slice, with a specified length
     fn decode(src: &'a [u8], length: usize) -> Result<(Self, usize), DecodeError>;
 }
@@ -22,7 +25,7 @@ impl<'a, T: Decode<'a>> DecodeWithLength<'a> for T {
 }
 
 /// Trait for decoding `SMPP` values from a slice with a specified key and length.
-pub trait DecodeWithKey<'a>: 'a + Sized {
+pub trait DecodeWithKey<'a>: 'a + Sized + Sealed {
     type Key;
 
     /// Decode a value from a slice, using a key to determine the type.
@@ -30,7 +33,7 @@ pub trait DecodeWithKey<'a>: 'a + Sized {
 }
 
 /// Trait for decoding optional `SMPP` values from a slice with a specified key and length.
-pub trait DecodeWithKeyOptional<'a>: 'a + Sized {
+pub trait DecodeWithKeyOptional<'a>: 'a + Sized + Sealed {
     type Key;
 
     /// Decode an optional value from a slice, using a key to determine the type.
@@ -41,8 +44,7 @@ pub trait DecodeWithKeyOptional<'a>: 'a + Sized {
     ) -> Result<Option<(Self, usize)>, DecodeError>;
 }
 
-#[doc(hidden)]
-pub trait DecodeExt<'a>: Decode<'a> {
+pub(crate) trait DecodeExt<'a>: Decode<'a> {
     fn decode_move(src: &'a [u8], size: usize) -> Result<(Self, usize), DecodeError> {
         Self::decode(&src[size..]).map(|(this, size_)| (this, size + size_))
     }
@@ -98,8 +100,7 @@ pub trait DecodeExt<'a>: Decode<'a> {
 
 impl<'a, T: Decode<'a>> DecodeExt<'a> for T {}
 
-#[doc(hidden)]
-pub trait DecodeWithLengthExt<'a>: DecodeWithLength<'a> {
+pub(crate) trait DecodeWithLengthExt<'a>: DecodeWithLength<'a> {
     fn decode_move(
         src: &'a [u8],
         length: usize,
@@ -111,8 +112,7 @@ pub trait DecodeWithLengthExt<'a>: DecodeWithLength<'a> {
 
 impl<'a, T: DecodeWithLength<'a>> DecodeWithLengthExt<'a> for T {}
 
-#[doc(hidden)]
-pub trait DecodeWithKeyExt<'a>: DecodeWithKey<'a> {
+pub(crate) trait DecodeWithKeyExt<'a>: DecodeWithKey<'a> {
     /// Decode a value from a slice, using a key to determine the type.
     ///
     /// If the length is 0, return `None`.
@@ -149,8 +149,7 @@ pub trait DecodeWithKeyExt<'a>: DecodeWithKey<'a> {
 
 impl<'a, T: DecodeWithKey<'a>> DecodeWithKeyExt<'a> for T {}
 
-#[doc(hidden)]
-pub trait DecodeWithKeyOptionalExt<'a>: DecodeWithKeyOptional<'a> {
+pub(crate) trait DecodeWithKeyOptionalExt<'a>: DecodeWithKeyOptional<'a> {
     fn decode_move(
         key: Self::Key,
         src: &'a [u8],

@@ -1,5 +1,5 @@
 use crate::{
-    CommandStatus,
+    CommandStatus, Sealed,
     decode::{
         DecodeError, DecodeResultExt,
         borrowed::{Decode, DecodeWithKey, DecodeWithLength},
@@ -188,6 +188,8 @@ impl TlvValue<'_> {
         }
     }
 }
+
+impl Sealed for TlvValue<'_> {}
 
 impl Length for TlvValue<'_> {
     fn length(&self) -> usize {

@@ -65,6 +65,7 @@ impl DistributionListName {
         Self { dest_flag: parts.dest_flag }
     }
 }
+impl crate::Sealed for DistributionListName {}
 impl crate::encode::Length for DistributionListName {
     fn length(&self) -> usize {
         let mut length = 0;

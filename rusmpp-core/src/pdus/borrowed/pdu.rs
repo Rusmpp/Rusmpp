@@ -1,5 +1,5 @@
 use crate::{
-    CommandId,
+    CommandId, Sealed,
     decode::{
         DecodeError, DecodeResultExt,
         borrowed::{Decode, DecodeWithKeyOptional, DecodeWithLength},
@@ -224,6 +224,8 @@ impl<'a, const N: usize> Pdu<'a, N> {
         }
     }
 }
+
+impl<const N: usize> Sealed for Pdu<'_, N> {}
 
 impl<const N: usize> Length for Pdu<'_, N> {
     fn length(&self) -> usize {

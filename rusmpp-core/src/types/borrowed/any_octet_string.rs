@@ -1,4 +1,5 @@
 use crate::{
+    Sealed,
     decode::{AnyOctetStringDecodeError, DecodeError, borrowed::DecodeWithLength},
     encode::{Encode, Length},
 };
@@ -101,6 +102,8 @@ impl core::ops::Deref for AnyOctetString<'_> {
         self.bytes
     }
 }
+
+impl Sealed for AnyOctetString<'_> {}
 
 impl Length for AnyOctetString<'_> {
     fn length(&self) -> usize {

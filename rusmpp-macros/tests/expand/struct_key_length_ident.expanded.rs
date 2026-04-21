@@ -87,6 +87,7 @@ impl Tlv {
         }
     }
 }
+impl crate::Sealed for Tlv {}
 impl crate::encode::Length for Tlv {
     fn length(&self) -> usize {
         let mut length = 0;
@@ -198,6 +199,7 @@ impl<'a> Tlv<'a> {
         }
     }
 }
+impl<'a> crate::Sealed for Tlv<'a> {}
 impl<'a> crate::encode::Length for Tlv<'a> {
     fn length(&self) -> usize {
         let mut length = 0;

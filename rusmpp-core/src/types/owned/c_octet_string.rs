@@ -4,6 +4,7 @@ use alloc::{string::String, string::ToString, vec::Vec};
 use bytes::{BufMut, Bytes, BytesMut};
 
 use crate::{
+    Sealed,
     decode::{
         COctetStringDecodeError,
         owned::{Decode, DecodeErrorType},
@@ -322,6 +323,8 @@ impl<const MIN: usize, const MAX: usize> core::ops::Deref for COctetString<MIN, 
         &self.bytes
     }
 }
+
+impl<const MIN: usize, const MAX: usize> Sealed for COctetString<MIN, MAX> {}
 
 impl<const MIN: usize, const MAX: usize> Length for COctetString<MIN, MAX> {
     fn length(&self) -> usize {

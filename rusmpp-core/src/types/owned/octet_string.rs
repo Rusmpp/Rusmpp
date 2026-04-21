@@ -3,6 +3,7 @@ use alloc::{string::String, string::ToString, vec::Vec};
 use bytes::{BufMut, Bytes, BytesMut};
 
 use crate::{
+    Sealed,
     decode::{
         OctetStringDecodeError,
         owned::{DecodeErrorType, DecodeWithLength},
@@ -264,6 +265,8 @@ impl<const MIN: usize, const MAX: usize> core::ops::Deref for OctetString<MIN, M
         &self.bytes
     }
 }
+
+impl<const MIN: usize, const MAX: usize> Sealed for OctetString<MIN, MAX> {}
 
 impl<const MIN: usize, const MAX: usize> Length for OctetString<MIN, MAX> {
     fn length(&self) -> usize {

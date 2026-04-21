@@ -1,6 +1,7 @@
 #[cfg(feature = "alloc")]
 use crate::decode::ConcatenatedShortMessageDecodeError;
 use crate::{
+    Sealed,
     encode::Length,
     udhs::{concatenation::ConcatenatedShortMessage16Bit, errors::ConcatenatedShortMessageError},
 };
@@ -145,6 +146,8 @@ impl ConcatenatedShortMessage8Bit {
         }
     }
 }
+
+impl Sealed for ConcatenatedShortMessage8Bit {}
 
 impl Length for ConcatenatedShortMessage8Bit {
     fn length(&self) -> usize {

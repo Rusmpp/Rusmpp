@@ -91,6 +91,7 @@ impl CancelSm {
         }
     }
 }
+impl crate::Sealed for CancelSm {}
 impl crate::encode::Length for CancelSm {
     fn length(&self) -> usize {
         let mut length = 0;
@@ -202,6 +203,7 @@ impl<'a> CancelSm<'a> {
         }
     }
 }
+impl<'a> crate::Sealed for CancelSm<'a> {}
 impl<'a> crate::encode::Length for CancelSm<'a> {
     fn length(&self) -> usize {
         let mut length = 0;

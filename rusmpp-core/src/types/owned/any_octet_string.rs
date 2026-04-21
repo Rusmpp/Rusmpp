@@ -2,6 +2,7 @@ use alloc::{string::String, string::ToString, vec::Vec};
 use bytes::{BufMut, Bytes, BytesMut};
 
 use crate::{
+    Sealed,
     decode::{
         AnyOctetStringDecodeError,
         owned::{DecodeErrorType, DecodeWithLength},
@@ -190,6 +191,8 @@ impl core::ops::Deref for AnyOctetString {
         &self.bytes
     }
 }
+
+impl Sealed for AnyOctetString {}
 
 impl Length for AnyOctetString {
     fn length(&self) -> usize {

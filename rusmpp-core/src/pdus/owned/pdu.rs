@@ -1,7 +1,7 @@
 use bytes::BytesMut;
 
 use crate::{
-    CommandId,
+    CommandId, Sealed,
     decode::{
         AnyOctetStringDecodeError, DecodeResultExt,
         owned::{Decode, DecodeErrorType, DecodeWithKeyOptional, DecodeWithLength},
@@ -228,6 +228,8 @@ impl Pdu {
         }
     }
 }
+
+impl Sealed for Pdu {}
 
 impl Length for Pdu {
     fn length(&self) -> usize {

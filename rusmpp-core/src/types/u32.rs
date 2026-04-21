@@ -7,9 +7,12 @@
 //! would be encoded as 4 octets with the value 0x1D95E1F
 
 use crate::{
+    Sealed,
     decode::{DecodeError, IntegerDecodeError, borrowed},
     encode::{Encode, Length},
 };
+
+impl Sealed for u32 {}
 
 impl Length for u32 {
     fn length(&self) -> usize {

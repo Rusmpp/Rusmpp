@@ -1,6 +1,7 @@
 #![allow(path_statements)]
 
 use crate::{
+    Sealed,
     decode::{DecodeError, OctetStringDecodeError, borrowed::DecodeWithLength},
     encode::{Encode, Length},
     types::octet_string::Error,
@@ -170,6 +171,8 @@ impl<'a, const MIN: usize, const MAX: usize> From<OctetString<'a, MIN, MAX>>
         Self::new(octet_string.bytes)
     }
 }
+
+impl<const MIN: usize, const MAX: usize> Sealed for OctetString<'_, MIN, MAX> {}
 
 impl<const MIN: usize, const MAX: usize> Length for OctetString<'_, MIN, MAX> {
     fn length(&self) -> usize {
