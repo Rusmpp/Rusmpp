@@ -391,12 +391,12 @@ impl<E: EventChannel> NoSpawnConnectionBuilder<E> {
         tracing::debug!(target: "rusmppc::connection::dns", domain, "Resolving domain");
 
         let resolver = hickory_resolver::TokioResolver::builder_tokio()
+            .and_then(|builder| builder.build())
             .map_err(|err| {
                 Error::Connect(std::io::Error::other(format!(
                     "Failed to create DNS resolver: {err}"
                 )))
-            })?
-            .build();
+            })?;
 
         let ip_addr = resolver
             .lookup_ip(domain)
@@ -404,7 +404,7 @@ impl<E: EventChannel> NoSpawnConnectionBuilder<E> {
             .map_err(|err| {
                 Error::Connect(std::io::Error::other(format!("Failed to lookup IP: {err}")))
             })?
-            .into_iter()
+            .iter()
             .next()
             .ok_or_else(|| {
                 Error::Connect(std::io::Error::new(
