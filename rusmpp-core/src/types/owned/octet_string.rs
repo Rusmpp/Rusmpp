@@ -3,12 +3,12 @@ use alloc::{string::String, string::ToString, vec::Vec};
 use bytes::{BufMut, Bytes, BytesMut};
 
 use crate::{
+    Sealed,
     decode::{
         OctetStringDecodeError,
         owned::{DecodeErrorType, DecodeWithLength},
     },
     encode::{Encode, Length, owned::Encode as BEncode},
-    Sealed,
     types::octet_string::Error,
 };
 

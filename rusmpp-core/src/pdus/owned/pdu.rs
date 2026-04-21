@@ -1,13 +1,12 @@
 use bytes::BytesMut;
 
 use crate::{
-    CommandId,
+    CommandId, Sealed,
     decode::{
         AnyOctetStringDecodeError, DecodeResultExt,
         owned::{Decode, DecodeErrorType, DecodeWithKeyOptional, DecodeWithLength},
     },
     encode::Length,
-    Sealed,
     types::owned::AnyOctetString,
 };
 

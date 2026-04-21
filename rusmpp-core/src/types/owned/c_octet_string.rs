@@ -4,12 +4,12 @@ use alloc::{string::String, string::ToString, vec::Vec};
 use bytes::{BufMut, Bytes, BytesMut};
 
 use crate::{
+    Sealed,
     decode::{
         COctetStringDecodeError,
         owned::{Decode, DecodeErrorType},
     },
     encode::{Encode, Length, owned::Encode as BEncode},
-    Sealed,
     types::c_octet_string::Error,
 };
 

@@ -7,9 +7,9 @@
 //! would be encoded as 4 octets with the value 0x1D95E1F
 
 use crate::{
+    Sealed,
     decode::{DecodeError, IntegerDecodeError, borrowed},
     encode::{Encode, Length},
-    Sealed,
 };
 
 impl Sealed for u32 {}

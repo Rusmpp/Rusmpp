@@ -2,12 +2,12 @@ use alloc::{string::String, string::ToString, vec::Vec};
 use bytes::{BufMut, Bytes, BytesMut};
 
 use crate::{
+    Sealed,
     decode::{
         AnyOctetStringDecodeError,
         owned::{DecodeErrorType, DecodeWithLength},
     },
     encode::{Encode, Length, owned::Encode as BEncode},
-    Sealed,
 };
 
 /// No fixed size [`OctetString`](struct@crate::types::owned::octet_string::OctetString).

@@ -1,7 +1,7 @@
 use crate::{
+    Sealed,
     decode::{AnyOctetStringDecodeError, DecodeError, borrowed::DecodeWithLength},
     encode::{Encode, Length},
-    Sealed,
 };
 
 /// No fixed size [`OctetString`](struct@crate::types::borrowed::octet_string::OctetString).

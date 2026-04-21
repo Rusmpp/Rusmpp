@@ -1,9 +1,9 @@
 #![allow(path_statements)]
 
 use crate::{
+    Sealed,
     decode::{COctetStringDecodeError, DecodeError, borrowed::Decode},
     encode::{Encode, Length},
-    Sealed,
     types::c_octet_string::Error,
 };
 
