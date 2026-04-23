@@ -157,3 +157,42 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use rusmpp_core::{pdus::owned::SubmitSm, values::DataCoding};
+
+    use crate::concatenation::owned::{
+        SubmitSmMultipartExt, multipart::tests::GSM_7_BIT_UNPACKED_3_PARTS_MESSAGE,
+    };
+
+    #[test]
+    fn gsm7bit_unpacked_3_parts() {
+        let multipart = SubmitSm::default()
+            .sar_multipart(GSM_7_BIT_UNPACKED_3_PARTS_MESSAGE)
+            .reference(1)
+            .gsm7bit_unpacked()
+            .build()
+            .expect("Failed to build multipart SubmitSm messages");
+
+        assert_eq!(multipart.len(), 3);
+
+        for (i, sm) in multipart.into_iter().enumerate() {
+            assert!(matches!(sm.data_coding, DataCoding::McSpecific));
+
+            let sar_msg_ref_num = sm
+                .sar_msg_ref_num()
+                .expect("SAR message reference number TLV is missing");
+            let sar_segment_seqnum = sm
+                .sar_segment_seqnum()
+                .expect("SAR segment sequence number TLV is missing");
+            let sar_total_segments = sm
+                .sar_total_segments()
+                .expect("SAR total segments TLV is missing");
+
+            assert_eq!(sar_msg_ref_num, 1);
+            assert_eq!(sar_segment_seqnum, i as u8 + 1);
+            assert_eq!(sar_total_segments, 3);
+        }
+    }
+}

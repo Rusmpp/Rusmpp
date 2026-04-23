@@ -6,3 +6,6 @@ pub use udh::SubmitSmMultipartBuilder;
 
 mod sar;
 pub use sar::SubmitSmSarMultipartBuilder;
+
+#[cfg(test)]
+mod tests;

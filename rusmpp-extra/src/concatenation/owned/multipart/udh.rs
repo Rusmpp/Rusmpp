@@ -173,3 +173,53 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use bytes::BytesMut;
+    use rusmpp_core::{
+        decode::owned::Decode,
+        pdus::owned::SubmitSm,
+        udhs::owned::{Udh, UdhValue},
+        values::{DataCoding, GsmFeatures},
+    };
+
+    use crate::concatenation::owned::{
+        SubmitSmMultipartExt, multipart::tests::GSM_7_BIT_UNPACKED_3_PARTS_MESSAGE,
+    };
+
+    #[test]
+    fn gsm7bit_unpacked_3_parts() {
+        let multipart = SubmitSm::default()
+            .multipart(GSM_7_BIT_UNPACKED_3_PARTS_MESSAGE)
+            .reference_u16(1)
+            .gsm7bit_unpacked()
+            .build()
+            .expect("Failed to build multipart SubmitSm messages");
+
+        assert_eq!(multipart.len(), 3);
+
+        for (i, sm) in multipart.into_iter().enumerate() {
+            assert!(matches!(
+                sm.esm_class.gsm_features,
+                GsmFeatures::UdhIndicator
+            ));
+
+            assert!(matches!(sm.data_coding, DataCoding::McSpecific));
+
+            let mut buf = BytesMut::from(sm.into_parts().short_message.into_bytes());
+
+            let (udh, _) = <Udh as Decode>::decode(&mut buf).expect("Failed to decode udh");
+
+            let Some(UdhValue::ConcatenatedShortMessage16Bit(concatenated)) =
+                udh.into_parts().value
+            else {
+                panic!("UDH is not Concatenated Short Message 16-bit");
+            };
+
+            assert_eq!(concatenated.reference(), 1);
+            assert_eq!(concatenated.part_number(), i as u8 + 1);
+            assert_eq!(concatenated.total_parts(), 3);
+        }
+    }
+}
