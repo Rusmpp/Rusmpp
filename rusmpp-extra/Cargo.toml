@@ -16,6 +16,9 @@ thiserror = { version = "2", default-features = false }
 ucs2 = { version = "0.3.3", default-features = false, optional = true }
 encoding_rs = { version = "0.8.35", default-features = false, optional = true }
 
+[dev-dependencies]
+bytes = { version = "1", default-features = false }
+
 [features]
 default = ["concatenation", "encoding", "alloc"]
 

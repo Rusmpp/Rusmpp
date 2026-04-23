@@ -3,7 +3,7 @@ use rusmpp_macros::Rusmpp;
 use crate::{
     encode::Length,
     pdus::owned::Pdu,
-    tlvs::owned::{MessageSubmissionRequestTlvValue, Tlv},
+    tlvs::owned::{MessageSubmissionRequestTlvValue, Tlv, TlvValue},
     types::owned::{COctetString, EmptyOrFullCOctetString, OctetString},
     values::{owned::*, *},
 };
@@ -198,6 +198,39 @@ impl SubmitSm {
 
     pub fn builder() -> SubmitSmBuilder {
         SubmitSmBuilder::new()
+    }
+
+    /// Returns the first value of [`TlvValue::SarMsgRefNum`] if present.
+    pub fn sar_msg_ref_num(&self) -> Option<u16> {
+        self.tlvs.iter().find_map(|tlv| {
+            if let Some(TlvValue::SarMsgRefNum(value)) = tlv.value() {
+                Some(*value)
+            } else {
+                None
+            }
+        })
+    }
+
+    /// Returns the first value of [`TlvValue::SarSegmentSeqnum`] if present.
+    pub fn sar_segment_seqnum(&self) -> Option<u8> {
+        self.tlvs.iter().find_map(|tlv| {
+            if let Some(TlvValue::SarSegmentSeqnum(value)) = tlv.value() {
+                Some(*value)
+            } else {
+                None
+            }
+        })
+    }
+
+    /// Returns the first value of [`TlvValue::SarTotalSegments`] if present.
+    pub fn sar_total_segments(&self) -> Option<u8> {
+        self.tlvs.iter().find_map(|tlv| {
+            if let Some(TlvValue::SarTotalSegments(value)) = tlv.value() {
+                Some(*value)
+            } else {
+                None
+            }
+        })
     }
 
     /// Sets the [`SubmitSm::data_coding`].

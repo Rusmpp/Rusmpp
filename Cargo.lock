@@ -2741,6 +2741,7 @@ dependencies = [
 name = "rusmpp-extra"
 version = "0.4.0"
 dependencies = [
+ "bytes",
  "encoding_rs",
  "rusmpp-core",
  "thiserror 2.0.17",
