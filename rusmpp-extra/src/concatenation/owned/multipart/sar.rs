@@ -1,7 +1,6 @@
 use alloc::vec::Vec;
 use rusmpp_core::{
-    pdus::owned::SubmitSm, types::owned::OctetString,
-    udhs::concatenation::ConcatenatedShortMessageType,
+    pdus::owned::SubmitSm, tlvs::owned::MessageSubmissionRequestTlvValue, types::owned::OctetString,
 };
 
 use crate::{
@@ -14,31 +13,31 @@ use crate::{
     fallback::Fallback,
 };
 
-/// Builder for creating multipart [`SubmitSm`] messages.
+/// Builder for creating multipart [`SubmitSm`] messages using SAR TLVs.
 ///
-/// Created using [`SubmitSmMultipartExt::multipart`](super::SubmitSmMultipartExt::multipart).
+/// Created using [`SubmitSmMultipartExt::sar_multipart`](super::SubmitSmMultipartExt::sar_multipart).
 #[derive(Debug)]
-pub struct SubmitSmMultipartBuilder<'a, E> {
+pub struct SubmitSmSarMultipartBuilder<'a, E> {
     short_message: &'a str,
     max_short_message_size: usize,
     sm: SubmitSm,
     encoder: E,
-    concatenation_type: ConcatenatedShortMessageType,
+    reference: u16,
 }
 
-impl<'a, E> SubmitSmMultipartBuilder<'a, E> {
-    /// Creates a new [`SubmitSmMultipartBuilder`].
+impl<'a, E> SubmitSmSarMultipartBuilder<'a, E> {
+    /// Creates a new [`SubmitSmSarMultipartBuilder`].
     pub(super) const fn new(
         short_message: &'a str,
         sm: SubmitSm,
         encoder: E,
-    ) -> SubmitSmMultipartBuilder<'a, E> {
+    ) -> SubmitSmSarMultipartBuilder<'a, E> {
         Self {
             short_message,
             max_short_message_size: SubmitSm::default_max_short_message_size(),
             sm,
             encoder,
-            concatenation_type: ConcatenatedShortMessageType::u8(0),
+            reference: 0,
         }
     }
 
@@ -50,57 +49,51 @@ impl<'a, E> SubmitSmMultipartBuilder<'a, E> {
         self
     }
 
-    /// Sets the reference number for the concatenated short message as [`u8`].
-    pub const fn reference_u8(mut self, reference: u8) -> Self {
-        self.concatenation_type = ConcatenatedShortMessageType::u8(reference);
-        self
-    }
-
-    /// Sets the reference number for the concatenated short message as [`u16`].
-    pub const fn reference_u16(mut self, reference: u16) -> Self {
-        self.concatenation_type = ConcatenatedShortMessageType::u16(reference);
+    /// Sets the reference number for the concatenated short message.
+    pub const fn reference(mut self, reference: u16) -> Self {
+        self.reference = reference;
         self
     }
 
     /// Sets a custom encoder.
-    pub fn encoder<U>(self, encoder: U) -> SubmitSmMultipartBuilder<'a, U> {
-        SubmitSmMultipartBuilder {
+    pub fn encoder<U>(self, encoder: U) -> SubmitSmSarMultipartBuilder<'a, U> {
+        SubmitSmSarMultipartBuilder {
             short_message: self.short_message,
             max_short_message_size: self.max_short_message_size,
             sm: self.sm,
             encoder,
-            concatenation_type: self.concatenation_type,
+            reference: self.reference,
         }
     }
 
     /// Sets the [`Gsm7BitUnpacked`] encoder.
-    pub fn gsm7bit_unpacked(self) -> SubmitSmMultipartBuilder<'a, Gsm7BitUnpacked> {
+    pub fn gsm7bit_unpacked(self) -> SubmitSmSarMultipartBuilder<'a, Gsm7BitUnpacked> {
         self.encoder(Gsm7BitUnpacked::new())
     }
 
     /// Sets the [`Ucs2`] encoder.
-    pub fn ucs2(self) -> SubmitSmMultipartBuilder<'a, Ucs2> {
+    pub fn ucs2(self) -> SubmitSmSarMultipartBuilder<'a, Ucs2> {
         self.encoder(Ucs2::new())
     }
 
     /// Sets the [`Latin1`] encoder.
-    pub fn latin1(self) -> SubmitSmMultipartBuilder<'a, Latin1> {
+    pub fn latin1(self) -> SubmitSmSarMultipartBuilder<'a, Latin1> {
         self.encoder(Latin1::new())
     }
 
     /// Sets a fallback encoder.
-    pub fn fallback<U>(self, encoder: U) -> SubmitSmMultipartBuilder<'a, Fallback<E, U>> {
-        SubmitSmMultipartBuilder {
+    pub fn fallback<U>(self, encoder: U) -> SubmitSmSarMultipartBuilder<'a, Fallback<E, U>> {
+        SubmitSmSarMultipartBuilder {
             short_message: self.short_message,
             max_short_message_size: self.max_short_message_size,
             sm: self.sm,
             encoder: Fallback::new(self.encoder, encoder),
-            concatenation_type: self.concatenation_type,
+            reference: self.reference,
         }
     }
 }
 
-impl<'a, E> SubmitSmMultipartBuilder<'a, E>
+impl<'a, E> SubmitSmSarMultipartBuilder<'a, E>
 where
     E: Concatenator + 'a,
 {
@@ -108,11 +101,7 @@ where
     pub fn build(self) -> Result<Vec<SubmitSm>, MultipartError<E::Error>> {
         let (concatenation, data_coding) = self
             .encoder
-            .concatenate(
-                self.short_message,
-                self.max_short_message_size,
-                self.concatenation_type.udh_length(),
-            )
+            .concatenate(self.short_message, self.max_short_message_size, 0)
             .map_err(MultipartError::concatenation)?;
 
         match concatenation {
@@ -135,36 +124,31 @@ where
                     return Err(MultipartError::max_parts_count(parts.len()));
                 }
 
-                let total_parts = parts.len().min(MAX_PARTS) as u8;
+                let sar_total_segments = parts.len().min(MAX_PARTS) as u8;
 
                 parts
                     .into_iter()
                     .enumerate()
                     .map(|(index, part)| {
-                        let udh = self
-                            .concatenation_type
-                            /*
-                               Correctness:
-                               - total_parts is at least 2 due to the earlier check.
-                               - total_parts is at most 255 due to the earlier check.
-                               - part_number (index + 1) is at least 1.
-                               - part_number (index + 1) is at most total_parts due to the earlier check.
-                            */
-                            .concatenated_short_message_unchecked(total_parts, index as u8 + 1);
+                        let sar_segment_seq_num = index as u8 + 1;
 
-                        let mut payload = Vec::with_capacity(udh.udh_length() + part.len());
+                        let short_message = OctetString::from_vec(part)?;
 
-                        payload.extend_from_slice(udh.udh_bytes().as_bytes());
-                        payload.extend_from_slice(&part);
-
-                        let short_message = OctetString::from_vec(payload)?;
-
-                        let sm = self
+                        let mut sm = self
                             .sm
                             .clone()
-                            .with_udhi_indicator()
                             .with_short_message(short_message)
                             .with_data_coding(data_coding);
+
+                        sm.push_tlv(MessageSubmissionRequestTlvValue::SarMsgRefNum(
+                            self.reference,
+                        ));
+                        sm.push_tlv(MessageSubmissionRequestTlvValue::SarTotalSegments(
+                            sar_total_segments,
+                        ));
+                        sm.push_tlv(MessageSubmissionRequestTlvValue::SarSegmentSeqnum(
+                            sar_segment_seq_num,
+                        ));
 
                         Ok(sm)
                     })

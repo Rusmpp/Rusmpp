@@ -2,7 +2,7 @@ use rusmpp_core::pdus::owned::SubmitSm;
 
 use crate::encoding::gsm7bit::Gsm7BitUnpacked;
 
-use super::SubmitSmMultipartBuilder;
+use super::{SubmitSmMultipartBuilder, SubmitSmSarMultipartBuilder};
 
 /// Extension trait for [`SubmitSm`] to create multipart messages.
 pub trait SubmitSmMultipartExt {
@@ -15,6 +15,12 @@ pub trait SubmitSmMultipartExt {
     /// - [`SubmitSm::short_message`] will be overridden by `short_message` of the multipart builder.
     fn multipart<'a>(self, short_message: &'a str)
     -> SubmitSmMultipartBuilder<'a, Gsm7BitUnpacked>;
+
+    /// Creates a new [`SubmitSmSarMultipartBuilder`] with the default [`Gsm7BitUnpacked`] encoder.
+    fn sar_multipart<'a>(
+        self,
+        short_message: &'a str,
+    ) -> SubmitSmSarMultipartBuilder<'a, Gsm7BitUnpacked>;
 }
 
 impl SubmitSmMultipartExt for SubmitSm {
@@ -23,5 +29,12 @@ impl SubmitSmMultipartExt for SubmitSm {
         short_message: &'a str,
     ) -> SubmitSmMultipartBuilder<'a, Gsm7BitUnpacked> {
         SubmitSmMultipartBuilder::new(short_message, self, Gsm7BitUnpacked::new())
+    }
+
+    fn sar_multipart<'a>(
+        self,
+        short_message: &'a str,
+    ) -> SubmitSmSarMultipartBuilder<'a, Gsm7BitUnpacked> {
+        SubmitSmSarMultipartBuilder::new(short_message, self, Gsm7BitUnpacked::new())
     }
 }
