@@ -13,6 +13,7 @@ use crate::{
     delay::TokioDelay,
     error::Error,
     event::{DefaultEventChannel, DiscardEventChannel, EventChannel, InsightEventChannel},
+    managed_::UnboundManagedConnectionBuilder,
 };
 
 /// Connection builder that discards all events.
@@ -25,7 +26,7 @@ pub type InsightConnectionBuilder = ConnectionBuilder<InsightEventChannel>;
 pub type DefaultConnectionBuilder = ConnectionBuilder<DefaultEventChannel>;
 
 /// Builder for creating a new `SMPP` connection.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ConnectionBuilder<E = DefaultEventChannel> {
     pub(crate) max_command_length: usize,
     pub(crate) enquire_link_interval: Option<Duration>,
@@ -173,6 +174,15 @@ impl<E: EventChannel> ConnectionBuilder<E> {
         tokio::spawn(connection);
 
         (client, events)
+    }
+
+    /// TODO
+    pub fn managed(self) -> UnboundManagedConnectionBuilder<E>
+    where
+        E: EventChannel + Clone + Send + Sync + 'static,
+        E::Event: Send + Sync + 'static,
+    {
+        UnboundManagedConnectionBuilder::new(self)
     }
 }
 

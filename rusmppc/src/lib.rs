@@ -143,3 +143,9 @@ mod tests;
 
 #[cfg(test)]
 mod mock;
+
+mod managed_;
+pub mod managed {
+    //! TODO: docs
+    pub use super::managed_::{ManagedClient, ManagedEvent};
+}
