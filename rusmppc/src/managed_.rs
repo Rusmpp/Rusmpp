@@ -92,15 +92,11 @@ impl ManagedClient {
     }
 
     /// TODO: docs
-    pub async fn get_with_timeout(&self, timeout: Duration) -> Result<Client, RusmppcError> {
-        tokio::time::timeout(timeout, self.get())
-            .await
-            .map_err(|_| {
-                RusmppcError::Connect(std::io::Error::new(
-                    std::io::ErrorKind::TimedOut,
-                    "Connection timed out",
-                ))
-            })?
+    pub async fn get_with_timeout(
+        &self,
+        timeout: Duration,
+    ) -> Option<Result<Client, RusmppcError>> {
+        tokio::time::timeout(timeout, self.get()).await.ok()
     }
 }
 

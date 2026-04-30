@@ -56,14 +56,15 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
         tracing::info!("Getting a connected client");
 
         match client.get_with_timeout(Duration::from_secs(5)).await {
-            Ok(client) => {
+            None => tracing::warn!("Timed out while waiting for a connected client"),
+            Some(Ok(client)) => {
                 tracing::info!("Got a connected client, sending a SubmitSm command");
 
                 let response = client.submit_sm(SubmitSm::builder().build()).await?;
 
                 tracing::info!(?response, "SubmitSm response");
             }
-            Err(err) => tracing::error!(?err, "Failed to get a connected client"),
+            Some(Err(err)) => tracing::error!(?err, "Failed to get a connected client"),
         }
 
         tokio::time::sleep(Duration::from_secs(3)).await;
