@@ -46,6 +46,8 @@ hickory-resolver = { version = "0.26.0", default-features = false, features = [
     "system-config",
 ] }
 
+tryhard = "0.5.2"
+
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }

@@ -1,7 +1,3 @@
-// This implementation in based on `bb8` pool.
-// The public api is relatively stable.
-// It should be possible to swap out the internal implementation without breaking the public api.
-
 use std::{
     fmt::Debug,
     pin::Pin,
@@ -17,6 +13,9 @@ use tokio::{
     sync::{RwLock, RwLockReadGuard, mpsc::UnboundedSender, watch},
 };
 use tokio_stream::wrappers::UnboundedReceiverStream;
+use tryhard::backoff_strategies::{
+    BackoffStrategy, ExponentialBackoff, FixedBackoff, LinearBackoff, NoBackoff,
+};
 
 use crate::{Client, ConnectionBuilder, error::Error as RusmppcError, event::EventChannel};
 
@@ -87,12 +86,21 @@ impl ManagedClient {
         }
     }
 
-    // TODO: in order for this to make sense, we have to add the backoff and stuff
     /// TODO: docs
     pub async fn get(&self) -> Result<Client, RusmppcError> {
-        // TODO: we handle timeouts here, because we might want to use retries while establishing the connection.
-
         self.inner.get().await.map(|client| client.clone())
+    }
+
+    /// TODO: docs
+    pub async fn get_with_timeout(&self, timeout: Duration) -> Result<Client, RusmppcError> {
+        tokio::time::timeout(timeout, self.get())
+            .await
+            .map_err(|_| {
+                RusmppcError::Connect(std::io::Error::new(
+                    std::io::ErrorKind::TimedOut,
+                    "Connection timed out",
+                ))
+            })?
     }
 }
 
@@ -146,6 +154,9 @@ pub struct ManagedConnectionBuilder<E: EventChannel + Clone + Send + Sync + 'sta
     builder: ConnectionBuilder<E>,
     bind: BindMode,
     auto_reconnect_interval: Option<Duration>,
+    max_delay: Option<Duration>,
+    back_off: BackOff,
+    max_retries: u32,
 }
 
 impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E> {
@@ -154,6 +165,9 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E
             builder,
             bind,
             auto_reconnect_interval: Some(Duration::from_secs(5)),
+            max_delay: None,
+            back_off: BackOff::Exponential(ExponentialBackoff::new(Duration::from_secs(2))),
+            max_retries: 10,
         }
     }
 
@@ -177,6 +191,54 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E
         self.auto_reconnect_interval = auto_reconnect_interval;
         self
     }
+
+    /// TODO: docs
+    pub fn max_delay(mut self, delay: Duration) -> Self {
+        self.max_delay = Some(delay);
+        self
+    }
+
+    /// TODO: docs
+    pub fn no_max_delay(mut self) -> Self {
+        self.max_delay = None;
+        self
+    }
+
+    /// TODO: docs
+    pub fn with_max_delay(mut self, delay: Option<Duration>) -> Self {
+        self.max_delay = delay;
+        self
+    }
+
+    /// TODO: docs
+    pub fn no_backoff(mut self) -> Self {
+        self.back_off = BackOff::None;
+        self
+    }
+
+    /// TODO: docs
+    pub fn exponential_backoff(mut self, initial_delay: Duration) -> Self {
+        self.back_off = BackOff::Exponential(ExponentialBackoff::new(initial_delay));
+        self
+    }
+
+    /// TODO: docs
+    pub fn fixed_backoff(mut self, delay: Duration) -> Self {
+        self.back_off = BackOff::Fixed(FixedBackoff::new(delay));
+        self
+    }
+
+    /// TODO: docs
+    pub fn linear_backoff(mut self, delay: Duration) -> Self {
+        self.back_off = BackOff::Linear(LinearBackoff::new(delay));
+        self
+    }
+
+    /// TODO: docs
+    pub fn max_retries(mut self, retries: u32) -> Self {
+        self.max_retries = retries;
+        self
+    }
 }
 
 impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E>
@@ -196,7 +258,16 @@ where
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
         let rx = UnboundedReceiverStream::new(rx);
 
-        let creator = BoundClientCreatorImpl::new(self.builder, connect, self.bind, tx);
+        let creator = BoundClientCreatorImpl::new(
+            self.builder,
+            connect,
+            self.bind,
+            self.max_delay,
+            self.back_off,
+            self.max_retries,
+            tx,
+        );
+
         let client = creator.connect().await?;
         let client = Arc::new(ManagedClientInner::new(Box::new(creator), client));
 
@@ -277,6 +348,9 @@ struct BoundClientCreatorImpl<E: EventChannel + Clone + Send + Sync + 'static> {
     builder: ConnectionBuilder<E>,
     connect: Connect,
     bind: BindMode,
+    max_delay: Option<Duration>,
+    back_off: BackOff,
+    max_retries: u32,
     tx: UnboundedSender<ManagedEvent<E::Event>>,
 }
 
@@ -288,12 +362,18 @@ where
         builder: ConnectionBuilder<E>,
         connect: Connect,
         bind: BindMode,
+        max_delay: Option<Duration>,
+        back_off: BackOff,
+        max_retries: u32,
         tx: UnboundedSender<ManagedEvent<E::Event>>,
     ) -> Self {
         Self {
             builder,
             connect,
             bind,
+            max_delay,
+            back_off,
+            max_retries,
             tx,
         }
     }
@@ -301,20 +381,37 @@ where
     async fn connect(&self) -> Result<Client, RusmppcError> {
         tracing::debug!(target: TARGET, "Connecting");
 
-        let (client, mut events) = match self.connect {
-            Connect::Url(ref url) => self
-                .builder
-                .clone()
-                .connect(url)
-                .await
-                .map(|(client, events)| (client, EventStream::new_a(events)))?,
-            Connect::Connector(ref connector) => connector
-                .connect()
-                .await
-                .map_err(RusmppcError::Connect)
-                .map(|stream| self.builder.clone().connected(stream))
-                .map(|(client, events)| (client, EventStream::new_b(events)))?,
+        let connect = move || async move {
+            match self.connect {
+                Connect::Url(ref url) => self
+                    .builder
+                    .clone()
+                    .connect(url)
+                    .await
+                    .map(|(client, events)| (client, EventStream::new_a(events))),
+                Connect::Connector(ref connector) => connector
+                    .connect()
+                    .await
+                    .map_err(RusmppcError::Connect)
+                    .map(|stream| self.builder.clone().connected(stream))
+                    .map(|(client, events)| (client, EventStream::new_b(events))),
+            }
         };
+
+        let max_delay = self.max_delay;
+        let max_retries = self.max_retries;
+        let mut fut = tryhard::retry_fn(connect)
+            .retries(self.max_retries)
+            .custom_backoff(self.back_off)
+            .on_retry(|attempt, next_delay, _| async move {
+                tracing::warn!(target: TARGET, ?attempt, ?max_retries, ?next_delay, ?max_delay, "Connection attempt failed");
+            });
+
+        if let Some(delay) = self.max_delay {
+            fut = fut.max_delay(delay)
+        };
+
+        let (client, mut events) = fut.await?;
 
         let _ = self.tx.send(ManagedEvent::Connected);
 
@@ -445,6 +542,27 @@ where
         match this.stream.project() {
             StreamOrStreamProj::A { stream } => stream.poll_next(cx),
             StreamOrStreamProj::B { stream } => stream.poll_next(cx),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum BackOff {
+    None,
+    Exponential(ExponentialBackoff),
+    Fixed(FixedBackoff),
+    Linear(LinearBackoff),
+}
+
+impl<'a, E> BackoffStrategy<'a, E> for BackOff {
+    type Output = Duration;
+
+    fn delay(&mut self, attempt: u32, error: &'a E) -> Duration {
+        match self {
+            BackOff::None => NoBackoff.delay(attempt, error),
+            BackOff::Exponential(backoff) => backoff.delay(attempt, error),
+            BackOff::Fixed(backoff) => backoff.delay(attempt, error),
+            BackOff::Linear(backoff) => backoff.delay(attempt, error),
         }
     }
 }

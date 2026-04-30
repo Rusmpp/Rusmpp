@@ -35,6 +35,9 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
                 .build(),
         )
         .auto_reconnect_interval(Duration::from_secs(15))
+        .exponential_backoff(Duration::from_secs(2))
+        .max_delay(Duration::from_secs(10))
+        .max_retries(5)
         //.connect("smpp://localhost:2775")
         .connect_fn(|| async { tokio::net::TcpStream::connect("localhost:2775").await })
         .await?;
@@ -52,7 +55,7 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
     for _ in 0..10 {
         tracing::info!("Getting a connected client");
 
-        match client.get().await {
+        match client.get_with_timeout(Duration::from_secs(5)).await {
             Ok(client) => {
                 tracing::info!("Got a connected client, sending a SubmitSm command");
 
