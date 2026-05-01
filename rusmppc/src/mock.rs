@@ -294,64 +294,51 @@ pub mod timeout {
     /// Timeout mock for timers.
     ///
     /// This mock translates each second in the requested duration to one poll before completion.
-    #[mockall::automock]
-    pub trait Timeout<T> {
-        fn timeout_(
-            &self,
-            duration: Duration,
-            future: Pin<Box<dyn Future<Output = T> + 'static>>,
-        ) -> MockTimeoutFuture<T>;
-    }
+    #[derive(Clone, Copy)]
+    #[non_exhaustive]
+    pub struct MockTimeout;
 
-    impl<T> MockTimeout<T> {
-        /// Each second in the duration will correspond to one poll before completion.
-        pub fn timeout_after_seconds(mut self) -> MockTimeout<T> {
-            self.expect_timeout_().returning(move |duration, future| {
-                MockTimeoutFuture::new(future, delay::MockDelayFuture::new(duration.as_secs()))
-            });
-            self
+    impl MockTimeout {
+        /// Creates a new [`MockTimeout`].
+        pub const fn new() -> Self {
+            Self {}
         }
     }
 
-    impl<F, T> crate::timeout::Timeout<F> for MockTimeout<T>
-    where
-        F: Future<Output = T>,
-        T: 'static,
-        F: 'static,
-    {
-        type Future = MockTimeoutFuture<T>;
+    impl crate::timeout::Timeout for MockTimeout {
+        type Future<F: Future> = MockTimeoutFuture<F>;
 
-        fn timeout(&self, duration: Duration, future: F) -> Self::Future {
-            <Self as Timeout<F::Output>>::timeout_(self, duration, Box::pin(future))
+        fn timeout<F: Future>(&self, duration: Duration, future: F) -> Self::Future<F> {
+            MockTimeoutFuture {
+                future,
+                delay: delay::MockDelayFuture::new(duration.as_secs()),
+            }
         }
     }
 
-    /// Future returned by the [`MockTimeout`].
-    ///
-    /// Each poll corresponds to one second in the requested duration.
-    pub struct MockTimeoutFuture<T> {
-        future: Pin<Box<dyn Future<Output = T>>>,
-        delay: delay::MockDelayFuture,
-    }
-
-    impl<T> MockTimeoutFuture<T> {
-        pub const fn new(
-            future: Pin<Box<dyn Future<Output = T>>>,
+    pin_project_lite::pin_project! {
+        /// Future returned by the [`MockTimeout`].
+        ///
+        /// Each poll corresponds to one second in the requested duration.
+        pub struct MockTimeoutFuture<F> {
+            #[pin]
+            future: F,
+            #[pin]
             delay: delay::MockDelayFuture,
-        ) -> Self {
-            Self { future, delay }
         }
     }
 
-    impl<T> Future for MockTimeoutFuture<T> {
-        type Output = Option<T>;
+    impl<F: Future> Future for MockTimeoutFuture<F> {
+        type Output = Option<F::Output>;
 
-        fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-            if let Poll::Ready(output) = self.future.as_mut().poll(cx) {
+        fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+            let this = self.project();
+
+            if let Poll::Ready(output) = this.future.poll(cx) {
                 return Poll::Ready(Some(output));
             }
 
-            match Pin::new(&mut self.delay).poll(cx) {
+            match this.delay.poll(cx) {
                 Poll::Ready(()) => Poll::Ready(None),
                 Poll::Pending => Poll::Pending,
             }
@@ -381,7 +368,7 @@ pub mod timeout {
 
         let three_polls_future = poll_future(3);
 
-        let mock_timeout = MockTimeout::new().timeout_after_seconds();
+        let mock_timeout = MockTimeout::new();
         let mut timeout_future = mock_timeout.timeout(Duration::from_secs(2), three_polls_future);
 
         let waker = futures::task::noop_waker();
@@ -405,7 +392,7 @@ pub mod timeout {
 
         let three_polls_future = poll_future(3);
 
-        let mock_timeout = MockTimeout::new().timeout_after_seconds();
+        let mock_timeout = MockTimeout::new();
         let mut timeout_future = mock_timeout.timeout(Duration::from_secs(5), three_polls_future);
 
         let waker = futures::task::noop_waker();

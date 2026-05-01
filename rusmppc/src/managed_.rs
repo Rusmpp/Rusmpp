@@ -17,7 +17,12 @@ use tryhard::backoff_strategies::{
     BackoffStrategy, ExponentialBackoff, FixedBackoff, LinearBackoff, NoBackoff,
 };
 
-use crate::{Client, ConnectionBuilder, error::Error as RusmppcError, event::EventChannel};
+use crate::{
+    Client, ConnectionBuilder,
+    error::Error as RusmppcError,
+    event::EventChannel,
+    timeout::{Timeout, TimeoutImpl},
+};
 
 const TARGET: &str = "rusmppc::managed::client";
 
@@ -37,6 +42,7 @@ pub enum ManagedEvent<E> {
 /// TODO: docs
 #[derive(Clone)]
 pub struct ManagedClient {
+    timeout: TimeoutImpl,
     inner: Arc<ManagedClientInner>,
     // Used to tell the reconnecting background task to stop when the client is dropped.
     _watch: watch::Receiver<()>,
@@ -81,6 +87,7 @@ impl ManagedClientInner {
 impl ManagedClient {
     fn new(inner: Arc<ManagedClientInner>, watch: watch::Receiver<()>) -> Self {
         Self {
+            timeout: TimeoutImpl::tokio(),
             inner,
             _watch: watch,
         }
@@ -96,7 +103,13 @@ impl ManagedClient {
         &self,
         timeout: Duration,
     ) -> Option<Result<Client, RusmppcError>> {
-        tokio::time::timeout(timeout, self.get()).await.ok()
+        self.timeout.timeout(timeout, self.get()).await
+    }
+
+    #[cfg(test)]
+    pub(crate) fn with_mock_timeout(mut self) -> Self {
+        self.timeout = TimeoutImpl::mock();
+        self
     }
 }
 
