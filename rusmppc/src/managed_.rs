@@ -19,6 +19,7 @@ use tryhard::backoff_strategies::{
 
 use crate::{
     Client, ConnectionBuilder,
+    delay::{Delay, DelayImpl},
     error::Error as RusmppcError,
     event::EventChannel,
     timeout::{Timeout, TimeoutImpl},
@@ -166,6 +167,7 @@ pub struct ManagedConnectionBuilder<E: EventChannel + Clone + Send + Sync + 'sta
     max_delay: Option<Duration>,
     back_off: BackOff,
     max_retries: u32,
+    delay: DelayImpl,
 }
 
 impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E> {
@@ -177,7 +179,14 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E
             max_delay: None,
             back_off: BackOff::Exponential(ExponentialBackoff::new(Duration::from_secs(2))),
             max_retries: 10,
+            delay: DelayImpl::tokio(),
         }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn with_mock_delay(mut self) -> Self {
+        self.delay = DelayImpl::mock();
+        self
     }
 
     /// TODO: docs
@@ -283,6 +292,7 @@ where
         let (w_tx, w_rx) = watch::channel(());
 
         if let Some(interval) = self.auto_reconnect_interval {
+            let delay = self.delay;
             let client_c = client.clone();
 
             tokio::spawn(async move {
@@ -295,7 +305,7 @@ where
 
                             break;
                         }
-                        _ = tokio::time::sleep(interval) => {
+                        _ = delay.delay(interval) => {
                             tracing::trace!(target: TARGET, "Triggering reconnection");
 
                             // Trigger a reconnection if the connection was closed
