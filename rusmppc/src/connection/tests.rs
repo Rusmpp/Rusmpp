@@ -76,8 +76,8 @@ async fn server_ddos_client_should_still_send_requests_and_connection_should_sti
             .pdu(Pdu::AlertNotification(Default::default())))))
     });
 
-    let enquire_link_timer_delay = MockDelay::new().delay_after_seconds();
-    let enquire_link_response_timer_delay = MockDelay::new().delay_after_seconds();
+    let enquire_link_timer_delay = MockDelay::new();
+    let enquire_link_response_timer_delay = MockDelay::new();
 
     let (client, events, future) = ConnectionBuilder::new()
         // Send an enquire link every 50 polls
@@ -159,8 +159,8 @@ async fn client_ddos_and_server_ddos_connection_should_still_respond_to_enquire_
         Ok(())
     });
 
-    let enquire_link_timer_delay = MockDelay::new().delay_after_seconds();
-    let enquire_link_response_timer_delay = MockDelay::new().delay_after_seconds();
+    let enquire_link_timer_delay = MockDelay::new();
+    let enquire_link_response_timer_delay = MockDelay::new();
 
     let (client, events, future) = ConnectionBuilder::new()
         .no_enquire_link_interval()
@@ -253,8 +253,8 @@ async fn client_ddos_and_server_ddos_connection_should_still_respond_to_enquire_
         Ok(())
     });
 
-    let enquire_link_timer_delay = MockDelay::new().delay_after_seconds();
-    let enquire_link_response_timer_delay = MockDelay::new().delay_after_seconds();
+    let enquire_link_timer_delay = MockDelay::new();
+    let enquire_link_response_timer_delay = MockDelay::new();
 
     let (client, events, future) = ConnectionBuilder::new()
         .no_enquire_link_interval()
@@ -319,8 +319,8 @@ async fn sink_first_poll_ready_pending_pending_request_should_be_sent() {
             Ok(())
         });
 
-    let enquire_link_timer_delay = MockDelay::new().delay_after_seconds();
-    let enquire_link_response_timer_delay = MockDelay::new().delay_after_seconds();
+    let enquire_link_timer_delay = MockDelay::new();
+    let enquire_link_response_timer_delay = MockDelay::new();
 
     let (client, events, future) = ConnectionBuilder::new()
         .no_enquire_link_interval()
@@ -381,8 +381,8 @@ async fn sink_first_poll_flush_pending_pending_request_should_be_sent() {
             });
     }
 
-    let enquire_link_timer_delay = MockDelay::new().delay_after_seconds();
-    let enquire_link_response_timer_delay = MockDelay::new().delay_after_seconds();
+    let enquire_link_timer_delay = MockDelay::new();
+    let enquire_link_response_timer_delay = MockDelay::new();
 
     let (client, events, future) = ConnectionBuilder::new()
         .no_enquire_link_interval()

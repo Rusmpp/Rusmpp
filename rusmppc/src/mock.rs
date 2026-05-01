@@ -202,25 +202,22 @@ pub mod delay {
     /// Delay mock for timers.
     ///
     /// This mock translates each second in the requested duration to one poll before completion.
-    #[mockall::automock]
-    pub trait Delay {
-        fn delay_(&self, duration: Duration) -> MockDelayFuture;
-    }
+    #[derive(Debug, Clone, Copy, Default)]
+    #[non_exhaustive]
+    pub struct MockDelay;
 
     impl crate::delay::Delay for MockDelay {
         type Future = MockDelayFuture;
 
         fn delay(&self, duration: Duration) -> Self::Future {
-            <Self as Delay>::delay_(self, duration)
+            MockDelayFuture::new(duration.as_secs())
         }
     }
 
     impl MockDelay {
-        /// Each second in the duration will correspond to one poll before completion.
-        pub fn delay_after_seconds(mut self) -> MockDelay {
-            self.expect_delay_()
-                .returning(move |duration| MockDelayFuture::new(duration.as_secs()));
-            self
+        /// Creates a new [`MockDelay`].
+        pub const fn new() -> Self {
+            Self {}
         }
     }
 
@@ -267,7 +264,7 @@ pub mod delay {
     fn test_delay_always_after() {
         use crate::delay::Delay;
 
-        let mock_delay = MockDelay::new().delay_after_seconds();
+        let mock_delay = MockDelay::new();
 
         let mut delay_future = mock_delay.delay(Duration::from_secs(3));
 

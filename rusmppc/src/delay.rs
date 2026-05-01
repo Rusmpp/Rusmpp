@@ -8,7 +8,7 @@ pub trait Delay: Default {
 }
 
 /// Delay implementation using Tokio's timer.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 #[non_exhaustive]
 pub struct TokioDelay;
 
