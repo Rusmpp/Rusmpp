@@ -10,7 +10,7 @@ use tokio_util::codec::Framed;
 
 use crate::{
     Client, MaybeTlsStream,
-    delay::TokioDelay,
+    delay::DelayImpl,
     error::Error,
     event::{DefaultEventChannel, DiscardEventChannel, EventChannel, InsightEventChannel},
     managed_::UnboundManagedConnectionBuilder,
@@ -488,7 +488,7 @@ impl<E: EventChannel> NoSpawnConnectionBuilder<E> {
             CommandCodec::new().with_max_length(self.builder.max_command_length),
         );
 
-        self.raw(framed, TokioDelay::new(), TokioDelay::new())
+        self.raw(framed, DelayImpl::tokio())
     }
 }
 

@@ -8,7 +8,7 @@ use std::{
 use crate::{
     Action, Client, Request, Timer,
     builder::NoSpawnConnectionBuilder,
-    delay::Delay,
+    delay::DelayImpl,
     error::Error,
     event::{EventChannel, Insight},
     request::ObligatedRequest,
@@ -46,7 +46,7 @@ enum State {
 // Actions will not be queued and the client would wait forever until the Connection is dropped.
 // We rely on this mechanism to work, to report correct and predictable errors.
 pin_project! {
-    pub struct Connection<F, D1: Delay, D2: Delay, E> {
+    pub struct Connection<F, E> {
         state: State,
         sequence_number: u32,
         requests: VecDeque<Request>,
@@ -61,9 +61,9 @@ pin_project! {
         // Used to let the client wait for the connection to be closed
         _watch: watch::Receiver<()>,
         #[pin]
-        enquire_link_timer: Timer<D1>,
+        enquire_link_timer: Timer<DelayImpl>,
         #[pin]
-        enquire_link_response_timer: Timer<D2>,
+        enquire_link_response_timer: Timer<DelayImpl>,
         #[pin]
         framed: F,
         #[pin]
@@ -71,13 +71,12 @@ pin_project! {
     }
 }
 
-impl<D1: Delay, D2: Delay, E: EventChannel> Connection<(), D1, D2, E> {
+impl<E: EventChannel> Connection<(), E> {
     pub fn new(
         enquire_link_interval: Option<Duration>,
         enquire_link_response_timeout: Duration,
         auto_enquire_link_response: bool,
-        enquire_link_timer_delay: D1,
-        enquire_link_response_timer_delay: D2,
+        delay: DelayImpl,
     ) -> (
         Self,
         watch::Sender<()>,
@@ -102,9 +101,9 @@ impl<D1: Delay, D2: Delay, E: EventChannel> Connection<(), D1, D2, E> {
                 enquire_link_response_timeout,
                 auto_enquire_link_response,
                 enquire_link_timer: enquire_link_interval
-                    .map(|duration| Timer::active(enquire_link_timer_delay, duration))
-                    .unwrap_or_default(),
-                enquire_link_response_timer: Timer::inactive(enquire_link_response_timer_delay),
+                    .map(|duration| Timer::active(delay, duration))
+                    .unwrap_or(Timer::inactive(delay)),
+                enquire_link_response_timer: Timer::inactive(delay),
                 _watch: watch_rx,
                 events,
                 framed: (),
@@ -116,7 +115,7 @@ impl<D1: Delay, D2: Delay, E: EventChannel> Connection<(), D1, D2, E> {
         )
     }
 
-    pub fn with_framed<F>(self, framed: F) -> Connection<F, D1, D2, E> {
+    pub fn with_framed<F>(self, framed: F) -> Connection<F, E> {
         Connection {
             state: self.state,
             sequence_number: self.sequence_number,
@@ -137,7 +136,7 @@ impl<D1: Delay, D2: Delay, E: EventChannel> Connection<(), D1, D2, E> {
     }
 }
 
-impl<F, D1: Delay, D2: Delay, E> Connection<F, D1, D2, E>
+impl<F, E> Connection<F, E>
 where
     F: Stream<Item = Result<Command, DecodeError>> + for<'a> Sink<&'a Command, Error = EncodeError>,
     E: EventChannel,
@@ -232,7 +231,7 @@ where
     }
 }
 
-impl<F, D1: Delay, D2: Delay, E> Future for Connection<F, D1, D2, E>
+impl<F, E> Future for Connection<F, E>
 where
     F: Stream<Item = Result<Command, DecodeError>> + for<'a> Sink<&'a Command, Error = EncodeError>,
     E: EventChannel,
@@ -695,28 +694,24 @@ where
 
 impl<E: EventChannel> NoSpawnConnectionBuilder<E> {
     /// Consumes the builder and creates a new [`Client`] along with the connection future and event stream (from raw parts).
-    pub(crate) fn raw<F, D1, D2>(
+    pub(crate) fn raw<F>(
         self,
         framed: F,
-        enquire_link_timer_delay: D1,
-        enquire_link_response_timer_delay: D2,
+        delay: DelayImpl,
     ) -> (
         Client,
         impl Stream<Item = E::Event> + Unpin + 'static,
         impl Future<Output = ()>,
     )
     where
-        D1: Delay,
-        D2: Delay,
         F: Stream<Item = Result<Command, DecodeError>>
             + for<'a> Sink<&'a Command, Error = EncodeError>,
     {
-        let (connection, watch, actions, events) = Connection::<_, _, _, E>::new(
+        let (connection, watch, actions, events) = Connection::<_, E>::new(
             self.builder.enquire_link_interval,
             self.builder.enquire_link_response_timeout,
             self.builder.auto_enquire_link_response,
-            enquire_link_timer_delay,
-            enquire_link_response_timer_delay,
+            delay,
         );
 
         let client = Client::new(
