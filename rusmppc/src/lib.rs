@@ -138,6 +138,8 @@ pub(crate) use tcp_stream::MaybeTlsStream;
 
 mod delay;
 
+mod timeout;
+
 #[cfg(test)]
 mod tests;
 

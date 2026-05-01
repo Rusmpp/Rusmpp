@@ -1,4 +1,4 @@
-//! Mocks for Io, Stream/Sink and Delay used in tests.
+//! Mocks for Io, Stream/Sink, Delay and Timeout used in tests.
 
 use std::{
     pin::Pin,
@@ -282,6 +282,142 @@ pub mod delay {
                 assert!(matches!(result, Poll::Pending));
             } else {
                 assert!(matches!(result, Poll::Ready(())));
+                break;
+            }
+        }
+    }
+}
+
+pub mod timeout {
+    use super::*;
+
+    /// Timeout mock for timers.
+    ///
+    /// This mock translates each second in the requested duration to one poll before completion.
+    #[mockall::automock]
+    pub trait Timeout<T> {
+        fn timeout_(
+            &self,
+            duration: Duration,
+            future: Pin<Box<dyn Future<Output = T> + 'static>>,
+        ) -> MockTimeoutFuture<T>;
+    }
+
+    impl<T> MockTimeout<T> {
+        /// Each second in the duration will correspond to one poll before completion.
+        pub fn timeout_after_seconds(mut self) -> MockTimeout<T> {
+            self.expect_timeout_().returning(move |duration, future| {
+                MockTimeoutFuture::new(future, delay::MockDelayFuture::new(duration.as_secs()))
+            });
+            self
+        }
+    }
+
+    impl<F, T> crate::timeout::Timeout<F> for MockTimeout<T>
+    where
+        F: Future<Output = T>,
+        T: 'static,
+        F: 'static,
+    {
+        type Future = MockTimeoutFuture<T>;
+
+        fn timeout(&self, duration: Duration, future: F) -> Self::Future {
+            <Self as Timeout<F::Output>>::timeout_(self, duration, Box::pin(future))
+        }
+    }
+
+    /// Future returned by the [`MockTimeout`].
+    ///
+    /// Each poll corresponds to one second in the requested duration.
+    pub struct MockTimeoutFuture<T> {
+        future: Pin<Box<dyn Future<Output = T>>>,
+        delay: delay::MockDelayFuture,
+    }
+
+    impl<T> MockTimeoutFuture<T> {
+        pub const fn new(
+            future: Pin<Box<dyn Future<Output = T>>>,
+            delay: delay::MockDelayFuture,
+        ) -> Self {
+            Self { future, delay }
+        }
+    }
+
+    impl<T> Future for MockTimeoutFuture<T> {
+        type Output = Option<T>;
+
+        fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+            if let Poll::Ready(output) = self.future.as_mut().poll(cx) {
+                return Poll::Ready(Some(output));
+            }
+
+            match Pin::new(&mut self.delay).poll(cx) {
+                Poll::Ready(()) => Poll::Ready(None),
+                Poll::Pending => Poll::Pending,
+            }
+        }
+    }
+
+    /// Helper future that polls a given number of times before completion.
+    fn poll_future(times: usize) -> impl Future<Output = ()> {
+        let mut remaining = times;
+
+        futures::future::poll_fn(move |cx| {
+            if remaining == 0 {
+                Poll::Ready(())
+            } else {
+                remaining -= 1;
+
+                cx.waker().wake_by_ref();
+
+                Poll::Pending
+            }
+        })
+    }
+
+    #[test]
+    fn would_timeout() {
+        use crate::timeout::Timeout;
+
+        let three_polls_future = poll_future(3);
+
+        let mock_timeout = MockTimeout::new().timeout_after_seconds();
+        let mut timeout_future = mock_timeout.timeout(Duration::from_secs(2), three_polls_future);
+
+        let waker = futures::task::noop_waker();
+        let mut cx = Context::from_waker(&waker);
+        let mut pinned = Pin::new(&mut timeout_future);
+
+        loop {
+            let result = pinned.as_mut().poll(&mut cx);
+
+            if let Poll::Ready(output) = result {
+                assert!(output.is_none());
+
+                break;
+            }
+        }
+    }
+
+    #[test]
+    fn would_not_timeout() {
+        use crate::timeout::Timeout;
+
+        let three_polls_future = poll_future(3);
+
+        let mock_timeout = MockTimeout::new().timeout_after_seconds();
+        let mut timeout_future = mock_timeout.timeout(Duration::from_secs(5), three_polls_future);
+
+        let waker = futures::task::noop_waker();
+        let mut cx = Context::from_waker(&waker);
+        let mut pinned = Pin::new(&mut timeout_future);
+
+        loop {
+            let result = pinned.as_mut().poll(&mut cx);
+
+            if let Poll::Ready(output) = result {
+                assert!(output.is_some());
+
                 break;
             }
         }
