@@ -201,6 +201,12 @@ impl<E: EventChannel> ConnectionBuilder<E> {
         self.timeout = TimeoutImpl::mock();
         self
     }
+
+    #[cfg(test)]
+    #[cfg(test)]
+    pub(crate) fn mock(self) -> Self {
+        self.mock_delay().mock_timeout()
+    }
 }
 
 impl DefaultConnectionBuilder {

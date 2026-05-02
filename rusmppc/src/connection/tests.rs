@@ -74,9 +74,9 @@ async fn server_ddos_client_should_still_send_requests_and_connection_should_sti
     let (client, events, future) = ConnectionBuilder::new()
         .mock_delay()
         // Send an enquire link every 50 polls
-        .enquire_link_interval(Duration::from_secs(50))
+        .enquire_link_interval(Duration::from_millis(50))
         // Wait for 5 polls for the enquire link response
-        .enquire_link_response_timeout(Duration::from_secs(5))
+        .enquire_link_response_timeout(Duration::from_millis(5))
         .no_spawn()
         .raw(framed);
 

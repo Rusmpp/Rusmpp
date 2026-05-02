@@ -201,7 +201,7 @@ pub mod delay {
 
     /// Delay mock for timers.
     ///
-    /// This mock translates each second in the requested duration to one poll before completion.
+    /// This mock translates each millisecond in the requested duration to one poll before completion.
     #[derive(Debug, Clone, Copy, Default)]
     #[non_exhaustive]
     pub struct MockDelay;
@@ -210,7 +210,7 @@ pub mod delay {
         type Future = MockDelayFuture;
 
         fn delay(&self, duration: Duration) -> Self::Future {
-            MockDelayFuture::new(duration.as_secs())
+            MockDelayFuture::new(duration.as_millis())
         }
     }
 
@@ -223,15 +223,15 @@ pub mod delay {
 
     /// Future returned by the [`MockDelay`].
     ///
-    /// Each poll corresponds to one second in the requested duration.
+    /// Each poll corresponds to one millisecond in the requested duration.
     pub struct MockDelayFuture {
         complete: bool,
         /// Number of polls before completion.
-        after: u64,
+        after: u128,
     }
 
     impl MockDelayFuture {
-        pub const fn new(after: u64) -> Self {
+        pub const fn new(after: u128) -> Self {
             Self {
                 complete: false,
                 after,
@@ -266,7 +266,7 @@ pub mod delay {
 
         let mock_delay = MockDelay::new();
 
-        let mut delay_future = mock_delay.delay(Duration::from_secs(3));
+        let mut delay_future = mock_delay.delay(Duration::from_millis(3));
 
         let waker = futures::task::noop_waker();
         let mut cx = Context::from_waker(&waker);
@@ -290,7 +290,7 @@ pub mod timeout {
 
     /// Timeout mock for timers.
     ///
-    /// This mock translates each second in the requested duration to one poll before completion.
+    /// This mock translates each millisecond in the requested duration to one poll before completion.
     #[derive(Debug, Clone, Copy)]
     #[non_exhaustive]
     pub struct MockTimeout;
@@ -308,7 +308,7 @@ pub mod timeout {
         fn timeout<F: Future>(&self, duration: Duration, future: F) -> Self::Future<F> {
             MockTimeoutFuture {
                 future,
-                delay: delay::MockDelayFuture::new(duration.as_secs()),
+                delay: delay::MockDelayFuture::new(duration.as_millis()),
             }
         }
     }
@@ -316,7 +316,7 @@ pub mod timeout {
     pin_project_lite::pin_project! {
         /// Future returned by the [`MockTimeout`].
         ///
-        /// Each poll corresponds to one second in the requested duration.
+        /// Each poll corresponds to one millisecond in the requested duration.
         pub struct MockTimeoutFuture<F> {
             #[pin]
             future: F,
@@ -366,7 +366,7 @@ pub mod timeout {
         let three_polls_future = poll_future(3);
 
         let mock_timeout = MockTimeout::new();
-        let mut timeout_future = mock_timeout.timeout(Duration::from_secs(2), three_polls_future);
+        let mut timeout_future = mock_timeout.timeout(Duration::from_millis(2), three_polls_future);
 
         let waker = futures::task::noop_waker();
         let mut cx = Context::from_waker(&waker);
@@ -390,7 +390,7 @@ pub mod timeout {
         let three_polls_future = poll_future(3);
 
         let mock_timeout = MockTimeout::new();
-        let mut timeout_future = mock_timeout.timeout(Duration::from_secs(5), three_polls_future);
+        let mut timeout_future = mock_timeout.timeout(Duration::from_millis(5), three_polls_future);
 
         let waker = futures::task::noop_waker();
         let mut cx = Context::from_waker(&waker);
