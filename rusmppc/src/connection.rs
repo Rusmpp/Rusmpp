@@ -717,7 +717,7 @@ impl<E: EventChannel> NoSpawnConnectionBuilder<E> {
             actions,
             self.builder.response_timeout,
             self.builder.check_interface_version,
-            self.builder.delay,
+            self.builder.timeout,
             watch,
         );
 

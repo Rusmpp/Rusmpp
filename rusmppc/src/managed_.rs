@@ -19,7 +19,7 @@ use tryhard::backoff_strategies::{
 
 use crate::{
     Client, ConnectionBuilder,
-    delay::{Delay, DelayImpl},
+    delay::Delay,
     error::Error as RusmppcError,
     event::EventChannel,
     timeout::{Timeout, TimeoutImpl},
@@ -86,9 +86,13 @@ impl ManagedClientInner {
 }
 
 impl ManagedClient {
-    fn new(inner: Arc<ManagedClientInner>, watch: watch::Receiver<()>) -> Self {
+    fn new(
+        timeout: TimeoutImpl,
+        inner: Arc<ManagedClientInner>,
+        watch: watch::Receiver<()>,
+    ) -> Self {
         Self {
-            timeout: TimeoutImpl::tokio(),
+            timeout,
             inner,
             _watch: watch,
         }
@@ -105,12 +109,6 @@ impl ManagedClient {
         timeout: Duration,
     ) -> Option<Result<Client, RusmppcError>> {
         self.timeout.timeout(timeout, self.get()).await
-    }
-
-    #[cfg(test)]
-    pub(crate) fn with_mock_timeout(mut self) -> Self {
-        self.timeout = TimeoutImpl::mock();
-        self
     }
 }
 
@@ -167,7 +165,6 @@ pub struct ManagedConnectionBuilder<E: EventChannel + Clone + Send + Sync + 'sta
     max_delay: Option<Duration>,
     back_off: BackOff,
     max_retries: u32,
-    delay: DelayImpl,
 }
 
 impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E> {
@@ -179,14 +176,7 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E
             max_delay: None,
             back_off: BackOff::Exponential(ExponentialBackoff::new(Duration::from_secs(2))),
             max_retries: 10,
-            delay: DelayImpl::tokio(),
         }
-    }
-
-    #[cfg(test)]
-    pub(crate) fn mock_delay(mut self) -> Self {
-        self.delay = DelayImpl::mock();
-        self
     }
 
     /// TODO: docs
@@ -273,6 +263,9 @@ where
         ),
         RusmppcError,
     > {
+        let delay = self.builder.delay;
+        let timeout = self.builder.timeout;
+
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
         let rx = UnboundedReceiverStream::new(rx);
 
@@ -292,7 +285,6 @@ where
         let (w_tx, w_rx) = watch::channel(());
 
         if let Some(interval) = self.auto_reconnect_interval {
-            let delay = self.delay;
             let client_c = client.clone();
 
             tokio::spawn(async move {
@@ -321,7 +313,7 @@ where
             });
         }
 
-        Ok((ManagedClient::new(client, w_rx), rx))
+        Ok((ManagedClient::new(timeout, client, w_rx), rx))
     }
 
     /// TODO: docs

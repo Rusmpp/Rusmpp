@@ -14,6 +14,7 @@ use crate::{
     error::Error,
     event::{DefaultEventChannel, DiscardEventChannel, EventChannel, InsightEventChannel},
     managed_::UnboundManagedConnectionBuilder,
+    timeout::TimeoutImpl,
 };
 
 /// Connection builder that discards all events.
@@ -43,8 +44,9 @@ pub struct ConnectionBuilder<E = DefaultEventChannel> {
     /// Native TLS connector provided by the user. If None, default connector will be used.
     #[cfg(feature = "native-tls")]
     native_tls_connector: Option<native_tls::TlsConnector>,
-    _phantom: std::marker::PhantomData<E>,
     pub(crate) delay: DelayImpl,
+    pub(crate) timeout: TimeoutImpl,
+    _phantom: std::marker::PhantomData<E>,
 }
 
 impl Default for DefaultConnectionBuilder {
@@ -79,6 +81,7 @@ impl DefaultConnectionBuilder {
             native_tls_connector: None,
             _phantom: std::marker::PhantomData,
             delay: DelayImpl::tokio(),
+            timeout: TimeoutImpl::tokio(),
         }
     }
 }
@@ -190,6 +193,12 @@ impl<E: EventChannel> ConnectionBuilder<E> {
     #[cfg(test)]
     pub(crate) fn mock_delay(mut self) -> Self {
         self.delay = DelayImpl::mock();
+        self
+    }
+
+    #[cfg(test)]
+    pub(crate) fn mock_timeout(mut self) -> Self {
+        self.timeout = TimeoutImpl::mock();
         self
     }
 }
@@ -520,8 +529,9 @@ impl<E> EventsConnectionBuilder<E> {
             rustls_config: self.builder.rustls_config,
             #[cfg(feature = "native-tls")]
             native_tls_connector: self.builder.native_tls_connector,
-            _phantom: std::marker::PhantomData,
             delay: self.builder.delay,
+            timeout: self.builder.timeout,
+            _phantom: std::marker::PhantomData,
         }
     }
 
@@ -538,8 +548,9 @@ impl<E> EventsConnectionBuilder<E> {
             rustls_config: self.builder.rustls_config,
             #[cfg(feature = "native-tls")]
             native_tls_connector: self.builder.native_tls_connector,
-            _phantom: std::marker::PhantomData,
             delay: self.builder.delay,
+            timeout: self.builder.timeout,
+            _phantom: std::marker::PhantomData,
         }
     }
 }

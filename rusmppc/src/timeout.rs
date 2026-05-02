@@ -14,7 +14,7 @@ pub trait Timeout {
 }
 
 /// Timeout implementation using Tokio's timer.
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 #[non_exhaustive]
 pub struct TokioTimeout;
 
@@ -59,7 +59,7 @@ impl<F: Future> Future for TokioTimeoutFuture<F> {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum TimeoutImpl {
     Tokio(TokioTimeout),
     #[cfg(test)]

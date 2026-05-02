@@ -291,7 +291,7 @@ pub mod timeout {
     /// Timeout mock for timers.
     ///
     /// This mock translates each second in the requested duration to one poll before completion.
-    #[derive(Clone, Copy)]
+    #[derive(Debug, Clone, Copy)]
     #[non_exhaustive]
     pub struct MockTimeout;
 
