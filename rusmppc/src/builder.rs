@@ -44,6 +44,7 @@ pub struct ConnectionBuilder<E = DefaultEventChannel> {
     #[cfg(feature = "native-tls")]
     native_tls_connector: Option<native_tls::TlsConnector>,
     _phantom: std::marker::PhantomData<E>,
+    pub(crate) delay: DelayImpl,
 }
 
 impl Default for DefaultConnectionBuilder {
@@ -77,6 +78,7 @@ impl DefaultConnectionBuilder {
             #[cfg(feature = "native-tls")]
             native_tls_connector: None,
             _phantom: std::marker::PhantomData,
+            delay: DelayImpl::tokio(),
         }
     }
 }
@@ -183,6 +185,12 @@ impl<E: EventChannel> ConnectionBuilder<E> {
         E::Event: Send + Sync + 'static,
     {
         UnboundManagedConnectionBuilder::new(self)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn mock_delay(mut self) -> Self {
+        self.delay = DelayImpl::mock();
+        self
     }
 }
 
@@ -488,7 +496,7 @@ impl<E: EventChannel> NoSpawnConnectionBuilder<E> {
             CommandCodec::new().with_max_length(self.builder.max_command_length),
         );
 
-        self.raw(framed, DelayImpl::tokio())
+        self.raw(framed)
     }
 }
 
@@ -513,6 +521,7 @@ impl<E> EventsConnectionBuilder<E> {
             #[cfg(feature = "native-tls")]
             native_tls_connector: self.builder.native_tls_connector,
             _phantom: std::marker::PhantomData,
+            delay: self.builder.delay,
         }
     }
 
@@ -530,6 +539,7 @@ impl<E> EventsConnectionBuilder<E> {
             #[cfg(feature = "native-tls")]
             native_tls_connector: self.builder.native_tls_connector,
             _phantom: std::marker::PhantomData,
+            delay: self.builder.delay,
         }
     }
 }

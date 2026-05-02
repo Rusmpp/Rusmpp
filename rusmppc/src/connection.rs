@@ -697,7 +697,6 @@ impl<E: EventChannel> NoSpawnConnectionBuilder<E> {
     pub(crate) fn raw<F>(
         self,
         framed: F,
-        delay: DelayImpl,
     ) -> (
         Client,
         impl Stream<Item = E::Event> + Unpin + 'static,
@@ -711,13 +710,14 @@ impl<E: EventChannel> NoSpawnConnectionBuilder<E> {
             self.builder.enquire_link_interval,
             self.builder.enquire_link_response_timeout,
             self.builder.auto_enquire_link_response,
-            delay,
+            self.builder.delay,
         );
 
         let client = Client::new(
             actions,
             self.builder.response_timeout,
             self.builder.check_interface_version,
+            self.builder.delay,
             watch,
         );
 

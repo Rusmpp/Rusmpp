@@ -184,7 +184,7 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E
     }
 
     #[cfg(test)]
-    pub(crate) fn with_mock_delay(mut self) -> Self {
+    pub(crate) fn mock_delay(mut self) -> Self {
         self.delay = DelayImpl::mock();
         self
     }

@@ -26,7 +26,7 @@ use tokio::sync::{mpsc::UnboundedSender, oneshot, watch};
 
 use crate::{
     Action, CloseRequest, CommandExt, ConnectionBuilder, PendingResponses, RegisteredRequest,
-    RequestFutureGuard, UnregisteredRequest, error::Error,
+    RequestFutureGuard, UnregisteredRequest, delay::DelayImpl, error::Error,
 };
 
 const TARGET: &str = "rusmppc::client";
@@ -52,6 +52,7 @@ impl Client {
         actions: UnboundedSender<Action>,
         response_timeout: Option<Duration>,
         check_interface_version: bool,
+        delay: DelayImpl,
         watch: watch::Sender<()>,
     ) -> Self {
         Self {
@@ -59,6 +60,7 @@ impl Client {
                 actions,
                 response_timeout,
                 check_interface_version,
+                delay,
                 watch,
             )),
         }
@@ -324,6 +326,7 @@ struct ClientInner {
     sequence_number: AtomicU32,
     check_interface_version: bool,
     watch: watch::Sender<()>,
+    delay: DelayImpl,
 }
 
 impl ClientInner {
@@ -331,6 +334,7 @@ impl ClientInner {
         actions: UnboundedSender<Action>,
         response_timeout: Option<Duration>,
         check_interface_version: bool,
+        delay: DelayImpl,
         watch: watch::Sender<()>,
     ) -> Self {
         Self {
@@ -339,6 +343,7 @@ impl ClientInner {
             sequence_number: AtomicU32::new(1),
             check_interface_version,
             watch,
+            delay,
         }
     }
 
