@@ -8,10 +8,10 @@ use std::{
 use crate::{
     Action, Client, Request, Timer,
     builder::NoSpawnConnectionBuilder,
-    delay::DelayImpl,
     error::Error,
     event::{EventChannel, Insight},
     request::ObligatedRequest,
+    runtime::Delay,
 };
 use futures::{FutureExt, Sink, SinkExt, Stream};
 use pin_project_lite::pin_project;
@@ -46,7 +46,7 @@ enum State {
 // Actions will not be queued and the client would wait forever until the Connection is dropped.
 // We rely on this mechanism to work, to report correct and predictable errors.
 pin_project! {
-    pub struct Connection<F, E> {
+    pub struct Connection<F, E, D: Delay> {
         state: State,
         sequence_number: u32,
         requests: VecDeque<Request>,
@@ -61,9 +61,9 @@ pin_project! {
         // Used to let the client wait for the connection to be closed
         _watch: watch::Receiver<()>,
         #[pin]
-        enquire_link_timer: Timer<DelayImpl>,
+        enquire_link_timer: Timer<D>,
         #[pin]
-        enquire_link_response_timer: Timer<DelayImpl>,
+        enquire_link_response_timer: Timer<D>,
         #[pin]
         framed: F,
         #[pin]
@@ -71,12 +71,11 @@ pin_project! {
     }
 }
 
-impl<E: EventChannel> Connection<(), E> {
+impl<E: EventChannel, D: Delay> Connection<(), E, D> {
     pub fn new(
         enquire_link_interval: Option<Duration>,
         enquire_link_response_timeout: Duration,
         auto_enquire_link_response: bool,
-        delay: DelayImpl,
     ) -> (
         Self,
         watch::Sender<()>,
@@ -101,9 +100,9 @@ impl<E: EventChannel> Connection<(), E> {
                 enquire_link_response_timeout,
                 auto_enquire_link_response,
                 enquire_link_timer: enquire_link_interval
-                    .map(|duration| Timer::active(delay, duration))
-                    .unwrap_or(Timer::inactive(delay)),
-                enquire_link_response_timer: Timer::inactive(delay),
+                    .map(|duration| Timer::active(duration))
+                    .unwrap_or(Timer::inactive()),
+                enquire_link_response_timer: Timer::inactive(),
                 _watch: watch_rx,
                 events,
                 framed: (),
@@ -115,7 +114,7 @@ impl<E: EventChannel> Connection<(), E> {
         )
     }
 
-    pub fn with_framed<F>(self, framed: F) -> Connection<F, E> {
+    pub fn with_framed<F>(self, framed: F) -> Connection<F, E, D> {
         Connection {
             state: self.state,
             sequence_number: self.sequence_number,
@@ -136,7 +135,7 @@ impl<E: EventChannel> Connection<(), E> {
     }
 }
 
-impl<F, E> Connection<F, E>
+impl<F, E, D: Delay> Connection<F, E, D>
 where
     F: Stream<Item = Result<Command, DecodeError>> + for<'a> Sink<&'a Command, Error = EncodeError>,
     E: EventChannel,
@@ -231,7 +230,7 @@ where
     }
 }
 
-impl<F, E> Future for Connection<F, E>
+impl<F, E, D: Delay> Future for Connection<F, E, D>
 where
     F: Stream<Item = Result<Command, DecodeError>> + for<'a> Sink<&'a Command, Error = EncodeError>,
     E: EventChannel,
@@ -692,7 +691,7 @@ where
     }
 }
 
-impl<E: EventChannel> NoSpawnConnectionBuilder<E> {
+impl<E: EventChannel, D: Delay> NoSpawnConnectionBuilder<E, D> {
     /// Consumes the builder and creates a new [`Client`] along with the connection future and event stream (from raw parts).
     pub(crate) fn raw<F>(
         self,
@@ -706,18 +705,16 @@ impl<E: EventChannel> NoSpawnConnectionBuilder<E> {
         F: Stream<Item = Result<Command, DecodeError>>
             + for<'a> Sink<&'a Command, Error = EncodeError>,
     {
-        let (connection, watch, actions, events) = Connection::<_, E>::new(
+        let (connection, watch, actions, events) = Connection::<_, E, D>::new(
             self.builder.enquire_link_interval,
             self.builder.enquire_link_response_timeout,
             self.builder.auto_enquire_link_response,
-            self.builder.delay,
         );
 
         let client = Client::new(
             actions,
             self.builder.response_timeout,
             self.builder.check_interface_version,
-            self.builder.timeout,
             watch,
         );
 

@@ -106,9 +106,7 @@ pub(crate) use action::Action;
 mod connection;
 
 mod builder;
-pub use builder::{
-    ConnectionBuilder, DefaultConnectionBuilder, DiscardConnectionBuilder, InsightConnectionBuilder,
-};
+pub use builder::{ConnectionBuilder, DefaultConnectionBuilder};
 
 mod event;
 pub use event::{Event, Insight, InsightEvent};
@@ -136,9 +134,7 @@ pub(crate) use response::PendingResponses;
 mod tcp_stream;
 pub(crate) use tcp_stream::MaybeTlsStream;
 
-mod delay;
-
-mod timeout;
+mod runtime;
 
 #[cfg(test)]
 mod tests;
