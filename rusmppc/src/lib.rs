@@ -148,6 +148,6 @@ mod mock;
 
 mod managed_;
 pub mod managed {
-    //! TODO: docs
+    //! A managed `SMPP` client that automatically handles reconnection and binding.
     pub use super::managed_::{ManagedClient, ManagedEvent};
 }

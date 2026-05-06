@@ -181,7 +181,7 @@ impl<E: EventChannel> ConnectionBuilder<E> {
         (client, events)
     }
 
-    /// TODO
+    /// Creates a managed connection builder that handles reconnection automatically.
     pub fn managed(self) -> UnboundManagedConnectionBuilder<E>
     where
         E: EventChannel + Clone + Send + Sync + 'static,

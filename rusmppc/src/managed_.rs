@@ -27,20 +27,20 @@ use crate::{
 
 const TARGET: &str = "rusmppc::managed::client";
 
-/// TODO: docs
+/// Events emitted by the [`ManagedClient`].
 #[derive(Debug)]
 pub enum ManagedEvent<E> {
-    /// TODO: docs
+    /// Emitted when the client is connected to the server.
     Connected,
-    /// TODO: docs
+    /// Emitted when the client is successfully bound to the server.
     Bound,
-    /// TODO: docs
+    /// Emitted when the client is disconnected from the server.
     Disconnected,
-    /// TODO: docs
+    /// Emitted when the client receives an event from the server.
     Event(E),
 }
 
-/// TODO: docs
+/// A managed `SMPP` client that automatically handles reconnection and binding.
 #[derive(Clone)]
 pub struct ManagedClient {
     timeout: TimeoutImpl,
@@ -98,12 +98,14 @@ impl ManagedClient {
         }
     }
 
-    /// TODO: docs
+    /// Gets a connected and bound [`Client`].
     pub async fn get(&self) -> Result<Client, RusmppcError> {
         self.inner.get().await.map(|client| client.clone())
     }
 
-    /// TODO: docs
+    // TODO: we want to have the same api like `Client` like, client.timeout().get()
+
+    /// Gets a connected and bound [`Client`] with a timeout.
     pub async fn get_with_timeout(
         &self,
         timeout: Duration,
@@ -136,22 +138,30 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> UnboundManagedConnectionBu
         Self { builder }
     }
 
-    /// TODO: docs
+    /// Binds the [`ManagedClient`] as a transmitter.
+    ///
+    /// Every time the client reconnects, it will automatically bind as a transmitter using the provided [`BindTransmitter`].
     pub fn transmitter(self, bind: BindTransmitter) -> ManagedConnectionBuilder<E> {
         ManagedConnectionBuilder::new(self.builder, BindMode::Transmitter(bind))
     }
 
-    /// TODO: docs
+    /// Binds the [`ManagedClient`] as a receiver.
+    ///
+    /// Every time the client reconnects, it will automatically bind as a receiver using the provided [`BindReceiver`].
     pub fn receiver(self, bind: BindReceiver) -> ManagedConnectionBuilder<E> {
         ManagedConnectionBuilder::new(self.builder, BindMode::Receiver(bind))
     }
 
-    /// TODO: docs
+    /// Binds the [`ManagedClient`] as a transceiver.
+    ///
+    /// Every time the client reconnects, it will automatically bind as a transceiver using the provided [`BindTransceiver`].
     pub fn transceiver(self, bind: BindTransceiver) -> ManagedConnectionBuilder<E> {
         ManagedConnectionBuilder::new(self.builder, BindMode::Transceiver(bind))
     }
 
-    /// TODO: docs
+    /// Does not bind the [`ManagedClient`].
+    ///
+    /// Every time the client reconnects, it will not automatically bind.
     pub fn unbound(self) -> ManagedConnectionBuilder<E> {
         ManagedConnectionBuilder::new(self.builder, BindMode::None)
     }
@@ -179,19 +189,23 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E
         }
     }
 
-    /// TODO: docs
+    /// Sets the interval at which the client will automatically attempt to reconnect.
     pub fn auto_reconnect_interval(mut self, auto_reconnect_interval: Duration) -> Self {
         self.auto_reconnect_interval = Some(auto_reconnect_interval);
         self
     }
 
-    /// TODO: docs
+    /// Disables automatic reconnection.
+    ///
+    /// The client will not automatically attempt to reconnect if the connection is lost.
+    ///
+    /// You can still manually call [`ManagedClient::get`] to reconnect.
     pub fn no_auto_reconnect_interval(mut self) -> Self {
         self.auto_reconnect_interval = None;
         self
     }
 
-    /// TODO: docs
+    /// Sets the interval at which the client will automatically attempt to reconnect.
     pub fn with_auto_reconnect_interval(
         mut self,
         auto_reconnect_interval: Option<Duration>,
@@ -200,49 +214,49 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E
         self
     }
 
-    /// TODO: docs
+    /// Sets the maximum delay between reconnection attempts.
     pub fn max_delay(mut self, delay: Duration) -> Self {
         self.max_delay = Some(delay);
         self
     }
 
-    /// TODO: docs
+    /// Disables the maximum delay between reconnection attempts.
     pub fn no_max_delay(mut self) -> Self {
         self.max_delay = None;
         self
     }
 
-    /// TODO: docs
+    /// Sets the maximum delay between reconnection attempts.
     pub fn with_max_delay(mut self, delay: Option<Duration>) -> Self {
         self.max_delay = delay;
         self
     }
 
-    /// TODO: docs
+    /// Disables backoff between reconnection attempts.
     pub fn no_backoff(mut self) -> Self {
         self.back_off = BackOff::None;
         self
     }
 
-    /// TODO: docs
+    /// Sets an exponential backoff for reconnection attempts.
     pub fn exponential_backoff(mut self, initial_delay: Duration) -> Self {
         self.back_off = BackOff::Exponential(ExponentialBackoff::new(initial_delay));
         self
     }
 
-    /// TODO: docs
+    /// Sets a fixed backoff for reconnection attempts.
     pub fn fixed_backoff(mut self, delay: Duration) -> Self {
         self.back_off = BackOff::Fixed(FixedBackoff::new(delay));
         self
     }
 
-    /// TODO: docs
+    /// Sets a linear backoff for reconnection attempts.
     pub fn linear_backoff(mut self, delay: Duration) -> Self {
         self.back_off = BackOff::Linear(LinearBackoff::new(delay));
         self
     }
 
-    /// TODO: docs
+    /// Sets a maximum number of reconnection attempts before giving up.
     pub fn max_retries(mut self, retries: u32) -> Self {
         self.max_retries = retries;
         self
@@ -316,7 +330,9 @@ where
         Ok((ManagedClient::new(timeout, client, w_rx), rx))
     }
 
-    /// TODO: docs
+    /// Sets a function to be called when connecting.
+    ///
+    /// See [`ConnectionBuilder::connected`] for more details.
     pub async fn connect_fn<F, Fut, S>(
         self,
         f: F,
@@ -335,7 +351,9 @@ where
         self.run(Connect::Connector(Box::new(f))).await
     }
 
-    /// TODO: docs
+    /// Connects to the `SMPP` server.
+    ///
+    /// See [`ConnectionBuilder::connect`] for more details.
     pub async fn connect(
         self,
         url: impl Into<String>,
@@ -577,3 +595,5 @@ impl<'a, E> BackoffStrategy<'a, E> for BackOff {
         }
     }
 }
+
+// TODO: tests
