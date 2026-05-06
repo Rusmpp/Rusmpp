@@ -26,7 +26,9 @@ use tokio::sync::{mpsc::UnboundedSender, oneshot, watch};
 
 use crate::{
     Action, CloseRequest, CommandExt, ConnectionBuilder, PendingResponses, RegisteredRequest,
-    RequestFutureGuard, UnregisteredRequest, error::Error,
+    RequestFutureGuard, UnregisteredRequest,
+    error::Error,
+    timeout::{Timeout, TimeoutImpl},
 };
 
 const TARGET: &str = "rusmppc::client";
@@ -52,6 +54,7 @@ impl Client {
         actions: UnboundedSender<Action>,
         response_timeout: Option<Duration>,
         check_interface_version: bool,
+        timeout: TimeoutImpl,
         watch: watch::Sender<()>,
     ) -> Self {
         Self {
@@ -59,6 +62,7 @@ impl Client {
                 actions,
                 response_timeout,
                 check_interface_version,
+                timeout,
                 watch,
             )),
         }
@@ -324,6 +328,7 @@ struct ClientInner {
     sequence_number: AtomicU32,
     check_interface_version: bool,
     watch: watch::Sender<()>,
+    timeout: TimeoutImpl,
 }
 
 impl ClientInner {
@@ -331,6 +336,7 @@ impl ClientInner {
         actions: UnboundedSender<Action>,
         response_timeout: Option<Duration>,
         check_interface_version: bool,
+        timeout: TimeoutImpl,
         watch: watch::Sender<()>,
     ) -> Self {
         Self {
@@ -339,6 +345,7 @@ impl ClientInner {
             sequence_number: AtomicU32::new(1),
             check_interface_version,
             watch,
+            timeout,
         }
     }
 
@@ -397,12 +404,15 @@ impl ClientInner {
 
         match response_timeout {
             None => response.await.map_err(|_| Error::ConnectionClosed),
-            Some(timeout) => tokio::time::timeout(timeout, response)
+            Some(timeout) => self
+                .timeout
+                .timeout(timeout, response)
                 .await
-                .inspect_err(|_| {
+                .ok_or_else(|| {
                     self.actions.send(Action::Remove(sequence_number)).ok();
-                })
-                .map_err(|_| Error::response_timeout(sequence_number, timeout))?
+
+                    Error::response_timeout(sequence_number, timeout)
+                })?
                 .map_err(|_| Error::ConnectionClosed),
         }
     }

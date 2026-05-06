@@ -1,4 +1,4 @@
-//! Mocks for Io, Stream/Sink and Delay used in tests.
+//! Mocks for Io, Stream/Sink, Delay and Timeout used in tests.
 
 use std::{
     pin::Pin,
@@ -201,40 +201,37 @@ pub mod delay {
 
     /// Delay mock for timers.
     ///
-    /// This mock translates each second in the requested duration to one poll before completion.
-    #[mockall::automock]
-    pub trait Delay {
-        fn delay_(&self, duration: Duration) -> MockDelayFuture;
-    }
+    /// This mock translates each millisecond in the requested duration to one poll before completion.
+    #[derive(Debug, Clone, Copy, Default)]
+    #[non_exhaustive]
+    pub struct MockDelay;
 
     impl crate::delay::Delay for MockDelay {
         type Future = MockDelayFuture;
 
         fn delay(&self, duration: Duration) -> Self::Future {
-            <Self as Delay>::delay_(self, duration)
+            MockDelayFuture::new(duration.as_millis())
         }
     }
 
     impl MockDelay {
-        /// Each second in the duration will correspond to one poll before completion.
-        pub fn delay_after_seconds(mut self) -> MockDelay {
-            self.expect_delay_()
-                .returning(move |duration| MockDelayFuture::new(duration.as_secs()));
-            self
+        /// Creates a new [`MockDelay`].
+        pub const fn new() -> Self {
+            Self {}
         }
     }
 
     /// Future returned by the [`MockDelay`].
     ///
-    /// Each poll corresponds to one second in the requested duration.
+    /// Each poll corresponds to one millisecond in the requested duration.
     pub struct MockDelayFuture {
         complete: bool,
         /// Number of polls before completion.
-        after: u64,
+        after: u128,
     }
 
     impl MockDelayFuture {
-        pub const fn new(after: u64) -> Self {
+        pub const fn new(after: u128) -> Self {
             Self {
                 complete: false,
                 after,
@@ -267,9 +264,9 @@ pub mod delay {
     fn test_delay_always_after() {
         use crate::delay::Delay;
 
-        let mock_delay = MockDelay::new().delay_after_seconds();
+        let mock_delay = MockDelay::new();
 
-        let mut delay_future = mock_delay.delay(Duration::from_secs(3));
+        let mut delay_future = mock_delay.delay(Duration::from_millis(3));
 
         let waker = futures::task::noop_waker();
         let mut cx = Context::from_waker(&waker);
@@ -282,6 +279,129 @@ pub mod delay {
                 assert!(matches!(result, Poll::Pending));
             } else {
                 assert!(matches!(result, Poll::Ready(())));
+                break;
+            }
+        }
+    }
+}
+
+pub mod timeout {
+    use super::*;
+
+    /// Timeout mock for timers.
+    ///
+    /// This mock translates each millisecond in the requested duration to one poll before completion.
+    #[derive(Debug, Clone, Copy)]
+    #[non_exhaustive]
+    pub struct MockTimeout;
+
+    impl MockTimeout {
+        /// Creates a new [`MockTimeout`].
+        pub const fn new() -> Self {
+            Self {}
+        }
+    }
+
+    impl crate::timeout::Timeout for MockTimeout {
+        type Future<F: Future> = MockTimeoutFuture<F>;
+
+        fn timeout<F: Future>(&self, duration: Duration, future: F) -> Self::Future<F> {
+            MockTimeoutFuture {
+                future,
+                delay: delay::MockDelayFuture::new(duration.as_millis()),
+            }
+        }
+    }
+
+    pin_project_lite::pin_project! {
+        /// Future returned by the [`MockTimeout`].
+        ///
+        /// Each poll corresponds to one millisecond in the requested duration.
+        pub struct MockTimeoutFuture<F> {
+            #[pin]
+            future: F,
+            #[pin]
+            delay: delay::MockDelayFuture,
+        }
+    }
+
+    impl<F: Future> Future for MockTimeoutFuture<F> {
+        type Output = Option<F::Output>;
+
+        fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+            let this = self.project();
+
+            if let Poll::Ready(output) = this.future.poll(cx) {
+                return Poll::Ready(Some(output));
+            }
+
+            match this.delay.poll(cx) {
+                Poll::Ready(()) => Poll::Ready(None),
+                Poll::Pending => Poll::Pending,
+            }
+        }
+    }
+
+    /// Helper future that polls a given number of times before completion.
+    fn poll_future(times: usize) -> impl Future<Output = ()> {
+        let mut remaining = times;
+
+        futures::future::poll_fn(move |cx| {
+            if remaining == 0 {
+                Poll::Ready(())
+            } else {
+                remaining -= 1;
+
+                cx.waker().wake_by_ref();
+
+                Poll::Pending
+            }
+        })
+    }
+
+    #[test]
+    fn would_timeout() {
+        use crate::timeout::Timeout;
+
+        let three_polls_future = poll_future(3);
+
+        let mock_timeout = MockTimeout::new();
+        let mut timeout_future = mock_timeout.timeout(Duration::from_millis(2), three_polls_future);
+
+        let waker = futures::task::noop_waker();
+        let mut cx = Context::from_waker(&waker);
+        let mut pinned = Pin::new(&mut timeout_future);
+
+        loop {
+            let result = pinned.as_mut().poll(&mut cx);
+
+            if let Poll::Ready(output) = result {
+                assert!(output.is_none());
+
+                break;
+            }
+        }
+    }
+
+    #[test]
+    fn would_not_timeout() {
+        use crate::timeout::Timeout;
+
+        let three_polls_future = poll_future(3);
+
+        let mock_timeout = MockTimeout::new();
+        let mut timeout_future = mock_timeout.timeout(Duration::from_millis(5), three_polls_future);
+
+        let waker = futures::task::noop_waker();
+        let mut cx = Context::from_waker(&waker);
+        let mut pinned = Pin::new(&mut timeout_future);
+
+        loop {
+            let result = pinned.as_mut().poll(&mut cx);
+
+            if let Poll::Ready(output) = result {
+                assert!(output.is_some());
+
                 break;
             }
         }

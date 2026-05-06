@@ -138,8 +138,16 @@ pub(crate) use tcp_stream::MaybeTlsStream;
 
 mod delay;
 
+mod timeout;
+
 #[cfg(test)]
 mod tests;
 
 #[cfg(test)]
 mod mock;
+
+mod managed_;
+pub mod managed {
+    //! A managed `SMPP` client that automatically handles reconnection and binding.
+    pub use super::managed_::{ManagedClient, ManagedEvent};
+}

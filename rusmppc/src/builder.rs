@@ -10,9 +10,11 @@ use tokio_util::codec::Framed;
 
 use crate::{
     Client, MaybeTlsStream,
-    delay::TokioDelay,
+    delay::DelayImpl,
     error::Error,
     event::{DefaultEventChannel, DiscardEventChannel, EventChannel, InsightEventChannel},
+    managed_::UnboundManagedConnectionBuilder,
+    timeout::TimeoutImpl,
 };
 
 /// Connection builder that discards all events.
@@ -25,7 +27,7 @@ pub type InsightConnectionBuilder = ConnectionBuilder<InsightEventChannel>;
 pub type DefaultConnectionBuilder = ConnectionBuilder<DefaultEventChannel>;
 
 /// Builder for creating a new `SMPP` connection.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ConnectionBuilder<E = DefaultEventChannel> {
     pub(crate) max_command_length: usize,
     pub(crate) enquire_link_interval: Option<Duration>,
@@ -42,6 +44,8 @@ pub struct ConnectionBuilder<E = DefaultEventChannel> {
     /// Native TLS connector provided by the user. If None, default connector will be used.
     #[cfg(feature = "native-tls")]
     native_tls_connector: Option<native_tls::TlsConnector>,
+    pub(crate) delay: DelayImpl,
+    pub(crate) timeout: TimeoutImpl,
     _phantom: std::marker::PhantomData<E>,
 }
 
@@ -76,6 +80,8 @@ impl DefaultConnectionBuilder {
             #[cfg(feature = "native-tls")]
             native_tls_connector: None,
             _phantom: std::marker::PhantomData,
+            delay: DelayImpl::tokio(),
+            timeout: TimeoutImpl::tokio(),
         }
     }
 }
@@ -173,6 +179,21 @@ impl<E: EventChannel> ConnectionBuilder<E> {
         tokio::spawn(connection);
 
         (client, events)
+    }
+
+    /// Creates a managed connection builder that handles reconnection automatically.
+    pub fn managed(self) -> UnboundManagedConnectionBuilder<E>
+    where
+        E: EventChannel + Clone + Send + Sync + 'static,
+        E::Event: Send + Sync + 'static,
+    {
+        UnboundManagedConnectionBuilder::new(self)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn mock_delay(mut self) -> Self {
+        self.delay = DelayImpl::mock();
+        self
     }
 }
 
@@ -478,7 +499,7 @@ impl<E: EventChannel> NoSpawnConnectionBuilder<E> {
             CommandCodec::new().with_max_length(self.builder.max_command_length),
         );
 
-        self.raw(framed, TokioDelay::new(), TokioDelay::new())
+        self.raw(framed)
     }
 }
 
@@ -502,6 +523,8 @@ impl<E> EventsConnectionBuilder<E> {
             rustls_config: self.builder.rustls_config,
             #[cfg(feature = "native-tls")]
             native_tls_connector: self.builder.native_tls_connector,
+            delay: self.builder.delay,
+            timeout: self.builder.timeout,
             _phantom: std::marker::PhantomData,
         }
     }
@@ -519,6 +542,8 @@ impl<E> EventsConnectionBuilder<E> {
             rustls_config: self.builder.rustls_config,
             #[cfg(feature = "native-tls")]
             native_tls_connector: self.builder.native_tls_connector,
+            delay: self.builder.delay,
+            timeout: self.builder.timeout,
             _phantom: std::marker::PhantomData,
         }
     }

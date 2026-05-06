@@ -17,12 +17,6 @@ pin_project! {
     }
 }
 
-impl<D: Delay> Default for Timer<D> {
-    fn default() -> Self {
-        Self::inactive(D::default())
-    }
-}
-
 impl<D: Delay> Timer<D> {
     pub const fn inactive(delay: D) -> Self {
         Self { delay, state: None }
