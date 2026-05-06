@@ -62,18 +62,11 @@ impl<F: Future> Future for TokioTimeoutFuture<F> {
 #[derive(Debug, Clone, Copy)]
 pub enum TimeoutImpl {
     Tokio(TokioTimeout),
-    #[cfg(test)]
-    Mock(crate::mock::timeout::MockTimeout),
 }
 
 impl TimeoutImpl {
     pub const fn tokio() -> Self {
         TimeoutImpl::Tokio(TokioTimeout::new())
-    }
-
-    #[cfg(test)]
-    pub const fn mock() -> Self {
-        TimeoutImpl::Mock(crate::mock::timeout::MockTimeout::new())
     }
 }
 
@@ -85,10 +78,6 @@ impl Timeout for TimeoutImpl {
             TimeoutImpl::Tokio(tokio_timeout) => {
                 TimeoutFuture::Tokio(tokio_timeout.timeout(duration, future))
             }
-            #[cfg(test)]
-            TimeoutImpl::Mock(mock_timeout) => {
-                TimeoutFuture::Mock(mock_timeout.timeout(duration, future))
-            }
         }
     }
 }
@@ -96,8 +85,6 @@ impl Timeout for TimeoutImpl {
 #[pin_project(project = TimeoutFutureProj)]
 pub enum TimeoutFuture<F> {
     Tokio(#[pin] TokioTimeoutFuture<F>),
-    #[cfg(test)]
-    Mock(#[pin] crate::mock::timeout::MockTimeoutFuture<F>),
 }
 
 impl<F: Future> Future for TimeoutFuture<F> {
@@ -106,8 +93,6 @@ impl<F: Future> Future for TimeoutFuture<F> {
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         match self.project() {
             TimeoutFutureProj::Tokio(future) => future.poll(cx),
-            #[cfg(test)]
-            TimeoutFutureProj::Mock(future) => future.poll(cx),
         }
     }
 }
