@@ -2,10 +2,7 @@ use std::{net::SocketAddr, time::Duration};
 
 use futures::Stream;
 use rusmpp::tokio_codec::CommandCodec;
-use tokio::{
-    io::{AsyncRead, AsyncWrite},
-    net::TcpStream,
-};
+use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::codec::Framed;
 
 use crate::{
@@ -21,7 +18,7 @@ pub type DefaultConnectionBuilder = ConnectionBuilder<DefaultEventChannel, Tokio
 
 /// Builder for creating a new `SMPP` connection.
 #[derive(Debug, Clone)]
-pub struct ConnectionBuilder<E = DefaultEventChannel, D = Tokio, T = Tokio> {
+pub struct ConnectionBuilder<E = DefaultEventChannel, D = Tokio, T = Tokio, R = Tokio> {
     pub(crate) max_command_length: usize,
     pub(crate) enquire_link_interval: Option<Duration>,
     /// Timeout for waiting for a an enquire link response from the server.
@@ -40,6 +37,7 @@ pub struct ConnectionBuilder<E = DefaultEventChannel, D = Tokio, T = Tokio> {
     _e: std::marker::PhantomData<E>,
     _d: std::marker::PhantomData<D>,
     _t: std::marker::PhantomData<T>,
+    _r: std::marker::PhantomData<R>,
 }
 
 impl Default for DefaultConnectionBuilder {
@@ -75,26 +73,27 @@ impl DefaultConnectionBuilder {
             _e: std::marker::PhantomData,
             _d: std::marker::PhantomData,
             _t: std::marker::PhantomData,
+            _r: std::marker::PhantomData,
         }
     }
 }
 
-impl<E, D, T> ConnectionBuilder<E, D, T> {
+impl<E, D, T, R> ConnectionBuilder<E, D, T, R> {
     /// Does not spawn the connection in the background.
     ///
     /// It is your responsibility to run the connection to completion.
-    pub fn no_spawn(self) -> NoSpawnConnectionBuilder<E, D, T> {
+    pub fn no_spawn(self) -> NoSpawnConnectionBuilder<E, D, T, R> {
         NoSpawnConnectionBuilder { builder: self }
     }
 
     /// Configures the connection event stream.
-    pub fn events(self) -> EventsConnectionBuilder<E, D, T> {
+    pub fn events(self) -> EventsConnectionBuilder<E, D, T, R> {
         EventsConnectionBuilder { builder: self }
     }
 
     #[cfg(test)]
     /// TODO: why the fk does clippy want me to document this?
-    pub fn mock_delay(self) -> ConnectionBuilder<E, crate::mock::delay::MockDelay, T> {
+    pub fn mock_delay(self) -> ConnectionBuilder<E, crate::mock::delay::MockDelay, T, R> {
         ConnectionBuilder {
             max_command_length: self.max_command_length,
             enquire_link_interval: self.enquire_link_interval,
@@ -109,11 +108,13 @@ impl<E, D, T> ConnectionBuilder<E, D, T> {
             _e: std::marker::PhantomData,
             _d: std::marker::PhantomData,
             _t: std::marker::PhantomData,
+            _r: std::marker::PhantomData,
         }
     }
 }
 
-impl<E: EventChannel, D: Delay, T: Timeout> ConnectionBuilder<E, D, T> {
+#[cfg(feature = "tokio")]
+impl<E: EventChannel, D: Delay, T: Timeout> ConnectionBuilder<E, D, T, Tokio> {
     /// Connects to the `SMPP` server.
     ///
     /// Opens and manages a connection in the background and returns a client and an event stream.
@@ -177,7 +178,7 @@ impl<E: EventChannel, D: Delay, T: Timeout> ConnectionBuilder<E, D, T> {
     {
         let (client, events, connection) = self.no_spawn().connect(url).await?;
 
-        tokio::spawn(connection);
+        Tokio::spawn(connection);
 
         Ok((client, events))
     }
@@ -200,13 +201,15 @@ impl<E: EventChannel, D: Delay, T: Timeout> ConnectionBuilder<E, D, T> {
     {
         let (client, events, connection) = self.no_spawn().connected(stream);
 
-        tokio::spawn(connection);
+        Tokio::spawn(connection);
 
         (client, events)
     }
+}
 
+impl<E: EventChannel, D: Delay, T: Timeout, R> ConnectionBuilder<E, D, T, R> {
     /// Creates a managed connection builder that handles reconnection automatically.
-    pub fn managed(self) -> UnboundManagedConnectionBuilder<E, D, T>
+    pub fn managed(self) -> UnboundManagedConnectionBuilder<E, D, T, R>
     where
         E: EventChannel + Clone + Send + Sync + 'static,
         E::Event: Send + Sync + 'static,
@@ -363,11 +366,12 @@ impl<E, D, T> ConnectionBuilder<E, D, T> {
 
 /// Builder for creating a new `SMPP` connection without spawning it in the background.
 #[derive(Debug)]
-pub struct NoSpawnConnectionBuilder<E = DefaultEventChannel, D = Tokio, T = Tokio> {
-    pub(crate) builder: ConnectionBuilder<E, D, T>,
+pub struct NoSpawnConnectionBuilder<E = DefaultEventChannel, D = Tokio, T = Tokio, R = Tokio> {
+    pub(crate) builder: ConnectionBuilder<E, D, T, R>,
 }
 
-impl<E: EventChannel, D: Delay, T: Timeout> NoSpawnConnectionBuilder<E, D, T> {
+#[cfg(feature = "tokio")]
+impl<E: EventChannel, D: Delay, T: Timeout> NoSpawnConnectionBuilder<E, D, T, Tokio> {
     /// Connects to the `SMPP` server without spawning the connection in the background.
     ///
     /// # Errors
@@ -460,7 +464,7 @@ impl<E: EventChannel, D: Delay, T: Timeout> NoSpawnConnectionBuilder<E, D, T> {
 
         tracing::debug!(target: "rusmppc::connection::tcp", %socket_addr, "Connecting");
 
-        let stream = TcpStream::connect(socket_addr)
+        let stream = tokio::net::TcpStream::connect(socket_addr)
             .await
             .map_err(Error::Connect)?;
 
@@ -503,7 +507,9 @@ impl<E: EventChannel, D: Delay, T: Timeout> NoSpawnConnectionBuilder<E, D, T> {
 
         Ok(self.connected(stream))
     }
+}
 
+impl<E: EventChannel, D: Delay, T: Timeout, R> NoSpawnConnectionBuilder<E, D, T, R> {
     /// Creates a client from an existing connection without spawning the connection in the background.
     pub fn connected<S>(
         self,
@@ -527,13 +533,13 @@ impl<E: EventChannel, D: Delay, T: Timeout> NoSpawnConnectionBuilder<E, D, T> {
 
 /// Builder for configuring the event stream
 #[derive(Debug)]
-pub struct EventsConnectionBuilder<E = DefaultEventChannel, D = Tokio, T = Tokio> {
-    builder: ConnectionBuilder<E, D, T>,
+pub struct EventsConnectionBuilder<E = DefaultEventChannel, D = Tokio, T = Tokio, R = Tokio> {
+    builder: ConnectionBuilder<E, D, T, R>,
 }
 
-impl<E, D, T> EventsConnectionBuilder<E, D, T> {
+impl<E, D, T, R> EventsConnectionBuilder<E, D, T, R> {
     /// Discards all events from the background connection.
-    pub fn discard(self) -> ConnectionBuilder<DiscardEventChannel, D, T> {
+    pub fn discard(self) -> ConnectionBuilder<DiscardEventChannel, D, T, R> {
         ConnectionBuilder {
             max_command_length: self.builder.max_command_length,
             enquire_link_interval: self.builder.enquire_link_interval,
@@ -548,11 +554,12 @@ impl<E, D, T> EventsConnectionBuilder<E, D, T> {
             _e: std::marker::PhantomData,
             _d: std::marker::PhantomData,
             _t: std::marker::PhantomData,
+            _r: std::marker::PhantomData,
         }
     }
 
     /// Enables insight events from the background connection.
-    pub fn insights(self) -> ConnectionBuilder<InsightEventChannel, D, T> {
+    pub fn insights(self) -> ConnectionBuilder<InsightEventChannel, D, T, R> {
         ConnectionBuilder {
             max_command_length: self.builder.max_command_length,
             enquire_link_interval: self.builder.enquire_link_interval,
@@ -567,6 +574,7 @@ impl<E, D, T> EventsConnectionBuilder<E, D, T> {
             _e: std::marker::PhantomData,
             _d: std::marker::PhantomData,
             _t: std::marker::PhantomData,
+            _r: std::marker::PhantomData,
         }
     }
 }

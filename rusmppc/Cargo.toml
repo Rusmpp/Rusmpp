@@ -16,7 +16,10 @@ rusmpp = { path = "../rusmpp", version = "0.4.0", default-features = false, feat
     "tracing",
     "extra",
 ] }
-tokio = { version = "1", default-features = false, features = ["sync"] }
+tokio = { version = "1", default-features = false, features = [
+    "sync",
+    "macros",
+] }
 tokio-stream = { version = "0.1.18", default-features = false }
 tokio-util = { version = "0.7.18", default-features = false, features = [
     "codec",
@@ -49,6 +52,11 @@ hickory-resolver = { version = "0.26.0", default-features = false, features = [
 
 tryhard = "0.5.2"
 
+wasm-bindgen-futures = { version = "0.4.56", default-features = false, optional = true }
+gloo-timers = { version = "0.4.0", default-features = false, features = [
+    "futures",
+], optional = true }
+
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
@@ -68,11 +76,14 @@ serde = { version = "1", features = ["derive"] }
 
 [features]
 default = [
+    "tokio",
     "rustls",
     "rustls-tls-native-roots",
     "rustls-tls-webpki-roots",
     "rustls-aws-lc-rs",
 ]
+tokio = ["tokio/rt", "tokio/sync", "tokio/time", "tokio/net"]
+wasm = ["dep:wasm-bindgen-futures", "dep:gloo-timers"]
 # Enables TLS support via Rustls. Enabled by default.
 rustls = ["dep:rustls", "dep:tokio-rustls", "dep:rustls-pki-types"]
 # Uses the platform's native root certificates while using default configuration. Enables the `rustls` feature and is enabled by default.

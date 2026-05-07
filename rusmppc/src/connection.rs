@@ -691,7 +691,7 @@ where
     }
 }
 
-impl<E: EventChannel, D: Delay, T: Timeout> NoSpawnConnectionBuilder<E, D, T> {
+impl<E: EventChannel, D: Delay, T: Timeout, R> NoSpawnConnectionBuilder<E, D, T, R> {
     /// Consumes the builder and creates a new [`Client`] along with the connection future and event stream (from raw parts).
     pub(crate) fn raw<F>(
         self,
