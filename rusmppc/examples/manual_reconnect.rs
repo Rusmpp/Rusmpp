@@ -16,7 +16,7 @@ use rusmpp::{
     types::{COctetString, OctetString},
     values::{EsmClass, Npi, RegisteredDelivery, ServiceType, Ton},
 };
-use rusmppc::{Client, ConnectionBuilder, Event};
+use rusmppc::{Client, ConnectionBuilder, event::Event};
 use tokio::sync::{mpsc, oneshot};
 
 type BoxedError = Box<dyn core::error::Error + Send + Sync>;

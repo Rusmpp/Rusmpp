@@ -18,7 +18,7 @@ use rusmpp::{
     types::{COctetString, OctetString},
     values::{DataCoding, EsmClass, Npi, Ton},
 };
-use rusmppc::{ConnectionBuilder, Event};
+use rusmppc::{ConnectionBuilder, event::Event};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn core::error::Error>> {

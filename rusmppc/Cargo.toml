@@ -16,7 +16,10 @@ rusmpp = { path = "../rusmpp", version = "0.4.0", default-features = false, feat
     "tracing",
     "extra",
 ] }
-tokio = { version = "1", default-features = false, features = ["sync"] }
+tokio = { version = "1", default-features = false, features = [
+    "sync",
+    "macros",
+] }
 tokio-stream = { version = "0.1.18", default-features = false }
 tokio-util = { version = "0.7.18", default-features = false, features = [
     "codec",
@@ -45,9 +48,14 @@ tokio-native-tls = { version = "0.3.1", default-features = false, optional = tru
 hickory-resolver = { version = "0.26.0", default-features = false, features = [
     "tokio",
     "system-config",
-] }
+], optional = true }
 
-tryhard = "0.5.2"
+tryhard = { version = "0.5.2", default-features = false, optional = true }
+
+wasm-bindgen-futures = { version = "0.4.71", default-features = false, optional = true }
+gloo-timers = { version = "0.4.0", default-features = false, features = [
+    "futures",
+], optional = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
@@ -68,11 +76,24 @@ serde = { version = "1", features = ["derive"] }
 
 [features]
 default = [
+    "wasm",
+    "tokio",
     "rustls",
     "rustls-tls-native-roots",
     "rustls-tls-webpki-roots",
     "rustls-aws-lc-rs",
 ]
+# Enables tokio support.
+tokio = [
+    "tokio/rt",
+    "tokio/sync",
+    "tokio/time",
+    "tokio/net",
+    "dep:hickory-resolver",
+    "dep:tryhard",
+]
+# Enables wasm support.
+wasm = ["dep:wasm-bindgen-futures", "dep:gloo-timers"]
 # Enables TLS support via Rustls. Enabled by default.
 rustls = ["dep:rustls", "dep:tokio-rustls", "dep:rustls-pki-types"]
 # Uses the platform's native root certificates while using default configuration. Enables the `rustls` feature and is enabled by default.

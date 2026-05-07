@@ -6,28 +6,27 @@ use std::{
 
 use pin_project_lite::pin_project;
 
-use crate::delay::Delay;
+use crate::runtime_::Delay;
 
 pin_project! {
     #[derive(Debug)]
     pub struct Timer<D: Delay> {
-        delay: D,
         #[pin]
         state: Option<D::Future>,
     }
 }
 
 impl<D: Delay> Timer<D> {
-    pub const fn inactive(delay: D) -> Self {
-        Self { delay, state: None }
+    pub const fn inactive() -> Self {
+        Self { state: None }
     }
 
-    pub fn active(delay: D, duration: Duration) -> Self {
-        Self::inactive(delay).activated(duration)
+    pub fn active(duration: Duration) -> Self {
+        Self::inactive().activated(duration)
     }
 
     pub fn activated(mut self, duration: Duration) -> Timer<D> {
-        self.state = Some(self.delay.delay(duration));
+        self.state = Some(D::delay(duration));
         self
     }
 
@@ -36,7 +35,7 @@ impl<D: Delay> Timer<D> {
     }
 
     pub fn activate(self: Pin<&mut Self>, duration: Duration) {
-        let delay = self.delay.delay(duration);
+        let delay = D::delay(duration);
 
         self.project().state.set(Some(delay));
     }

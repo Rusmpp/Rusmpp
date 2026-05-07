@@ -23,13 +23,13 @@ pub enum Event {
     Error(Error),
 }
 
-impl From<rusmppc::Event> for Event {
-    fn from(event: rusmppc::Event) -> Self {
+impl From<rusmppc::event::Event> for Event {
+    fn from(event: rusmppc::event::Event) -> Self {
         match event {
-            rusmppc::Event::Incoming(command) => {
+            rusmppc::event::Event::Incoming(command) => {
                 Event::Incoming(crate::generated::Command::from(command))
             }
-            rusmppc::Event::Error(error) => Event::Error(Error::from(error)),
+            rusmppc::event::Event::Error(error) => Event::Error(Error::from(error)),
         }
     }
 }

@@ -3,6 +3,7 @@
 // The `Ok` variant is the specific `Pdu` variant, while the `Err` variant is the generic `Pdu` that can be large.
 
 use std::{
+    fmt::Debug,
     sync::{
         Arc,
         atomic::{AtomicU32, Ordering},
@@ -28,7 +29,8 @@ use crate::{
     Action, CloseRequest, CommandExt, ConnectionBuilder, PendingResponses, RegisteredRequest,
     RequestFutureGuard, UnregisteredRequest,
     error::Error,
-    timeout::{Timeout, TimeoutImpl},
+    event_::DefaultEventChannel,
+    runtime_::{Timeout, tokio::Tokio, wasm::Wasm},
 };
 
 const TARGET: &str = "rusmppc::client";
@@ -36,12 +38,11 @@ const TARGET: &str = "rusmppc::client";
 /// `SMPP` Client.
 ///
 /// The client is a handle to communicate with the `SMPP` server through a managed connection in the background.
-#[derive(Debug)]
-pub struct Client {
-    inner: Arc<ClientInner>,
+pub struct Client<T = Tokio> {
+    inner: Arc<ClientInner<T>>,
 }
 
-impl Clone for Client {
+impl<T> Clone for Client<T> {
     fn clone(&self) -> Self {
         Self {
             inner: self.inner.clone(),
@@ -49,12 +50,35 @@ impl Clone for Client {
     }
 }
 
-impl Client {
+impl<T> Debug for Client<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Client").finish()
+    }
+}
+
+impl Client<Tokio> {
+    /// Creates a new `SMPP` connection builder.
+    ///
+    /// See [`ConnectionBuilder::new`] for more details.
+    pub fn builder() -> ConnectionBuilder {
+        ConnectionBuilder::new()
+    }
+}
+
+impl Client<Wasm> {
+    /// Creates a new `SMPP` connection builder.
+    ///
+    /// See [`ConnectionBuilder::new_wasm`] for more details.
+    pub fn builder_wasm() -> ConnectionBuilder<DefaultEventChannel, Wasm, Wasm, Wasm> {
+        ConnectionBuilder::new_wasm()
+    }
+}
+
+impl<T: Timeout> Client<T> {
     pub(crate) fn new(
         actions: UnboundedSender<Action>,
         response_timeout: Option<Duration>,
         check_interface_version: bool,
-        timeout: TimeoutImpl,
         watch: watch::Sender<()>,
     ) -> Self {
         Self {
@@ -62,17 +86,9 @@ impl Client {
                 actions,
                 response_timeout,
                 check_interface_version,
-                timeout,
                 watch,
             )),
         }
-    }
-
-    /// Creates a new `SMPP` connection builder.
-    ///
-    /// See [`ConnectionBuilder::new`] for more details.
-    pub fn builder() -> ConnectionBuilder {
-        ConnectionBuilder::new()
     }
 
     /// Sends a [`BindTransmitter`] command to the server and waits for a successful [`BindTransmitterResp`].
@@ -280,63 +296,62 @@ impl Client {
     }
 
     /// Sets the command status for the next request.
-    pub const fn status(&'_ self, status: CommandStatus) -> UnregisteredRequestBuilder<'_> {
+    pub const fn status(&'_ self, status: CommandStatus) -> UnregisteredRequestBuilder<'_, T> {
         self.unregistered_request().status(status)
     }
 
     /// Sets the response timeout for the next request.
-    pub fn response_timeout(&'_ self, timeout: Duration) -> RegisteredRequestBuilder<'_> {
+    pub fn response_timeout(&'_ self, timeout: Duration) -> RegisteredRequestBuilder<'_, T> {
         self.registered_request().response_timeout(timeout)
     }
 
     /// Disables the response timeout for the next request.
-    pub fn no_response_timeout(&'_ self) -> RegisteredRequestBuilder<'_> {
+    pub fn no_response_timeout(&'_ self) -> RegisteredRequestBuilder<'_, T> {
         self.registered_request().no_response_timeout()
     }
 
     /// Sends a request without waiting for a response.
-    pub const fn no_wait(&'_ self) -> NoWaitRequestBuilder<'_> {
+    pub const fn no_wait(&'_ self) -> NoWaitRequestBuilder<'_, T> {
         self.no_wait_request()
     }
 
     /// Sends a raw request to the server.
-    pub fn raw(&'_ self) -> RawRegisteredRequestBuilder<'_> {
+    pub fn raw(&'_ self) -> RawRegisteredRequestBuilder<'_, T> {
         self.raw_request()
     }
 
-    const fn unregistered_request(&'_ self) -> UnregisteredRequestBuilder<'_> {
+    const fn unregistered_request(&'_ self) -> UnregisteredRequestBuilder<'_, T> {
         UnregisteredRequestBuilder::new(self, CommandStatus::EsmeRok)
     }
 
-    fn registered_request(&'_ self) -> RegisteredRequestBuilder<'_> {
+    fn registered_request(&'_ self) -> RegisteredRequestBuilder<'_, T> {
         RegisteredRequestBuilder::new(self, CommandStatus::EsmeRok)
     }
 
-    const fn no_wait_request(&'_ self) -> NoWaitRequestBuilder<'_> {
+    const fn no_wait_request(&'_ self) -> NoWaitRequestBuilder<'_, T> {
         NoWaitRequestBuilder::new(self, CommandStatus::EsmeRok)
     }
 
-    fn raw_request(&'_ self) -> RawRegisteredRequestBuilder<'_> {
+    fn raw_request(&'_ self) -> RawRegisteredRequestBuilder<'_, T> {
         RawRegisteredRequestBuilder::new(self, CommandStatus::EsmeRok)
     }
 }
 
 #[derive(Debug)]
-struct ClientInner {
+struct ClientInner<T = Tokio> {
     actions: UnboundedSender<Action>,
     response_timeout: Option<Duration>,
     sequence_number: AtomicU32,
     check_interface_version: bool,
     watch: watch::Sender<()>,
-    timeout: TimeoutImpl,
+    _t: std::marker::PhantomData<T>,
 }
 
-impl ClientInner {
+impl<T: Timeout> ClientInner<T> {
     const fn new(
         actions: UnboundedSender<Action>,
         response_timeout: Option<Duration>,
         check_interface_version: bool,
-        timeout: TimeoutImpl,
         watch: watch::Sender<()>,
     ) -> Self {
         Self {
@@ -345,7 +360,7 @@ impl ClientInner {
             sequence_number: AtomicU32::new(1),
             check_interface_version,
             watch,
-            timeout,
+            _t: std::marker::PhantomData,
         }
     }
 
@@ -404,9 +419,7 @@ impl ClientInner {
 
         match response_timeout {
             None => response.await.map_err(|_| Error::ConnectionClosed),
-            Some(timeout) => self
-                .timeout
-                .timeout(timeout, response)
+            Some(timeout) => T::timeout(timeout, response)
                 .await
                 .ok_or_else(|| {
                     self.actions.send(Action::Remove(sequence_number)).ok();
@@ -437,21 +450,21 @@ impl ClientInner {
 }
 
 #[derive(Debug)]
-pub struct UnregisteredRequestBuilder<'a> {
-    client: &'a Client,
+pub struct UnregisteredRequestBuilder<'a, T = Tokio> {
+    client: &'a Client<T>,
     status: CommandStatus,
 }
 
-impl<'a> UnregisteredRequestBuilder<'a> {
-    const fn new(client: &'a Client, status: CommandStatus) -> Self {
+impl<'a, T: Timeout> UnregisteredRequestBuilder<'a, T> {
+    const fn new(client: &'a Client<T>, status: CommandStatus) -> Self {
         Self { client, status }
     }
 
-    fn registered_request(&'_ self) -> RegisteredRequestBuilder<'_> {
+    fn registered_request(&'_ self) -> RegisteredRequestBuilder<'_, T> {
         RegisteredRequestBuilder::new(self.client, self.status)
     }
 
-    const fn no_wait_request(&'_ self) -> NoWaitRequestBuilder<'_> {
+    const fn no_wait_request(&'_ self) -> NoWaitRequestBuilder<'_, T> {
         NoWaitRequestBuilder::new(self.client, self.status)
     }
 
@@ -460,15 +473,15 @@ impl<'a> UnregisteredRequestBuilder<'a> {
         self
     }
 
-    pub fn response_timeout(&'_ self, timeout: Duration) -> RegisteredRequestBuilder<'_> {
+    pub fn response_timeout(&'_ self, timeout: Duration) -> RegisteredRequestBuilder<'_, T> {
         self.registered_request().response_timeout(timeout)
     }
 
-    pub fn no_response_timeout(&'_ self) -> RegisteredRequestBuilder<'_> {
+    pub fn no_response_timeout(&'_ self) -> RegisteredRequestBuilder<'_, T> {
         self.registered_request().no_response_timeout()
     }
 
-    pub const fn no_wait(&'_ self) -> NoWaitRequestBuilder<'_> {
+    pub const fn no_wait(&'_ self) -> NoWaitRequestBuilder<'_, T> {
         self.no_wait_request()
     }
 
@@ -637,8 +650,8 @@ impl<'a> UnregisteredRequestBuilder<'a> {
 }
 
 #[derive(Debug)]
-pub struct RegisteredRequestBuilder<'a> {
-    client: &'a Client,
+pub struct RegisteredRequestBuilder<'a, T = Tokio> {
+    client: &'a Client<T>,
     status: CommandStatus,
     response_timeout: Option<Duration>,
 }
@@ -653,8 +666,8 @@ macro_rules! extract {
     };
 }
 
-impl<'a> RegisteredRequestBuilder<'a> {
-    fn new(client: &'a Client, status: CommandStatus) -> Self {
+impl<'a, T: Timeout> RegisteredRequestBuilder<'a, T> {
+    fn new(client: &'a Client<T>, status: CommandStatus) -> Self {
         Self {
             client,
             status,
@@ -857,17 +870,17 @@ impl<'a> RegisteredRequestBuilder<'a> {
 }
 
 #[derive(Debug)]
-pub struct NoWaitRequestBuilder<'a> {
-    client: &'a Client,
+pub struct NoWaitRequestBuilder<'a, T = Tokio> {
+    client: &'a Client<T>,
     status: CommandStatus,
 }
 
-impl<'a> NoWaitRequestBuilder<'a> {
-    const fn new(client: &'a Client, status: CommandStatus) -> Self {
+impl<'a, T: Timeout> NoWaitRequestBuilder<'a, T> {
+    const fn new(client: &'a Client<T>, status: CommandStatus) -> Self {
         Self { client, status }
     }
 
-    const fn unregistered_request(&'_ self) -> UnregisteredRequestBuilder<'_> {
+    const fn unregistered_request(&'_ self) -> UnregisteredRequestBuilder<'_, T> {
         UnregisteredRequestBuilder::new(self.client, self.status)
     }
 
@@ -950,14 +963,14 @@ impl<'a> NoWaitRequestBuilder<'a> {
 }
 
 #[derive(Debug)]
-pub struct RawRegisteredRequestBuilder<'a> {
-    client: &'a Client,
+pub struct RawRegisteredRequestBuilder<'a, T = Tokio> {
+    client: &'a Client<T>,
     status: CommandStatus,
     response_timeout: Option<Duration>,
 }
 
-impl<'a> RawRegisteredRequestBuilder<'a> {
-    fn new(client: &'a Client, status: CommandStatus) -> Self {
+impl<'a, T: Timeout> RawRegisteredRequestBuilder<'a, T> {
+    fn new(client: &'a Client<T>, status: CommandStatus) -> Self {
         Self {
             client,
             status,

@@ -202,14 +202,14 @@ pub mod delay {
     /// Delay mock for timers.
     ///
     /// This mock translates each millisecond in the requested duration to one poll before completion.
-    #[derive(Debug, Clone, Copy, Default)]
+    #[derive(Debug, Clone, Copy)]
     #[non_exhaustive]
     pub struct MockDelay;
 
-    impl crate::delay::Delay for MockDelay {
+    impl crate::runtime_::Delay for MockDelay {
         type Future = MockDelayFuture;
 
-        fn delay(&self, duration: Duration) -> Self::Future {
+        fn delay(duration: Duration) -> Self::Future {
             MockDelayFuture::new(duration.as_millis())
         }
     }
@@ -224,6 +224,7 @@ pub mod delay {
     /// Future returned by the [`MockDelay`].
     ///
     /// Each poll corresponds to one millisecond in the requested duration.
+    #[derive(Debug)]
     pub struct MockDelayFuture {
         complete: bool,
         /// Number of polls before completion.
@@ -262,11 +263,9 @@ pub mod delay {
 
     #[test]
     fn test_delay_always_after() {
-        use crate::delay::Delay;
+        use crate::runtime_::Delay;
 
-        let mock_delay = MockDelay::new();
-
-        let mut delay_future = mock_delay.delay(Duration::from_millis(3));
+        let mut delay_future = MockDelay::delay(Duration::from_millis(3));
 
         let waker = futures::task::noop_waker();
         let mut cx = Context::from_waker(&waker);
@@ -295,17 +294,10 @@ pub mod timeout {
     #[non_exhaustive]
     pub struct MockTimeout;
 
-    impl MockTimeout {
-        /// Creates a new [`MockTimeout`].
-        pub const fn new() -> Self {
-            Self {}
-        }
-    }
-
-    impl crate::timeout::Timeout for MockTimeout {
+    impl crate::runtime_::Timeout for MockTimeout {
         type Future<F: Future> = MockTimeoutFuture<F>;
 
-        fn timeout<F: Future>(&self, duration: Duration, future: F) -> Self::Future<F> {
+        fn timeout<F: Future>(duration: Duration, future: F) -> Self::Future<F> {
             MockTimeoutFuture {
                 future,
                 delay: delay::MockDelayFuture::new(duration.as_millis()),
@@ -361,12 +353,11 @@ pub mod timeout {
 
     #[test]
     fn would_timeout() {
-        use crate::timeout::Timeout;
+        use crate::runtime_::Timeout;
 
         let three_polls_future = poll_future(3);
 
-        let mock_timeout = MockTimeout::new();
-        let mut timeout_future = mock_timeout.timeout(Duration::from_millis(2), three_polls_future);
+        let mut timeout_future = MockTimeout::timeout(Duration::from_millis(2), three_polls_future);
 
         let waker = futures::task::noop_waker();
         let mut cx = Context::from_waker(&waker);
@@ -385,12 +376,11 @@ pub mod timeout {
 
     #[test]
     fn would_not_timeout() {
-        use crate::timeout::Timeout;
+        use crate::runtime_::Timeout;
 
         let three_polls_future = poll_future(3);
 
-        let mock_timeout = MockTimeout::new();
-        let mut timeout_future = mock_timeout.timeout(Duration::from_millis(5), three_polls_future);
+        let mut timeout_future = MockTimeout::timeout(Duration::from_millis(5), three_polls_future);
 
         let waker = futures::task::noop_waker();
         let mut cx = Context::from_waker(&waker);

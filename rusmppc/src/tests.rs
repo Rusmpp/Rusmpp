@@ -25,7 +25,12 @@ use rusmpp::{
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::codec::Framed;
 
-use crate::{ConnectionBuilder, Event, Insight, InsightEvent, error::Error, mock::io::MockIo};
+use crate::{
+    ConnectionBuilder,
+    error::Error,
+    event::{Event, Insight, InsightEvent},
+    mock::io::MockIo,
+};
 
 #[derive(Debug)]
 pub struct Server {
