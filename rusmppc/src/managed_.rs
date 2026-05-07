@@ -18,7 +18,10 @@ use tryhard::backoff_strategies::{
 };
 
 use crate::{
-    Client, ConnectionBuilder, error::Error as RusmppcError, event::EventChannel, runtime::Delay,
+    Client, ConnectionBuilder,
+    error::Error as RusmppcError,
+    event::EventChannel,
+    runtime::{Delay, Timeout, tokio::Tokio},
 };
 
 const TARGET: &str = "rusmppc::managed::client";
@@ -37,14 +40,24 @@ pub enum ManagedEvent<E> {
 }
 
 /// A managed `SMPP` client that automatically handles reconnection and binding.
-#[derive(Clone)]
-pub struct ManagedClient {
+pub struct ManagedClient<T = Tokio> {
     inner: Arc<ManagedClientInner>,
     // Used to tell the reconnecting background task to stop when the client is dropped.
     _watch: watch::Receiver<()>,
+    _t: std::marker::PhantomData<T>,
 }
 
-impl Debug for ManagedClient {
+impl<T> Clone for ManagedClient<T> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+            _watch: self._watch.clone(),
+            _t: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<T> Debug for ManagedClient<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ManagedClient").finish()
     }
@@ -80,11 +93,12 @@ impl ManagedClientInner {
     }
 }
 
-impl ManagedClient {
+impl<T: Timeout> ManagedClient<T> {
     fn new(inner: Arc<ManagedClientInner>, watch: watch::Receiver<()>) -> Self {
         Self {
             inner,
             _watch: watch,
+            _t: std::marker::PhantomData,
         }
     }
 
@@ -100,9 +114,7 @@ impl ManagedClient {
         &self,
         timeout: Duration,
     ) -> Option<Result<Client, RusmppcError>> {
-        // self.timeout.timeout(timeout, self.get()).await
-
-        todo!("impl timeout")
+        T::timeout(timeout, self.get()).await
     }
 }
 
@@ -260,8 +272,9 @@ impl<E: EventChannel + Clone + Send + Sync + 'static, D: Delay> ManagedConnectio
     }
 }
 
-impl<E: EventChannel + Clone + Send + Sync + 'static, D: Delay> ManagedConnectionBuilder<E, D>
+impl<E: EventChannel, D: Delay> ManagedConnectionBuilder<E, D>
 where
+    E: Clone + Send + Sync + 'static,
     E::Event: Send + Sync + 'static,
     D: Clone + Send + Sync + 'static,
     D::Future: Send,
@@ -369,7 +382,7 @@ enum Connect {
     Connector(Box<dyn Connector>),
 }
 
-struct BoundClientCreatorImpl<E: EventChannel + Clone + Send + Sync + 'static, D: Delay> {
+struct BoundClientCreatorImpl<E: EventChannel, D: Delay> {
     builder: ConnectionBuilder<E, D>,
     connect: Connect,
     bind: BindMode,
@@ -379,8 +392,9 @@ struct BoundClientCreatorImpl<E: EventChannel + Clone + Send + Sync + 'static, D
     tx: UnboundedSender<ManagedEvent<E::Event>>,
 }
 
-impl<E: EventChannel + Clone + Send + Sync + 'static, D: Delay> BoundClientCreatorImpl<E, D>
+impl<E: EventChannel, D: Delay> BoundClientCreatorImpl<E, D>
 where
+    E: Clone + Send + Sync + 'static,
     E::Event: Send + Sync + 'static,
     D: Clone + Send + Sync + 'static,
     D::Future: Send,
@@ -483,10 +497,11 @@ trait BoundClientCreator: Send + Sync + 'static {
     fn connect(&self) -> Pin<Box<dyn Future<Output = Result<Client, RusmppcError>> + Send + '_>>;
 }
 
-impl<E: EventChannel + Clone + Send + Sync + 'static, D: Delay + Send + Sync + 'static>
-    BoundClientCreator for BoundClientCreatorImpl<E, D>
+impl<E: EventChannel, D: Delay> BoundClientCreator for BoundClientCreatorImpl<E, D>
 where
+    E: Clone + Send + Sync + 'static,
     E::Event: Send + Sync + 'static,
+    D: Send + Sync + 'static,
 {
     fn connect(&self) -> Pin<Box<dyn Future<Output = Result<Client, RusmppcError>> + Send + '_>> {
         Box::pin(async move { self.connect().await })
