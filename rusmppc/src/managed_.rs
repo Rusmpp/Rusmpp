@@ -19,7 +19,7 @@ use tryhard::backoff_strategies::{
 
 use crate::{
     Client, ConnectionBuilder,
-    error::Error as RusmppcError,
+    error::Error,
     event::EventChannel,
     runtime::{Delay, Timeout, tokio::Tokio},
 };
@@ -76,7 +76,7 @@ impl ManagedClientInner {
         }
     }
 
-    async fn get(&self) -> Result<RwLockReadGuard<'_, Client>, RusmppcError> {
+    async fn get(&self) -> Result<RwLockReadGuard<'_, Client>, Error> {
         {
             let client = self.client.read().await;
 
@@ -103,17 +103,16 @@ impl<T: Timeout> ManagedClient<T> {
     }
 
     /// Gets a connected and bound [`Client`].
-    pub async fn get(&self) -> Result<Client, RusmppcError> {
+    ///
+    /// This method will block until a connected [`Client`] is available, and will automatically attempt to reconnect if the connection is lost.
+    pub async fn get(&self) -> Result<Client, Error> {
         self.inner.get().await.map(|client| client.clone())
     }
 
-    // TODO: we want to have the same api like `Client` like, client.timeout().get()
+    // TODO: we want to have the same api like `Client`: client.timeout().get()
 
     /// Gets a connected and bound [`Client`] with a timeout.
-    pub async fn get_with_timeout(
-        &self,
-        timeout: Duration,
-    ) -> Option<Result<Client, RusmppcError>> {
+    pub async fn get_with_timeout(&self, timeout: Duration) -> Option<Result<Client, Error>> {
         T::timeout(timeout, self.get()).await
     }
 }
@@ -287,7 +286,7 @@ where
             ManagedClient,
             impl Stream<Item = ManagedEvent<E::Event>> + Unpin + 'static,
         ),
-        RusmppcError,
+        Error,
     > {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
         let rx = UnboundedReceiverStream::new(rx);
@@ -350,7 +349,7 @@ where
             ManagedClient,
             impl Stream<Item = ManagedEvent<E::Event>> + Unpin + 'static,
         ),
-        RusmppcError,
+        Error,
     >
     where
         F: Fn() -> Fut + Send + Sync + 'static,
@@ -371,7 +370,7 @@ where
             ManagedClient,
             impl Stream<Item = ManagedEvent<E::Event>> + Unpin + 'static,
         ),
-        RusmppcError,
+        Error,
     > {
         self.run(Connect::Url(url.into())).await
     }
@@ -419,7 +418,7 @@ where
         }
     }
 
-    async fn connect(&self) -> Result<Client, RusmppcError> {
+    async fn connect(&self) -> Result<Client, Error> {
         tracing::debug!(target: TARGET, "Connecting");
 
         let connect = move || async move {
@@ -433,7 +432,7 @@ where
                 Connect::Connector(ref connector) => connector
                     .connect()
                     .await
-                    .map_err(RusmppcError::Connect)
+                    .map_err(Error::Connect)
                     .map(|stream| self.builder.clone().connected(stream))
                     .map(|(client, events)| (client, EventStream::new_b(events))),
             }
@@ -494,7 +493,7 @@ where
 }
 
 trait BoundClientCreator: Send + Sync + 'static {
-    fn connect(&self) -> Pin<Box<dyn Future<Output = Result<Client, RusmppcError>> + Send + '_>>;
+    fn connect(&self) -> Pin<Box<dyn Future<Output = Result<Client, Error>> + Send + '_>>;
 }
 
 impl<E: EventChannel, D: Delay> BoundClientCreator for BoundClientCreatorImpl<E, D>
@@ -503,7 +502,7 @@ where
     E::Event: Send + Sync + 'static,
     D: Send + Sync + 'static,
 {
-    fn connect(&self) -> Pin<Box<dyn Future<Output = Result<Client, RusmppcError>> + Send + '_>> {
+    fn connect(&self) -> Pin<Box<dyn Future<Output = Result<Client, Error>> + Send + '_>> {
         Box::pin(async move { self.connect().await })
     }
 }
