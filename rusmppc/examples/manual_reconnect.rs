@@ -1,4 +1,4 @@
-//! An opinionated reconnect logic implementation, since rusmppc does not handle reconnects.
+//! An opinionated reconnect logic implementation.
 //!
 //! Run with
 //!
