@@ -6,7 +6,7 @@ use std::{
 
 use pin_project_lite::pin_project;
 
-use crate::runtime::Delay;
+use crate::runtime_::Delay;
 
 pin_project! {
     #[derive(Debug)]

@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 pub mod tokio;
+pub mod wasm;
 
 /// Abstraction over delay implementations for timers.
 pub trait Delay {

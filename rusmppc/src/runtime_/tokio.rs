@@ -1,3 +1,4 @@
+/// Tokio runtime.
 #[derive(Debug, Clone, Copy)]
 #[non_exhaustive]
 pub struct Tokio;
@@ -55,7 +56,7 @@ const _: () = {
     }
 
     impl Tokio {
-        pub fn spawn<F>(future: F) -> tokio::task::JoinHandle<F::Output>
+        pub(crate) fn spawn<F>(future: F) -> tokio::task::JoinHandle<F::Output>
         where
             F: Future + Send + 'static,
             F::Output: Send + 'static,

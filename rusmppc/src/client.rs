@@ -29,7 +29,8 @@ use crate::{
     Action, CloseRequest, CommandExt, ConnectionBuilder, PendingResponses, RegisteredRequest,
     RequestFutureGuard, UnregisteredRequest,
     error::Error,
-    runtime::{Timeout, tokio::Tokio},
+    event_::DefaultEventChannel,
+    runtime_::{Timeout, tokio::Tokio, wasm::Wasm},
 };
 
 const TARGET: &str = "rusmppc::client";
@@ -55,6 +56,24 @@ impl<T> Debug for Client<T> {
     }
 }
 
+impl Client<Tokio> {
+    /// Creates a new `SMPP` connection builder.
+    ///
+    /// See [`ConnectionBuilder::new`] for more details.
+    pub fn builder() -> ConnectionBuilder {
+        ConnectionBuilder::new()
+    }
+}
+
+impl Client<Wasm> {
+    /// Creates a new `SMPP` connection builder.
+    ///
+    /// See [`ConnectionBuilder::new_wasm`] for more details.
+    pub fn builder_wasm() -> ConnectionBuilder<DefaultEventChannel, Wasm, Wasm, Wasm> {
+        ConnectionBuilder::new_wasm()
+    }
+}
+
 impl<T: Timeout> Client<T> {
     pub(crate) fn new(
         actions: UnboundedSender<Action>,
@@ -70,13 +89,6 @@ impl<T: Timeout> Client<T> {
                 watch,
             )),
         }
-    }
-
-    /// Creates a new `SMPP` connection builder.
-    ///
-    /// See [`ConnectionBuilder::new`] for more details.
-    pub fn builder() -> ConnectionBuilder {
-        ConnectionBuilder::new()
     }
 
     /// Sends a [`BindTransmitter`] command to the server and waits for a successful [`BindTransmitterResp`].

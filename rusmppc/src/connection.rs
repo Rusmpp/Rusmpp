@@ -9,9 +9,9 @@ use crate::{
     Action, Client, Request, Timer,
     builder::NoSpawnConnectionBuilder,
     error::Error,
-    event::{EventChannel, Insight},
+    event_::{EventChannel, Insight},
     request::ObligatedRequest,
-    runtime::{Delay, Timeout},
+    runtime_::{Delay, Timeout},
 };
 use futures::{FutureExt, Sink, SinkExt, Stream};
 use pin_project_lite::pin_project;

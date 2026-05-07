@@ -206,7 +206,7 @@ pub mod delay {
     #[non_exhaustive]
     pub struct MockDelay;
 
-    impl crate::runtime::Delay for MockDelay {
+    impl crate::runtime_::Delay for MockDelay {
         type Future = MockDelayFuture;
 
         fn delay(duration: Duration) -> Self::Future {
@@ -263,7 +263,7 @@ pub mod delay {
 
     #[test]
     fn test_delay_always_after() {
-        use crate::runtime::Delay;
+        use crate::runtime_::Delay;
 
         let mut delay_future = MockDelay::delay(Duration::from_millis(3));
 
@@ -294,7 +294,7 @@ pub mod timeout {
     #[non_exhaustive]
     pub struct MockTimeout;
 
-    impl crate::runtime::Timeout for MockTimeout {
+    impl crate::runtime_::Timeout for MockTimeout {
         type Future<F: Future> = MockTimeoutFuture<F>;
 
         fn timeout<F: Future>(duration: Duration, future: F) -> Self::Future<F> {
@@ -353,7 +353,7 @@ pub mod timeout {
 
     #[test]
     fn would_timeout() {
-        use crate::runtime::Timeout;
+        use crate::runtime_::Timeout;
 
         let three_polls_future = poll_future(3);
 
@@ -376,7 +376,7 @@ pub mod timeout {
 
     #[test]
     fn would_not_timeout() {
-        use crate::runtime::Timeout;
+        use crate::runtime_::Timeout;
 
         let three_polls_future = poll_future(3);
 

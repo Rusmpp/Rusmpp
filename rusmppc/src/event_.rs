@@ -63,7 +63,7 @@ pub trait EventChannel: Send + 'static {
     fn send_insight(&self, insight: Insight) -> Result<(), SendError<Self::Event>>;
 }
 
-/// The default [`EventChannel`] implementation that sends [`Event`]s through the event stream.
+/// The default `EventChannel` implementation that sends [`Event`]s through the event stream.
 #[derive(Clone)]
 pub struct DefaultEventChannel {
     sender: tokio::sync::mpsc::UnboundedSender<Event>,
@@ -97,7 +97,7 @@ impl EventChannel for DefaultEventChannel {
     }
 }
 
-/// An [`EventChannel`] implementation that discards all events.
+/// An `EventChannel` implementation that discards all events.
 #[derive(Clone)]
 pub struct DiscardEventChannel {
     // even if we don't use it, we should keep it alive to avoid closing the event stream
@@ -131,7 +131,7 @@ impl EventChannel for DiscardEventChannel {
     }
 }
 
-/// An [`EventChannel`] implementation that sends [`InsightEvent`]s through the event stream.
+/// An `EventChannel` implementation that sends [`InsightEvent`]s through the event stream.
 #[derive(Clone)]
 pub struct InsightEventChannel {
     sender: tokio::sync::mpsc::UnboundedSender<InsightEvent>,

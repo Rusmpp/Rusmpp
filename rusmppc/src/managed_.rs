@@ -20,8 +20,8 @@ use tryhard::backoff_strategies::{
 use crate::{
     Client, ConnectionBuilder,
     error::Error,
-    event::EventChannel,
-    runtime::{Delay, Timeout, tokio::Tokio},
+    event_::EventChannel,
+    runtime_::{Delay, Timeout, tokio::Tokio},
 };
 
 const TARGET: &str = "rusmppc::managed::client";

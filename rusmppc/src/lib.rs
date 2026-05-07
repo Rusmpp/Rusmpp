@@ -23,7 +23,7 @@
 //!     types::{COctetString, OctetString},
 //!     values::{EsmClass, Npi, RegisteredDelivery, ServiceType, Ton},
 //! };
-//! use rusmppc::{ConnectionBuilder, Event};
+//! use rusmppc::{ConnectionBuilder, event::Event};
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -108,8 +108,17 @@ mod connection;
 mod builder;
 pub use builder::{ConnectionBuilder, DefaultConnectionBuilder};
 
-mod event;
-pub use event::{Event, Insight, InsightEvent};
+mod event_;
+
+pub mod event {
+    //! Types related to events emitted by the `SMPP` connection.
+    pub use super::event_::{Event, Insight, InsightEvent};
+}
+
+pub mod channel {
+    //! Types related to event channels.
+    pub use super::event_::{DefaultEventChannel, DiscardEventChannel, InsightEventChannel};
+}
 
 mod request;
 pub(crate) use request::{CloseRequest, RegisteredRequest, Request, UnregisteredRequest};
@@ -131,10 +140,16 @@ pub(crate) use futures::RequestFutureGuard;
 mod response;
 pub(crate) use response::PendingResponses;
 
+#[cfg(feature = "tokio")]
 mod tcp_stream;
+#[cfg(feature = "tokio")]
 pub(crate) use tcp_stream::MaybeTlsStream;
 
-mod runtime;
+mod runtime_;
+pub mod runtime {
+    //! Supported runtimes.
+    pub use super::runtime_::{tokio::Tokio, wasm::Wasm};
+}
 
 #[cfg(test)]
 mod tests;
@@ -142,7 +157,9 @@ mod tests;
 #[cfg(test)]
 mod mock;
 
+#[cfg(feature = "tokio")]
 mod managed_;
+#[cfg(feature = "tokio")]
 pub mod managed {
     //! A managed `SMPP` client that automatically handles reconnection and binding.
     pub use super::managed_::{ManagedClient, ManagedEvent};

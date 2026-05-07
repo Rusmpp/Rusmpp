@@ -15,7 +15,10 @@ use rusmpp::{
     pdus::{BindTransceiver, SubmitSm},
     types::{COctetString, OctetString},
 };
-use rusmppc::{ConnectionBuilder, Insight, InsightEvent};
+use rusmppc::{
+    ConnectionBuilder,
+    event::{Insight, InsightEvent},
+};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn core::error::Error>> {

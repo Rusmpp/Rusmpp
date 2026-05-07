@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, time::Duration};
+use std::time::Duration;
 
 use futures::Stream;
 use rusmpp::tokio_codec::CommandCodec;
@@ -6,15 +6,13 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::codec::Framed;
 
 use crate::{
-    Client, MaybeTlsStream,
-    error::Error,
-    event::{DefaultEventChannel, DiscardEventChannel, EventChannel, InsightEventChannel},
-    managed_::UnboundManagedConnectionBuilder,
-    runtime::{Delay, Timeout, tokio::Tokio},
+    Client,
+    event_::{DefaultEventChannel, DiscardEventChannel, EventChannel, InsightEventChannel},
+    runtime_::{Delay, Timeout, tokio::Tokio, wasm::Wasm},
 };
 
-/// Default connection builder that sends [`Event`](crate::Event)s through the event stream.
-pub type DefaultConnectionBuilder = ConnectionBuilder<DefaultEventChannel, Tokio, Tokio>;
+/// Default connection builder that sends [`Event`](crate::event::Event)s through the event stream.
+pub type DefaultConnectionBuilder = ConnectionBuilder<DefaultEventChannel, Tokio, Tokio, Tokio>;
 
 /// Builder for creating a new `SMPP` connection.
 #[derive(Debug, Clone)]
@@ -29,10 +27,10 @@ pub struct ConnectionBuilder<E = DefaultEventChannel, D = Tokio, T = Tokio, R = 
     pub(crate) response_timeout: Option<Duration>,
     pub(crate) check_interface_version: bool,
     /// TLS configurations provided by the user. If None, default configurations will be used.
-    #[cfg(feature = "rustls")]
+    #[cfg(all(feature = "tokio", feature = "rustls"))]
     rustls_config: Option<rustls::ClientConfig>,
     /// Native TLS connector provided by the user. If None, default connector will be used.
-    #[cfg(feature = "native-tls")]
+    #[cfg(all(feature = "tokio", feature = "native-tls"))]
     native_tls_connector: Option<native_tls::TlsConnector>,
     _e: std::marker::PhantomData<E>,
     _d: std::marker::PhantomData<D>,
@@ -66,9 +64,9 @@ impl DefaultConnectionBuilder {
             auto_enquire_link_response: true,
             response_timeout: Some(Duration::from_secs(5)),
             check_interface_version: true,
-            #[cfg(feature = "rustls")]
+            #[cfg(all(feature = "tokio", feature = "rustls"))]
             rustls_config: None,
-            #[cfg(feature = "native-tls")]
+            #[cfg(all(feature = "tokio", feature = "native-tls"))]
             native_tls_connector: None,
             _e: std::marker::PhantomData,
             _d: std::marker::PhantomData,
@@ -78,33 +76,34 @@ impl DefaultConnectionBuilder {
     }
 }
 
-impl<E, D, T, R> ConnectionBuilder<E, D, T, R> {
-    /// Does not spawn the connection in the background.
+impl Default for ConnectionBuilder<DefaultEventChannel, Wasm, Wasm, Wasm> {
+    fn default() -> Self {
+        Self::new_wasm()
+    }
+}
+
+impl ConnectionBuilder<DefaultEventChannel, Wasm, Wasm, Wasm> {
+    /// Creates a new [`ConnectionBuilder`] with default configurations.
     ///
-    /// It is your responsibility to run the connection to completion.
-    pub fn no_spawn(self) -> NoSpawnConnectionBuilder<E, D, T, R> {
-        NoSpawnConnectionBuilder { builder: self }
-    }
-
-    /// Configures the connection event stream.
-    pub fn events(self) -> EventsConnectionBuilder<E, D, T, R> {
-        EventsConnectionBuilder { builder: self }
-    }
-
-    #[cfg(test)]
-    /// TODO: why the fk does clippy want me to document this?
-    pub fn mock_delay(self) -> ConnectionBuilder<E, crate::mock::delay::MockDelay, T, R> {
-        ConnectionBuilder {
-            max_command_length: self.max_command_length,
-            enquire_link_interval: self.enquire_link_interval,
-            enquire_link_response_timeout: self.enquire_link_response_timeout,
-            auto_enquire_link_response: self.auto_enquire_link_response,
-            response_timeout: self.response_timeout,
-            check_interface_version: self.check_interface_version,
-            #[cfg(feature = "rustls")]
-            rustls_config: self.rustls_config,
-            #[cfg(feature = "native-tls")]
-            native_tls_connector: self.native_tls_connector,
+    /// # Defaults
+    /// - `max_command_length`: 4096 bytes
+    /// - `enquire_link_interval`: 30 seconds
+    /// - `enquire_link_response_timeout`: 5 seconds
+    /// - `auto_enquire_link_response`: true
+    /// - `response_timeout`: 5 seconds
+    /// - `check_interface_version`: true
+    pub fn new_wasm() -> Self {
+        Self {
+            max_command_length: 4096,
+            enquire_link_interval: Some(Duration::from_secs(30)),
+            enquire_link_response_timeout: Duration::from_secs(5),
+            auto_enquire_link_response: true,
+            response_timeout: Some(Duration::from_secs(5)),
+            check_interface_version: true,
+            #[cfg(all(feature = "tokio", feature = "rustls"))]
+            rustls_config: None,
+            #[cfg(all(feature = "tokio", feature = "native-tls"))]
+            native_tls_connector: None,
             _e: std::marker::PhantomData,
             _d: std::marker::PhantomData,
             _t: std::marker::PhantomData,
@@ -170,7 +169,7 @@ impl<E: EventChannel, D: Delay, T: Timeout> ConnectionBuilder<E, D, T, Tokio> {
     pub async fn connect(
         self,
         url: impl AsRef<str>,
-    ) -> Result<(Client<T>, impl Stream<Item = E::Event> + Unpin + 'static), Error>
+    ) -> Result<(Client<T>, impl Stream<Item = E::Event> + Unpin + 'static), crate::error::Error>
     where
         D: Send + 'static,
         D::Future: Send,
@@ -207,18 +206,44 @@ impl<E: EventChannel, D: Delay, T: Timeout> ConnectionBuilder<E, D, T, Tokio> {
     }
 }
 
+#[cfg(feature = "wasm")]
+impl<E: EventChannel, D: Delay, T: Timeout> ConnectionBuilder<E, D, T, Wasm> {
+    /// Creates a client from an existing connection.
+    ///
+    /// Manages a connection in the background and returns a client and an event stream.
+    ///
+    /// - The client is used as a handle to communicate with the server through the managed connection.
+    /// - The event stream is used to receive events from the server, such as incoming messages or errors.
+    pub fn connected<S>(
+        self,
+        stream: S,
+    ) -> (Client<T>, impl Stream<Item = E::Event> + Unpin + 'static)
+    where
+        S: AsyncRead + AsyncWrite + 'static,
+        D: 'static,
+        T: 'static,
+    {
+        let (client, events, connection) = self.no_spawn().connected(stream);
+
+        Wasm::spawn(connection);
+
+        (client, events)
+    }
+}
+
+#[cfg(feature = "tokio")]
 impl<E: EventChannel, D: Delay, T: Timeout, R> ConnectionBuilder<E, D, T, R> {
     /// Creates a managed connection builder that handles reconnection automatically.
-    pub fn managed(self) -> UnboundManagedConnectionBuilder<E, D, T, R>
+    pub fn managed(self) -> crate::managed_::UnboundManagedConnectionBuilder<E, D, T, R>
     where
         E: EventChannel + Clone + Send + Sync + 'static,
         E::Event: Send + Sync + 'static,
     {
-        UnboundManagedConnectionBuilder::new(self)
+        crate::managed_::UnboundManagedConnectionBuilder::new(self)
     }
 }
 
-impl<E, D, T> ConnectionBuilder<E, D, T> {
+impl<E, D, T, R> ConnectionBuilder<E, D, T, R> {
     /// Sets the maximum command length for incoming commands.
     pub const fn max_command_length(mut self, max_command_length: usize) -> Self {
         self.max_command_length = max_command_length;
@@ -348,7 +373,7 @@ impl<E, D, T> ConnectionBuilder<E, D, T> {
     /// If not set, a default configuration will be used.
     ///  - If the `rustls-tls-native-roots` feature is enabled, native root certificates are used.
     ///  - If the `rustls-tls-webpki-roots` feature is enabled, webpki root certificates are used.
-    #[cfg(feature = "rustls")]
+    #[cfg(all(feature = "tokio", feature = "rustls"))]
     pub fn rustls_config(mut self, config: rustls::ClientConfig) -> Self {
         self.rustls_config = Some(config);
         self
@@ -357,10 +382,43 @@ impl<E, D, T> ConnectionBuilder<E, D, T> {
     /// Sets a custom `native-tls` connector.
     ///
     /// If not set, a default connector will be used.
-    #[cfg(feature = "native-tls")]
+    #[cfg(all(feature = "tokio", feature = "native-tls"))]
     pub fn native_tls_connector(mut self, connector: native_tls::TlsConnector) -> Self {
         self.native_tls_connector = Some(connector);
         self
+    }
+
+    /// Does not spawn the connection in the background.
+    ///
+    /// It is your responsibility to run the connection to completion.
+    pub fn no_spawn(self) -> NoSpawnConnectionBuilder<E, D, T, R> {
+        NoSpawnConnectionBuilder { builder: self }
+    }
+
+    /// Configures the connection event stream.
+    pub fn events(self) -> EventsConnectionBuilder<E, D, T, R> {
+        EventsConnectionBuilder { builder: self }
+    }
+
+    #[cfg(test)]
+    /// TODO: why the fk does clippy want me to document this?
+    pub fn mock_delay(self) -> ConnectionBuilder<E, crate::mock::delay::MockDelay, T, R> {
+        ConnectionBuilder {
+            max_command_length: self.max_command_length,
+            enquire_link_interval: self.enquire_link_interval,
+            enquire_link_response_timeout: self.enquire_link_response_timeout,
+            auto_enquire_link_response: self.auto_enquire_link_response,
+            response_timeout: self.response_timeout,
+            check_interface_version: self.check_interface_version,
+            #[cfg(all(feature = "tokio", feature = "rustls"))]
+            rustls_config: self.rustls_config,
+            #[cfg(all(feature = "tokio", feature = "native-tls"))]
+            native_tls_connector: self.native_tls_connector,
+            _e: std::marker::PhantomData,
+            _d: std::marker::PhantomData,
+            _t: std::marker::PhantomData,
+            _r: std::marker::PhantomData,
+        }
     }
 }
 
@@ -395,12 +453,14 @@ impl<E: EventChannel, D: Delay, T: Timeout> NoSpawnConnectionBuilder<E, D, T, To
             impl Stream<Item = E::Event> + Unpin + 'static,
             impl Future<Output = ()> + 'static,
         ),
-        Error,
+        crate::error::Error,
     >
     where
         D: 'static,
         T: 'static,
     {
+        use crate::{MaybeTlsStream, error::Error};
+
         enum Scheme {
             Smpp,
             Ssmpp,
@@ -460,7 +520,7 @@ impl<E: EventChannel, D: Delay, T: Timeout> NoSpawnConnectionBuilder<E, D, T, To
                 ))
             })?;
 
-        let socket_addr = SocketAddr::new(ip_addr, port);
+        let socket_addr = std::net::SocketAddr::new(ip_addr, port);
 
         tracing::debug!(target: "rusmppc::connection::tcp", %socket_addr, "Connecting");
 
@@ -520,7 +580,7 @@ impl<E: EventChannel, D: Delay, T: Timeout, R> NoSpawnConnectionBuilder<E, D, T,
         impl Future<Output = ()>,
     )
     where
-        S: AsyncRead + AsyncWrite + Send + 'static,
+        S: AsyncRead + AsyncWrite + 'static,
     {
         let framed = Framed::new(
             stream,
@@ -547,9 +607,9 @@ impl<E, D, T, R> EventsConnectionBuilder<E, D, T, R> {
             auto_enquire_link_response: self.builder.auto_enquire_link_response,
             response_timeout: self.builder.response_timeout,
             check_interface_version: self.builder.check_interface_version,
-            #[cfg(feature = "rustls")]
+            #[cfg(all(feature = "tokio", feature = "rustls"))]
             rustls_config: self.builder.rustls_config,
-            #[cfg(feature = "native-tls")]
+            #[cfg(all(feature = "tokio", feature = "native-tls"))]
             native_tls_connector: self.builder.native_tls_connector,
             _e: std::marker::PhantomData,
             _d: std::marker::PhantomData,
@@ -567,9 +627,9 @@ impl<E, D, T, R> EventsConnectionBuilder<E, D, T, R> {
             auto_enquire_link_response: self.builder.auto_enquire_link_response,
             response_timeout: self.builder.response_timeout,
             check_interface_version: self.builder.check_interface_version,
-            #[cfg(feature = "rustls")]
+            #[cfg(all(feature = "tokio", feature = "rustls"))]
             rustls_config: self.builder.rustls_config,
-            #[cfg(feature = "native-tls")]
+            #[cfg(all(feature = "tokio", feature = "native-tls"))]
             native_tls_connector: self.builder.native_tls_connector,
             _e: std::marker::PhantomData,
             _d: std::marker::PhantomData,
