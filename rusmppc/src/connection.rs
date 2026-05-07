@@ -11,7 +11,7 @@ use crate::{
     error::Error,
     event::{EventChannel, Insight},
     request::ObligatedRequest,
-    runtime::Delay,
+    runtime::{Delay, Timeout},
 };
 use futures::{FutureExt, Sink, SinkExt, Stream};
 use pin_project_lite::pin_project;
@@ -691,13 +691,13 @@ where
     }
 }
 
-impl<E: EventChannel, D: Delay> NoSpawnConnectionBuilder<E, D> {
+impl<E: EventChannel, D: Delay, T: Timeout> NoSpawnConnectionBuilder<E, D, T> {
     /// Consumes the builder and creates a new [`Client`] along with the connection future and event stream (from raw parts).
     pub(crate) fn raw<F>(
         self,
         framed: F,
     ) -> (
-        Client,
+        Client<T>,
         impl Stream<Item = E::Event> + Unpin + 'static,
         impl Future<Output = ()>,
     )
