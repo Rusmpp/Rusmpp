@@ -11,6 +11,8 @@ Rust implementation of the [SMPP v5](https://smpp.org/SMPP_v5.pdf) protocol.
 
 This is a low level library for implementing clients and servers. If you are looking for a client, check out [rusmppc](https://crates.io/crates/rusmppc).
 
+See it in action with the [web client](https://rusmppc-egui.pages.dev/).
+
 ```rust
 use core::error::Error;
 use futures::{SinkExt, StreamExt};
