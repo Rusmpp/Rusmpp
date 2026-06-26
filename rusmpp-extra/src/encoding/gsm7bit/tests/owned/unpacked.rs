@@ -13,6 +13,8 @@ use crate::{
 };
 
 mod encode {
+    use crate::encoding::gsm7bit::Gsm7BitAlphabet;
+
     use super::*;
 
     #[test]
@@ -55,6 +57,41 @@ mod encode {
         ];
 
         assert_eq!(encoded.as_slice(), expected);
+    }
+    #[test]
+    fn encode_spanish() {
+        // c-spell: disable
+        // Spanish GSM 7-bit extended-only characters.
+        let input = r#"ç^{}\[~]|ÁÍÓÚá€íóú"#;
+        // c-spell: enable
+
+        let (encoded, _) = Gsm7BitUnpacked::new()
+            .with_alphabet(Gsm7BitAlphabet::spanish())
+            .encode(input)
+            .expect("Encoding failed");
+
+        let expected: &[u8] = &[
+            0x1B, 0x09, // ç
+            0x1B, 0x14, // ^
+            0x1B, 0x28, // {
+            0x1B, 0x29, // }
+            0x1B, 0x2F, // \
+            0x1B, 0x3C, // [
+            0x1B, 0x3D, // ~
+            0x1B, 0x3E, // ]
+            0x1B, 0x40, // |
+            0x1B, 0x41, // Á
+            0x1B, 0x49, // Í
+            0x1B, 0x4F, // Ó
+            0x1B, 0x55, // Ú
+            0x1B, 0x61, // á
+            0x1B, 0x65, // €
+            0x1B, 0x69, // í
+            0x1B, 0x6F, // ó
+            0x1B, 0x75, // ú
+        ];
+
+        assert_eq!(encoded.as_slice(), expected)
     }
 
     #[test]
