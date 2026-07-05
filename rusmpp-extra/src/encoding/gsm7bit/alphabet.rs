@@ -1,6 +1,9 @@
 mod default;
+mod spanish;
 
 pub use default::Gsm7BitDefaultAlphabet;
+
+pub use spanish::Gsm7BitSpanishAlphabet;
 
 /// Gsm 7-bit escape character.
 pub const ESCAPE_CHARACTER: u8 = 0x1B;
@@ -11,6 +14,7 @@ pub const ESCAPE_CHARACTER: u8 = 0x1B;
 pub enum Gsm7BitAlphabet {
     /// Default GSM 7-bit alphabet.
     Default(Gsm7BitDefaultAlphabet),
+    Spanish(Gsm7BitSpanishAlphabet),
 }
 
 impl Default for Gsm7BitAlphabet {
@@ -24,6 +28,11 @@ impl Gsm7BitAlphabet {
         Self::Default(Gsm7BitDefaultAlphabet::new())
     }
 
+    /// Create a [`Gsm7BitDefaultAlphabet`] GSM 7-bit alphabet with spanish table Character Set.
+    pub const fn spanish() -> Self {
+        Self::Spanish(Gsm7BitSpanishAlphabet::new())
+    }
+
     /// # Returns
     ///
     /// - `Some(Encoded)` if the character is found in the GSM 7-bit tables.
@@ -31,6 +40,7 @@ impl Gsm7BitAlphabet {
     const fn encode(&self, ch: char) -> Option<Encoded> {
         match self {
             Self::Default(alphabet) => alphabet.encode(ch),
+            Self::Spanish(alphabet) => alphabet.encode(ch),
         }
     }
 
