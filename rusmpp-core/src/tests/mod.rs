@@ -1,3 +1,4 @@
+//! Test utilities for the `rusmpp-core`.
 pub mod borrowed;
 
 #[cfg(feature = "alloc")]

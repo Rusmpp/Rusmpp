@@ -101,7 +101,7 @@ impl<'a, const N: usize> QueryBroadcastSmRespBuilder<'a, N> {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test"))]
 mod tests {
     use crate::{tests::TestInstance, types::borrowed::OctetString, values::*};
 

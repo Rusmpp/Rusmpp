@@ -58,6 +58,9 @@ framez = ["dep:framez"]
 # Enables logging via the `tracing` crate.
 tracing = ["dep:tracing"]
 
+# Exposes test utilities for the `rusmpp-core`.
+test = []
+
 # Prints byte slices like: [0x00, 0x00, 0x00, 0x6F] instead of [00, 00, 00, 6F].
 pretty-hex-fmt = []
 # Prints byte slices as characters.

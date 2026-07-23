@@ -43,8 +43,8 @@ pub mod types;
 
 pub mod tlvs;
 
-#[cfg(test)]
-pub(crate) mod tests;
+#[cfg(any(test, feature = "test"))]
+pub mod tests;
 
 pub(crate) mod formatter;
 

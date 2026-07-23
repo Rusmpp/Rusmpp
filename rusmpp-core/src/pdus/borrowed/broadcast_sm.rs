@@ -245,7 +245,7 @@ impl<'a, const N: usize> BroadcastSmBuilder<'a, N> {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test"))]
 mod tests {
     use crate::{tests::TestInstance, types::borrowed::OctetString};
 

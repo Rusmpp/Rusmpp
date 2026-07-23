@@ -6,7 +6,7 @@ use crate::{
     CommandId,
     command::owned::Command,
     decode::owned::{Decode, DecodeErrorType, DecodeWithLength},
-    encode::{Length, owned::Encode},
+    encode::owned::Encode,
     pdus::owned::*,
     tests::TestInstance,
     types::owned::AnyOctetString,
@@ -142,6 +142,8 @@ pub fn test_commands() -> alloc::vec::Vec<Command> {
 #[test]
 #[ignore = "observation test"]
 fn print_decode_errors() {
+    use crate::encode::Length;
+
     let mut buf = BytesMut::from(&[0u8; 1024][..]);
 
     for command in test_commands() {

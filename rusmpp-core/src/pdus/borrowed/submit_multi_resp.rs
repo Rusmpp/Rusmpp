@@ -168,7 +168,7 @@ impl<'a, const N: usize> SubmitMultiRespBuilder<'a, N> {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test"))]
 mod tests {
     use crate::{CommandStatus, tests::TestInstance, values::*};
 

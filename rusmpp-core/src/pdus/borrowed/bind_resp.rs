@@ -120,7 +120,7 @@ impl<'a, const N: usize> From<BindTransceiverResp<'a>> for Pdu<'a, N> {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test"))]
 mod tests {
     use crate::tests::TestInstance;
 

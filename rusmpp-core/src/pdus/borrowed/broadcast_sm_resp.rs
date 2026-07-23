@@ -100,7 +100,7 @@ impl<'a, const N: usize> BroadcastSmRespBuilder<'a, N> {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test"))]
 mod tests {
     use crate::{
         CommandStatus,

@@ -186,7 +186,7 @@ impl<'a> CancelSmBuilder<'a> {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test"))]
 mod tests {
     use crate::tests::TestInstance;
 

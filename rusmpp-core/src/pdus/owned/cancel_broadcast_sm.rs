@@ -168,7 +168,7 @@ impl CancelBroadcastSmBuilder {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test"))]
 mod tests {
     use std::str::FromStr;
 
