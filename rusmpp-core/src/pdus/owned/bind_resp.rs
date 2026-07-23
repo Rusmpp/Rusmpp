@@ -120,7 +120,7 @@ impl From<BindTransceiverResp> for Pdu {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test"))]
 mod tests {
     use std::str::FromStr;
 

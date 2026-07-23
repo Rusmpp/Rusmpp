@@ -216,7 +216,7 @@ impl<'a, const N: usize> DataSmBuilder<'a, N> {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test"))]
 mod tests {
     use crate::tests::TestInstance;
 
