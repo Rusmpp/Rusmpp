@@ -126,7 +126,7 @@ impl Repr {
             TestAttributes::Skip => quote! {},
             TestAttributes::Implement => {
                 quote! {
-                    #[cfg(test)]
+                    #[cfg(any(test, feature = "test"))]
                     impl crate::tests::TestInstance for #name {
                         fn instances() -> alloc::vec::Vec<Self> {
                             alloc::vec![Self::default(),]
