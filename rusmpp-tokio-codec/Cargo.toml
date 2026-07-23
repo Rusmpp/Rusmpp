@@ -1,0 +1,28 @@
+[package]
+name = "rusmpp-tokio-codec"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rusmpp-core = { path = "../rusmpp-core", version = "0.4.0", default-features = false, features = [
+    "alloc",
+] }
+tokio-util = { version = "0.7.18", default-features = false, features = [
+    "codec",
+] }
+bytes = { version = "1", default-features = false }
+tracing = { version = "0.1.44", default-features = false, optional = true }
+
+[dev-dependencies]
+rusmpp-core = { path = "../rusmpp-core", version = "0.4.0", default-features = false, features = [
+    "alloc",
+    "test",
+] }
+tokio = { version = "1", features = ["full"] }
+futures = "0.3.32"
+testcontainers = "0.27.3"
+
+[features]
+default = ["tracing"]
+# Enables logging via the `tracing` crate.
+tracing = ["dep:tracing"]

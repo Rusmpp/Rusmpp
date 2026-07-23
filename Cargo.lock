@@ -2780,6 +2780,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "rusmpp-tokio-codec"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "futures",
+ "rusmpp-core",
+ "testcontainers",
+ "tokio",
+ "tokio-util",
+ "tracing",
+]
+
+[[package]]
 name = "rusmppc"
 version = "0.4.0"
 dependencies = [
