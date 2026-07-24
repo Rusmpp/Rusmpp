@@ -2730,6 +2730,7 @@ dependencies = [
  "futures",
  "rusmpp-core",
  "rusmpp-extra",
+ "rusmpp-tokio-codec",
  "tokio",
  "tokio-util",
  "tracing",
@@ -2754,7 +2755,6 @@ dependencies = [
  "testcontainers",
  "thiserror 2.0.17",
  "tokio",
- "tokio-util",
  "tracing",
 ]
 

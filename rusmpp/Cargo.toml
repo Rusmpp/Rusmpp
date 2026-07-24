@@ -22,8 +22,8 @@ futures = "0.3.31"
 [dependencies]
 rusmpp-core = { path = "../rusmpp-core", version = "0.4.0", default-features = false, features = [
     "alloc",
-    "tokio-codec",
 ] }
+rusmpp-tokio-codec = { path = "../rusmpp-tokio-codec", version = "0.1.0", default-features = false, optional = true }
 rusmpp-extra = { path = "../rusmpp-extra", version = "0.4.0", default-features = false, features = [
     "alloc",
 ] }
@@ -31,7 +31,7 @@ rusmpp-extra = { path = "../rusmpp-extra", version = "0.4.0", default-features =
 [features]
 default = ["tokio-codec"]
 # Implements tokio's util codec Encoder/Decoder traits.
-tokio-codec = ["rusmpp-core/tokio-codec"]
+tokio-codec = ["dep:rusmpp-tokio-codec"]
 # Enables encoding/decoding and concatenation support for SubmitSm.
 extra = ["rusmpp-extra/encoding", "rusmpp-extra/concatenation"]
 # Derives serde Serialize for all SMPP types.
@@ -43,7 +43,7 @@ pretty-hex-fmt = ["rusmpp-core/pretty-hex-fmt"]
 # Prints byte slices as characters.
 char-fmt = ["rusmpp-core/char-fmt"]
 # Enables logging via the `tracing` crate.
-tracing = ["rusmpp-core/tracing"]
+tracing = ["rusmpp-tokio-codec/tracing"]
 
 
 [[example]]

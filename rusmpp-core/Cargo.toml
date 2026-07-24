@@ -22,9 +22,6 @@ serde = { version = "1", default-features = false, features = [
 ], optional = true }
 pastey = "0.2.1"
 framez = { version = "0.4.0", default-features = false, optional = true }
-tokio-util = { version = "0.7.18", default-features = false, features = [
-    "codec",
-], optional = true }
 tracing = { version = "0.1.44", default-features = false, optional = true }
 thiserror = { version = "2", default-features = false }
 
@@ -50,8 +47,6 @@ serde = ["dep:serde", "heapless/serde", "bytes/serde"]
 # Derives serde Deserialize for owned SMPP types. This will allow to create unchecked SMPP values from arbitrary serialized data, which may not be valid SMPP values.
 serde-deserialize-unchecked = ["dep:serde", "heapless/serde", "bytes/serde"]
 
-# Implements tokio's util codec Encoder/Decoder traits for the CommandCodec.
-tokio-codec = ["alloc", "dep:tokio-util"]
 # Implements framez' Encoder/Decoder traits for the CommandCodec.
 framez = ["dep:framez"]
 

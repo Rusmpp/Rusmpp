@@ -18,7 +18,7 @@
 #[cfg(any(test, feature = "alloc"))]
 extern crate alloc;
 
-#[cfg(any(test, feature = "arbitrary", feature = "tokio-codec"))]
+#[cfg(any(test, feature = "arbitrary", feature = "test"))]
 extern crate std;
 
 pub mod pdus;
@@ -48,16 +48,12 @@ pub mod tests;
 
 pub(crate) mod formatter;
 
-#[cfg(any(feature = "framez", feature = "tokio-codec"))]
+#[cfg(feature = "framez")]
 pub(crate) mod logging;
 
 #[cfg(feature = "framez")]
 #[cfg_attr(docsrs, doc(cfg(feature = "framez")))]
 pub mod framez;
-
-#[cfg(feature = "tokio-codec")]
-#[cfg_attr(docsrs, doc(cfg(feature = "tokio-codec")))]
-pub mod tokio_codec;
 
 pub mod udhs;
 

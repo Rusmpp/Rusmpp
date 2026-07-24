@@ -16,10 +16,11 @@ use rusmpp_core::{
     pdus::owned::*,
     tests::owned::test_commands,
     tlvs::owned::{BroadcastRequestTlvValue, MessageSubmissionRequestTlvValue},
-    tokio_codec::{CommandCodec, DecodeError},
     types::owned::{AnyOctetString, COctetString, OctetString},
     values::{owned::*, *},
 };
+
+use crate::{CommandCodec, error::DecodeError};
 
 /// Encode and decode every possible test command created using [`TestInstance`](crate::tests::TestInstance).
 #[tokio::test]
