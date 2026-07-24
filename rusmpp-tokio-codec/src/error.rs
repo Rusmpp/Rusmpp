@@ -47,9 +47,19 @@ pub enum DecodeError {
     /// Decode error.
     Decode(std::boxed::Box<CommandDecodeError>),
     /// Minimum command length not met.
-    MinLength { actual: usize, min: usize },
+    MinLength {
+        /// The actual length of the command.
+        actual: usize,
+        /// The minimum required length of the command.
+        min: usize,
+    },
     /// Maximum command length exceeded.
-    MaxLength { actual: usize, max: usize },
+    MaxLength {
+        /// The actual length of the command.
+        actual: usize,
+        /// The maximum allowed length of the command.
+        max: usize,
+    },
     /// Integral type conversion failed.
     InvalidLength(TryFromIntError),
 }

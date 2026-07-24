@@ -2,6 +2,12 @@
 name = "rusmpp-tokio-codec"
 version = "0.1.0"
 edition = "2024"
+description = "Tokio codec implementation for rusmpp."
+authors = ["Jad K. Haddad <jadkhaddad@gmail.com>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/Rusmpp/Rusmpp"
+readme = "Readme.md"
+keywords = ["smpp", "smsc", "messaging", "networking", "protocol"]
 
 [dependencies]
 rusmpp-core = { path = "../rusmpp-core", version = "0.4.0", default-features = false, features = [
@@ -24,5 +30,6 @@ testcontainers = "0.27.3"
 
 [features]
 default = ["tracing"]
+
 # Enables logging via the `tracing` crate.
 tracing = ["dep:tracing"]

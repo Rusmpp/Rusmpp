@@ -42,17 +42,20 @@ impl CommandCodec {
         }
     }
 
+    /// Returns the maximum length of the command that can be decoded.
     #[inline]
     pub const fn max_length(&self) -> Option<usize> {
         self.max_length
     }
 
+    /// Sets the maximum length of the command that can be decoded.
     #[inline]
     pub fn with_max_length(mut self, max_length: usize) -> Self {
         self.max_length = Some(max_length);
         self
     }
 
+    /// Removes the maximum length of the command that can be decoded.
     #[inline]
     pub fn without_max_length(mut self) -> Self {
         self.max_length = None;
