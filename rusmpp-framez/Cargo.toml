@@ -1,0 +1,31 @@
+[package]
+name = "rusmpp-framez"
+version = "0.1.0"
+edition = "2024"
+description = "Framez codec implementation for rusmpp."
+authors = ["Jad K. Haddad <jadkhaddad@gmail.com>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/Rusmpp/Rusmpp"
+readme = "Readme.md"
+keywords = ["smpp", "smsc", "messaging", "networking", "protocol"]
+
+
+[dependencies]
+rusmpp-core = { path = "../rusmpp-core", version = "0.4.0", default-features = false }
+framez = { version = "0.4.0", default-features = false }
+tracing = { version = "0.1.44", default-features = false, optional = true }
+
+[dev-dependencies]
+rusmpp-core = { path = "../rusmpp-core", version = "0.4.0", default-features = false, features = [
+    "test",
+] }
+tokio = { version = "1", features = ["full"] }
+embedded-io-adapters = { version = "0.7.0", default-features = false, features = [
+    "tokio-1",
+] }
+
+[features]
+default = []
+
+# Enables logging via the `tracing` crate.
+tracing = ["dep:tracing"]
