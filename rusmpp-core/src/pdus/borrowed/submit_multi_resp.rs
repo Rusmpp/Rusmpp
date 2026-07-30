@@ -51,7 +51,7 @@ impl<'a, const N: usize> SubmitMultiResp<'a, N> {
         }
     }
 
-    pub fn no_unsuccess(&self) -> u8 {
+    pub const fn no_unsuccess(&self) -> u8 {
         self.no_unsuccess
     }
 
@@ -119,7 +119,7 @@ impl<'a, const N: usize> SubmitMultiRespBuilder<'a, N> {
         Self::default()
     }
 
-    pub fn message_id(mut self, message_id: COctetString<'a, 1, 65>) -> Self {
+    pub const fn message_id(mut self, message_id: COctetString<'a, 1, 65>) -> Self {
         self.inner.message_id = message_id;
         self
     }

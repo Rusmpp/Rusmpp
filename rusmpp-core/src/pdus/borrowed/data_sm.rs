@@ -140,52 +140,52 @@ impl<'a, const N: usize> DataSmBuilder<'a, N> {
         Default::default()
     }
 
-    pub fn service_type(mut self, service_type: ServiceType<'a>) -> Self {
+    pub const fn service_type(mut self, service_type: ServiceType<'a>) -> Self {
         self.inner.service_type = service_type;
         self
     }
 
-    pub fn source_addr_ton(mut self, source_addr_ton: Ton) -> Self {
+    pub const fn source_addr_ton(mut self, source_addr_ton: Ton) -> Self {
         self.inner.source_addr_ton = source_addr_ton;
         self
     }
 
-    pub fn source_addr_npi(mut self, source_addr_npi: Npi) -> Self {
+    pub const fn source_addr_npi(mut self, source_addr_npi: Npi) -> Self {
         self.inner.source_addr_npi = source_addr_npi;
         self
     }
 
-    pub fn source_addr(mut self, source_addr: COctetString<'a, 1, 21>) -> Self {
+    pub const fn source_addr(mut self, source_addr: COctetString<'a, 1, 21>) -> Self {
         self.inner.source_addr = source_addr;
         self
     }
 
-    pub fn dest_addr_ton(mut self, dest_addr_ton: Ton) -> Self {
+    pub const fn dest_addr_ton(mut self, dest_addr_ton: Ton) -> Self {
         self.inner.dest_addr_ton = dest_addr_ton;
         self
     }
 
-    pub fn dest_addr_npi(mut self, dest_addr_npi: Npi) -> Self {
+    pub const fn dest_addr_npi(mut self, dest_addr_npi: Npi) -> Self {
         self.inner.dest_addr_npi = dest_addr_npi;
         self
     }
 
-    pub fn destination_addr(mut self, destination_addr: COctetString<'a, 1, 21>) -> Self {
+    pub const fn destination_addr(mut self, destination_addr: COctetString<'a, 1, 21>) -> Self {
         self.inner.destination_addr = destination_addr;
         self
     }
 
-    pub fn esm_class(mut self, esm_class: EsmClass) -> Self {
+    pub const fn esm_class(mut self, esm_class: EsmClass) -> Self {
         self.inner.esm_class = esm_class;
         self
     }
 
-    pub fn registered_delivery(mut self, registered_delivery: RegisteredDelivery) -> Self {
+    pub const fn registered_delivery(mut self, registered_delivery: RegisteredDelivery) -> Self {
         self.inner.registered_delivery = registered_delivery;
         self
     }
 
-    pub fn data_coding(mut self, data_coding: DataCoding) -> Self {
+    pub const fn data_coding(mut self, data_coding: DataCoding) -> Self {
         self.inner.data_coding = data_coding;
         self
     }

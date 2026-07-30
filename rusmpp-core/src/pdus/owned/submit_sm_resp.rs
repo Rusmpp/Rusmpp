@@ -31,7 +31,7 @@ impl SubmitSmResp {
         Self { message_id, tlvs }
     }
 
-    pub fn message_id(&self) -> &COctetString<1, 65> {
+    pub const fn message_id(&self) -> &COctetString<1, 65> {
         &self.message_id
     }
 

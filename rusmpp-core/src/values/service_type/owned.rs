@@ -75,7 +75,7 @@ impl ServiceType {
     }
 
     /// Create a new [`ServiceType`] with a value of 0.
-    pub fn null() -> Self {
+    pub const fn null() -> Self {
         Self {
             value: COctetString::null(),
         }

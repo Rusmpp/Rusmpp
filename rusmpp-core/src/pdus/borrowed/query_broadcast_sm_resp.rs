@@ -73,7 +73,7 @@ impl<'a, const N: usize> QueryBroadcastSmRespBuilder<'a, N> {
         Self::default()
     }
 
-    pub fn message_id(mut self, message_id: COctetString<'a, 1, 65>) -> Self {
+    pub const fn message_id(mut self, message_id: COctetString<'a, 1, 65>) -> Self {
         self.inner.message_id = message_id;
         self
     }

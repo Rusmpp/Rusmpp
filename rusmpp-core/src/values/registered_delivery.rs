@@ -13,7 +13,7 @@ pub struct RegisteredDelivery {
 }
 
 impl RegisteredDelivery {
-    pub fn new(
+    pub const fn new(
         mc_delivery_receipt: MCDeliveryReceipt,
         sme_originated_acknowledgement: SmeOriginatedAcknowledgement,
         intermediate_notification: IntermediateNotification,
@@ -31,7 +31,7 @@ impl RegisteredDelivery {
     }
 
     /// Request all delivery receipts, acknowledgements and notifications
-    pub fn request_all() -> Self {
+    pub const fn request_all() -> Self {
         Self::new(
             MCDeliveryReceipt::McDeliveryReceiptRequestedWhereFinalDeliveryOutcomeIsSuccessOrFailure,
             SmeOriginatedAcknowledgement::BothDeliveryAndUserAcknowledgmentRequested,
@@ -40,19 +40,19 @@ impl RegisteredDelivery {
         )
     }
 
-    pub fn mc_delivery_receipt(&self) -> MCDeliveryReceipt {
+    pub const fn mc_delivery_receipt(&self) -> MCDeliveryReceipt {
         self.mc_delivery_receipt
     }
 
-    pub fn sme_originated_acknowledgement(&self) -> SmeOriginatedAcknowledgement {
+    pub const fn sme_originated_acknowledgement(&self) -> SmeOriginatedAcknowledgement {
         self.sme_originated_acknowledgement
     }
 
-    pub fn intermediate_notification(&self) -> IntermediateNotification {
+    pub const fn intermediate_notification(&self) -> IntermediateNotification {
         self.intermediate_notification
     }
 
-    pub fn other(&self) -> u8 {
+    pub const fn other(&self) -> u8 {
         self.other
     }
 }

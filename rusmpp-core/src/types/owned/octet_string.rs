@@ -88,7 +88,7 @@ impl<const MIN: usize, const MAX: usize> OctetString<MIN, MAX> {
     ///
     /// Equivalent to [`OctetString::empty`].
     #[inline]
-    pub fn null() -> Self {
+    pub const fn null() -> Self {
         Self::_ASSERT_VALID;
 
         Self::empty()
@@ -96,7 +96,7 @@ impl<const MIN: usize, const MAX: usize> OctetString<MIN, MAX> {
 
     /// Creates a new empty [`OctetString`].
     #[inline]
-    pub fn empty() -> Self {
+    pub const fn empty() -> Self {
         Self::_ASSERT_VALID;
 
         Self {
@@ -106,7 +106,7 @@ impl<const MIN: usize, const MAX: usize> OctetString<MIN, MAX> {
 
     /// Returns the number of bytes contained in the [`OctetString`].
     #[inline]
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.bytes.len()
     }
 
@@ -115,7 +115,7 @@ impl<const MIN: usize, const MAX: usize> OctetString<MIN, MAX> {
     /// An [`OctetString`] is considered empty if it
     /// contains no octets.
     #[inline]
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.bytes.is_empty()
     }
 

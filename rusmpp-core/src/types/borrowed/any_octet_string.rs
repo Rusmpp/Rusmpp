@@ -57,7 +57,7 @@ impl<'a> AnyOctetString<'a> {
 
     /// Interprets the [`AnyOctetString`] as &[`str`].
     #[inline]
-    pub fn to_str(&self) -> Result<&str, core::str::Utf8Error> {
+    pub const fn to_str(&self) -> Result<&str, core::str::Utf8Error> {
         core::str::from_utf8(self.bytes)
     }
 }

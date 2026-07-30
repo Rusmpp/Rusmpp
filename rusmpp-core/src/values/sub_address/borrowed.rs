@@ -15,7 +15,7 @@ pub struct Subaddress<'a> {
 }
 
 impl<'a> Subaddress<'a> {
-    pub fn new(tag: SubaddressTag, addr: OctetString<'a, 1, 22>) -> Self {
+    pub const fn new(tag: SubaddressTag, addr: OctetString<'a, 1, 22>) -> Self {
         Self { tag, addr }
     }
 }

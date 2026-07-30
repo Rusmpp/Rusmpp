@@ -2,7 +2,7 @@
 #![forbid(unsafe_code)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(missing_debug_implementations)]
-
+#![deny(clippy::missing_const_for_fn)]
 //! ## Features
 //!
 //! - `alloc`:  Enables the `alloc` crate.

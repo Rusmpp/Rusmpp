@@ -17,7 +17,7 @@ pub struct BroadcastAreaIdentifier {
 }
 
 impl BroadcastAreaIdentifier {
-    pub fn new(format: BroadcastAreaFormat, area: AnyOctetString) -> Self {
+    pub const fn new(format: BroadcastAreaFormat, area: AnyOctetString) -> Self {
         Self { format, area }
     }
 }

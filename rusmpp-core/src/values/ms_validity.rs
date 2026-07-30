@@ -11,7 +11,7 @@ pub struct MsValidity {
 }
 
 impl MsValidity {
-    pub fn new(
+    pub const fn new(
         validity_behavior: MsValidityBehavior,
         validity_information: Option<MsValidityInformation>,
     ) -> Self {
@@ -32,7 +32,7 @@ pub struct MsValidityInformation {
 }
 
 impl MsValidityInformation {
-    pub fn new(units_of_time: UnitsOfTime, number_of_time_units: u16) -> Self {
+    pub const fn new(units_of_time: UnitsOfTime, number_of_time_units: u16) -> Self {
         Self {
             units_of_time,
             number_of_time_units,

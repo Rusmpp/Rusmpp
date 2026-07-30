@@ -99,7 +99,7 @@ pub struct CancelSm {
 
 impl CancelSm {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(
+    pub const fn new(
         service_type: ServiceType,
         message_id: COctetString<1, 65>,
         source_addr_ton: Ton,
@@ -152,12 +152,12 @@ impl CancelSmBuilder {
         self
     }
 
-    pub fn source_addr_ton(mut self, source_addr_ton: Ton) -> Self {
+    pub const fn source_addr_ton(mut self, source_addr_ton: Ton) -> Self {
         self.inner.source_addr_ton = source_addr_ton;
         self
     }
 
-    pub fn source_addr_npi(mut self, source_addr_npi: Npi) -> Self {
+    pub const fn source_addr_npi(mut self, source_addr_npi: Npi) -> Self {
         self.inner.source_addr_npi = source_addr_npi;
         self
     }
@@ -167,12 +167,12 @@ impl CancelSmBuilder {
         self
     }
 
-    pub fn dest_addr_ton(mut self, dest_addr_ton: Ton) -> Self {
+    pub const fn dest_addr_ton(mut self, dest_addr_ton: Ton) -> Self {
         self.inner.dest_addr_ton = dest_addr_ton;
         self
     }
 
-    pub fn dest_addr_npi(mut self, dest_addr_npi: Npi) -> Self {
+    pub const fn dest_addr_npi(mut self, dest_addr_npi: Npi) -> Self {
         self.inner.dest_addr_npi = dest_addr_npi;
         self
     }

@@ -34,7 +34,7 @@ pub struct QuerySmResp<'a> {
 }
 
 impl<'a> QuerySmResp<'a> {
-    pub fn new(
+    pub const fn new(
         message_id: COctetString<'a, 1, 65>,
         final_date: EmptyOrFullCOctetString<'a, 17>,
         message_state: MessageState,
@@ -69,27 +69,27 @@ impl<'a> QuerySmRespBuilder<'a> {
         Self::default()
     }
 
-    pub fn message_id(mut self, message_id: COctetString<'a, 1, 65>) -> Self {
+    pub const fn message_id(mut self, message_id: COctetString<'a, 1, 65>) -> Self {
         self.inner.message_id = message_id;
         self
     }
 
-    pub fn final_date(mut self, final_date: EmptyOrFullCOctetString<'a, 17>) -> Self {
+    pub const fn final_date(mut self, final_date: EmptyOrFullCOctetString<'a, 17>) -> Self {
         self.inner.final_date = final_date;
         self
     }
 
-    pub fn message_state(mut self, message_state: MessageState) -> Self {
+    pub const fn message_state(mut self, message_state: MessageState) -> Self {
         self.inner.message_state = message_state;
         self
     }
 
-    pub fn error_code(mut self, error_code: u8) -> Self {
+    pub const fn error_code(mut self, error_code: u8) -> Self {
         self.inner.error_code = error_code;
         self
     }
 
-    pub fn build(self) -> QuerySmResp<'a> {
+    pub const fn build(self) -> QuerySmResp<'a> {
         self.inner
     }
 }

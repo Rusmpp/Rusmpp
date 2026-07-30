@@ -123,7 +123,7 @@ impl<const MIN: usize, const MAX: usize> COctetString<MIN, MAX> {
     ///
     /// Equivalent to [`COctetString::empty`].
     #[inline]
-    pub fn null() -> Self {
+    pub const fn null() -> Self {
         Self::_ASSERT_VALID;
 
         Self::empty()
@@ -131,7 +131,7 @@ impl<const MIN: usize, const MAX: usize> COctetString<MIN, MAX> {
 
     /// Creates a new empty [`COctetString`].
     #[inline]
-    pub fn empty() -> Self {
+    pub const fn empty() -> Self {
         Self::_ASSERT_VALID;
 
         Self {
@@ -141,7 +141,7 @@ impl<const MIN: usize, const MAX: usize> COctetString<MIN, MAX> {
 
     /// Returns the number of bytes contained in the [`COctetString`] including the null terminator.
     #[inline]
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.bytes.len()
     }
 
@@ -150,7 +150,7 @@ impl<const MIN: usize, const MAX: usize> COctetString<MIN, MAX> {
     /// A [`COctetString`] is considered empty if it
     /// contains only a single NULL octet (0x00).
     #[inline]
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.len() == 1
     }
 
@@ -233,7 +233,7 @@ impl<const MIN: usize, const MAX: usize> COctetString<MIN, MAX> {
 
     /// Creates a new [`COctetString`] from `&'static [u8]` without checking the length and the null terminator.
     #[inline]
-    pub(crate) fn from_static_slice_unchecked(bytes: &'static [u8]) -> Self {
+    pub(crate) const fn from_static_slice_unchecked(bytes: &'static [u8]) -> Self {
         Self::_ASSERT_VALID;
 
         Self {

@@ -31,7 +31,7 @@ impl<'a, const N: usize> SubmitSmResp<'a, N> {
         Self { message_id, tlvs }
     }
 
-    pub fn message_id(&'_ self) -> &'_ COctetString<'_, 1, 65> {
+    pub const fn message_id(&'_ self) -> &'_ COctetString<'_, 1, 65> {
         &self.message_id
     }
 
@@ -76,7 +76,7 @@ impl<'a, const N: usize> SubmitSmRespBuilder<'a, N> {
         Self::default()
     }
 
-    pub fn message_id(mut self, message_id: COctetString<'a, 1, 65>) -> Self {
+    pub const fn message_id(mut self, message_id: COctetString<'a, 1, 65>) -> Self {
         self.inner.message_id = message_id;
         self
     }

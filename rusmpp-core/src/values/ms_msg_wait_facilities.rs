@@ -11,7 +11,7 @@ pub struct MsMsgWaitFacilities {
 }
 
 impl MsMsgWaitFacilities {
-    pub fn new(indicator: Indicator, type_of_message: TypeOfMessage) -> Self {
+    pub const fn new(indicator: Indicator, type_of_message: TypeOfMessage) -> Self {
         Self {
             indicator,
             type_of_message,

@@ -117,7 +117,7 @@ impl<'a> ReplaceSm<'a> {
         self.sm_length
     }
 
-    pub fn short_message(&'_ self) -> &'_ OctetString<'_, 0, 255> {
+    pub const fn short_message(&'_ self) -> &'_ OctetString<'_, 0, 255> {
         &self.short_message
     }
 
@@ -177,27 +177,27 @@ impl<'a> ReplaceSmBuilder<'a> {
         Self::default()
     }
 
-    pub fn message_id(mut self, message_id: COctetString<'a, 1, 65>) -> Self {
+    pub const fn message_id(mut self, message_id: COctetString<'a, 1, 65>) -> Self {
         self.inner.message_id = message_id;
         self
     }
 
-    pub fn source_addr_ton(mut self, source_addr_ton: Ton) -> Self {
+    pub const fn source_addr_ton(mut self, source_addr_ton: Ton) -> Self {
         self.inner.source_addr_ton = source_addr_ton;
         self
     }
 
-    pub fn source_addr_npi(mut self, source_addr_npi: Npi) -> Self {
+    pub const fn source_addr_npi(mut self, source_addr_npi: Npi) -> Self {
         self.inner.source_addr_npi = source_addr_npi;
         self
     }
 
-    pub fn source_addr(mut self, source_addr: COctetString<'a, 1, 21>) -> Self {
+    pub const fn source_addr(mut self, source_addr: COctetString<'a, 1, 21>) -> Self {
         self.inner.source_addr = source_addr;
         self
     }
 
-    pub fn schedule_delivery_time(
+    pub const fn schedule_delivery_time(
         mut self,
         schedule_delivery_time: EmptyOrFullCOctetString<'a, 17>,
     ) -> Self {
@@ -205,17 +205,20 @@ impl<'a> ReplaceSmBuilder<'a> {
         self
     }
 
-    pub fn validity_period(mut self, validity_period: EmptyOrFullCOctetString<'a, 17>) -> Self {
+    pub const fn validity_period(
+        mut self,
+        validity_period: EmptyOrFullCOctetString<'a, 17>,
+    ) -> Self {
         self.inner.validity_period = validity_period;
         self
     }
 
-    pub fn registered_delivery(mut self, registered_delivery: RegisteredDelivery) -> Self {
+    pub const fn registered_delivery(mut self, registered_delivery: RegisteredDelivery) -> Self {
         self.inner.registered_delivery = registered_delivery;
         self
     }
 
-    pub fn sm_default_msg_id(mut self, sm_default_msg_id: u8) -> Self {
+    pub const fn sm_default_msg_id(mut self, sm_default_msg_id: u8) -> Self {
         self.inner.sm_default_msg_id = sm_default_msg_id;
         self
     }
@@ -230,7 +233,7 @@ impl<'a> ReplaceSmBuilder<'a> {
         self
     }
 
-    pub fn build(self) -> ReplaceSm<'a> {
+    pub const fn build(self) -> ReplaceSm<'a> {
         self.inner
     }
 }

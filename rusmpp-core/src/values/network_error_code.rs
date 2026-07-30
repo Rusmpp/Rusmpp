@@ -10,7 +10,7 @@ pub struct NetworkErrorCode {
 }
 
 impl NetworkErrorCode {
-    pub fn new(network_type: ErrorCodeNetworkType, error_code: u16) -> Self {
+    pub const fn new(network_type: ErrorCodeNetworkType, error_code: u16) -> Self {
         Self {
             network_type,
             error_code,

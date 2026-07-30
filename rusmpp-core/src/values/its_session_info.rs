@@ -10,7 +10,7 @@ pub struct ItsSessionInfo {
 }
 
 impl ItsSessionInfo {
-    pub fn new(session_number: u8, sequence_number: u8) -> Self {
+    pub const fn new(session_number: u8, sequence_number: u8) -> Self {
         Self {
             session_number,
             sequence_number,

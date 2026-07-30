@@ -11,7 +11,7 @@ pub struct PriorityFlag {
 }
 
 impl PriorityFlag {
-    pub fn new(value: u8) -> Self {
+    pub const fn new(value: u8) -> Self {
         Self { value }
     }
 }

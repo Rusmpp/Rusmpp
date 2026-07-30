@@ -11,7 +11,7 @@ pub struct CallbackNumPresInd {
 }
 
 impl CallbackNumPresInd {
-    pub fn new(presentation: Presentation, screening: Screening) -> Self {
+    pub const fn new(presentation: Presentation, screening: Screening) -> Self {
         Self {
             presentation,
             screening,

@@ -47,7 +47,7 @@ pub struct QuerySm {
 }
 
 impl QuerySm {
-    pub fn new(
+    pub const fn new(
         message_id: COctetString<1, 65>,
         source_addr_ton: Ton,
         source_addr_npi: Npi,
@@ -87,12 +87,12 @@ impl QuerySmBuilder {
         self
     }
 
-    pub fn source_addr_ton(mut self, source_addr_ton: Ton) -> Self {
+    pub const fn source_addr_ton(mut self, source_addr_ton: Ton) -> Self {
         self.inner.source_addr_ton = source_addr_ton;
         self
     }
 
-    pub fn source_addr_npi(mut self, source_addr_npi: Npi) -> Self {
+    pub const fn source_addr_npi(mut self, source_addr_npi: Npi) -> Self {
         self.inner.source_addr_npi = source_addr_npi;
         self
     }

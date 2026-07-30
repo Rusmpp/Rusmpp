@@ -98,7 +98,7 @@ pub struct CancelSm<'a> {
 
 impl<'a> CancelSm<'a> {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(
+    pub const fn new(
         service_type: ServiceType<'a>,
         message_id: COctetString<'a, 1, 65>,
         source_addr_ton: Ton,
@@ -141,47 +141,47 @@ impl<'a> CancelSmBuilder<'a> {
         Self::default()
     }
 
-    pub fn service_type(mut self, service_type: ServiceType<'a>) -> Self {
+    pub const fn service_type(mut self, service_type: ServiceType<'a>) -> Self {
         self.inner.service_type = service_type;
         self
     }
 
-    pub fn message_id(mut self, message_id: COctetString<'a, 1, 65>) -> Self {
+    pub const fn message_id(mut self, message_id: COctetString<'a, 1, 65>) -> Self {
         self.inner.message_id = message_id;
         self
     }
 
-    pub fn source_addr_ton(mut self, source_addr_ton: Ton) -> Self {
+    pub const fn source_addr_ton(mut self, source_addr_ton: Ton) -> Self {
         self.inner.source_addr_ton = source_addr_ton;
         self
     }
 
-    pub fn source_addr_npi(mut self, source_addr_npi: Npi) -> Self {
+    pub const fn source_addr_npi(mut self, source_addr_npi: Npi) -> Self {
         self.inner.source_addr_npi = source_addr_npi;
         self
     }
 
-    pub fn source_addr(mut self, source_addr: COctetString<'a, 1, 21>) -> Self {
+    pub const fn source_addr(mut self, source_addr: COctetString<'a, 1, 21>) -> Self {
         self.inner.source_addr = source_addr;
         self
     }
 
-    pub fn dest_addr_ton(mut self, dest_addr_ton: Ton) -> Self {
+    pub const fn dest_addr_ton(mut self, dest_addr_ton: Ton) -> Self {
         self.inner.dest_addr_ton = dest_addr_ton;
         self
     }
 
-    pub fn dest_addr_npi(mut self, dest_addr_npi: Npi) -> Self {
+    pub const fn dest_addr_npi(mut self, dest_addr_npi: Npi) -> Self {
         self.inner.dest_addr_npi = dest_addr_npi;
         self
     }
 
-    pub fn destination_addr(mut self, destination_addr: COctetString<'a, 1, 21>) -> Self {
+    pub const fn destination_addr(mut self, destination_addr: COctetString<'a, 1, 21>) -> Self {
         self.inner.destination_addr = destination_addr;
         self
     }
 
-    pub fn build(self) -> CancelSm<'a> {
+    pub const fn build(self) -> CancelSm<'a> {
         self.inner
     }
 }

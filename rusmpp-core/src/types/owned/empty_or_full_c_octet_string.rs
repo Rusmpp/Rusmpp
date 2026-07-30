@@ -72,7 +72,7 @@ impl<const N: usize> EmptyOrFullCOctetString<N> {
     ///
     /// Equivalent to [`EmptyOrFullCOctetString::empty`].
     #[inline]
-    pub fn null() -> Self {
+    pub const fn null() -> Self {
         Self::_ASSERT_VALID;
 
         Self::empty()
@@ -80,7 +80,7 @@ impl<const N: usize> EmptyOrFullCOctetString<N> {
 
     /// Creates a new empty [`EmptyOrFullCOctetString`].
     #[inline]
-    pub fn empty() -> Self {
+    pub const fn empty() -> Self {
         Self::_ASSERT_VALID;
 
         Self {
@@ -90,7 +90,7 @@ impl<const N: usize> EmptyOrFullCOctetString<N> {
 
     /// Returns the number of bytes contained in the [`EmptyOrFullCOctetString`] including the null terminator.
     #[inline]
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.bytes.len()
     }
 
@@ -99,7 +99,7 @@ impl<const N: usize> EmptyOrFullCOctetString<N> {
     /// An [`EmptyOrFullCOctetString`] is considered empty if it
     /// contains only a single NULL octet `(0x00)`.
     #[inline]
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.len() == 1
     }
 
