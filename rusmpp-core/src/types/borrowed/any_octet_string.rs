@@ -65,7 +65,7 @@ impl<'a> AnyOctetString<'a> {
 impl core::fmt::Debug for AnyOctetString<'_> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("AnyOctetString")
-            .field("bytes", &crate::formatter::Formatter(self.bytes))
+            .field("bytes", &self.bytes)
             .field("string", &self.to_str().unwrap_or("<invalid utf-8>"))
             .finish()
     }

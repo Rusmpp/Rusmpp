@@ -282,7 +282,7 @@ impl<const MIN: usize, const MAX: usize> Default for COctetString<MIN, MAX> {
 impl<const MIN: usize, const MAX: usize> core::fmt::Debug for COctetString<MIN, MAX> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("COctetString")
-            .field("bytes", &crate::formatter::Formatter(&self.bytes))
+            .field("bytes", &self.bytes)
             .field("string", &self.to_string())
             .finish()
     }

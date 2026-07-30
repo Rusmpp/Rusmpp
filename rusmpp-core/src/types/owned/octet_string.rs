@@ -220,7 +220,7 @@ impl<const MIN: usize, const MAX: usize> From<OctetString<MIN, MAX>> for Vec<u8>
 impl<const MIN: usize, const MAX: usize> core::fmt::Debug for OctetString<MIN, MAX> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("OctetString")
-            .field("bytes", &crate::formatter::Formatter(&self.bytes))
+            .field("bytes", &self.bytes)
             .field("string", &self.to_string())
             .finish()
     }

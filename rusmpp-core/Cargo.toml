@@ -21,19 +21,12 @@ serde = { version = "1", default-features = false, features = [
     "derive",
 ], optional = true }
 pastey = "0.2.1"
-framez = { version = "0.4.0", default-features = false, optional = true }
-tracing = { version = "0.1.44", default-features = false, optional = true }
 thiserror = { version = "2", default-features = false }
 
 [dev-dependencies]
 strum = "0.28.0"
 strum_macros = "0.28.0"
-tokio = { version = "1", features = ["full"] }
-futures = "0.3.32"
-testcontainers = "0.27.3"
-embedded-io-adapters = { version = "0.7.0", default-features = false, features = [
-    "tokio-1",
-] }
+
 
 [features]
 default = []
@@ -41,25 +34,12 @@ default = []
 alloc = ["serde/alloc", "dep:bytes"]
 # Implements arbitrary's Arbitrary trait for fuzz testing.
 arbitrary = ["dep:arbitrary"]
-
 # Derives serde Serialize for all SMPP types.
 serde = ["dep:serde", "heapless/serde", "bytes/serde"]
 # Derives serde Deserialize for owned SMPP types. This will allow to create unchecked SMPP values from arbitrary serialized data, which may not be valid SMPP values.
 serde-deserialize-unchecked = ["dep:serde", "heapless/serde", "bytes/serde"]
-
-# Implements framez' Encoder/Decoder traits for the CommandCodec.
-framez = ["dep:framez"]
-
-# Enables logging via the `tracing` crate.
-tracing = ["dep:tracing"]
-
 # Exposes test utilities for the `rusmpp-core`.
 test = []
-
-# Prints byte slices like: [0x00, 0x00, 0x00, 0x6F] instead of [00, 00, 00, 6F].
-pretty-hex-fmt = []
-# Prints byte slices as characters.
-char-fmt = []
 
 [package.metadata.docs.rs]
 all-features = true
