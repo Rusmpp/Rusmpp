@@ -36,6 +36,12 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [[example]]
+name = "submit_sm_sar_multipart"
+path = "examples/submit_sm_sar_multipart.rs"
+required-features = ["alloc", "concatenation"]
+
+
+[[example]]
 name = "submit_sm_multipart"
 path = "examples/submit_sm_multipart.rs"
 required-features = ["alloc", "concatenation"]

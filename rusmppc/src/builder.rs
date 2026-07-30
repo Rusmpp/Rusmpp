@@ -74,6 +74,13 @@ impl DefaultConnectionBuilder {
             _r: std::marker::PhantomData,
         }
     }
+
+    /// Creates a new [`ConnectionBuilder`] with default configurations.
+    ///
+    /// See [`new`](Self::new) for more details.
+    pub fn new_tokio() -> Self {
+        Self::new()
+    }
 }
 
 impl Default for ConnectionBuilder<DefaultEventChannel, Wasm, Wasm, Wasm> {
@@ -232,9 +239,9 @@ impl<E: EventChannel, D: Delay, T: Timeout> ConnectionBuilder<E, D, T, Wasm> {
 }
 
 #[cfg(feature = "tokio")]
-impl<E: EventChannel, D: Delay, T: Timeout, R> ConnectionBuilder<E, D, T, R> {
+impl<E: EventChannel> ConnectionBuilder<E, Tokio, Tokio, Tokio> {
     /// Creates a managed connection builder that handles reconnection automatically.
-    pub fn managed(self) -> crate::managed_::UnboundManagedConnectionBuilder<E, D, T, R>
+    pub fn managed(self) -> crate::managed_::UnboundManagedConnectionBuilder<E>
     where
         E: EventChannel + Clone + Send + Sync + 'static,
         E::Event: Send + Sync + 'static,

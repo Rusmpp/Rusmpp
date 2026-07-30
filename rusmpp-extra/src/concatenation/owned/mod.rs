@@ -7,6 +7,6 @@ mod concatenator;
 pub use concatenator::Concatenator;
 
 mod multipart;
-pub use multipart::{SubmitSmMultipartBuilder, SubmitSmMultipartExt};
+pub use multipart::{SubmitSmMultipartBuilder, SubmitSmMultipartExt, SubmitSmSarMultipartBuilder};
 
 mod fallback;
