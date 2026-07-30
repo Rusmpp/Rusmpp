@@ -3,12 +3,12 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(missing_debug_implementations)]
 
+//! A `zerocopy` Rust implementation of the [SMPP v5](https://smpp.org/SMPP_v5.pdf) protocol.
+//!
 //! ## Features
 //!
 //! - `framez`: Implements [`framez`](https://docs.rs/framez/latest/framez/index.html) [`Encoder`](https://docs.rs/framez/latest/framez/encode/trait.Encoder.html) and [`Decoder`](https://docs.rs/framez/latest/framez/decode/trait.Decoder.html) traits.
 //! - `tracing`: Enables logging using [`tracing`](https://docs.rs/tracing/latest/tracing/).
-//! - `pretty-hex-fmt`: Logs byte slices like `[0x00, 0x00, 0x00, 0x6F]` instead of `[00, 00, 00, 6F]`, if `tracing` feature is enabled.
-//! - `char-fmt`: Logs byte slices as characters, if `tracing` feature is enabled.
 
 #[cfg(feature = "framez")]
 #[cfg_attr(docsrs, doc(cfg(feature = "framez")))]

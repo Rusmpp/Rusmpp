@@ -9,17 +9,18 @@ use testcontainers::{
 use tokio::{io::AsyncWriteExt, net::TcpStream};
 use tokio_util::codec::{Framed, FramedRead, FramedWrite};
 
-use crate::{
+use rusmpp_core::{
     CommandStatus,
     command::owned::Command,
     encode::{Encode, Length},
     pdus::owned::*,
     tests::owned::test_commands,
     tlvs::owned::{BroadcastRequestTlvValue, MessageSubmissionRequestTlvValue},
-    tokio_codec::{CommandCodec, DecodeError},
     types::owned::{AnyOctetString, COctetString, OctetString},
     values::{owned::*, *},
 };
+
+use crate::{CommandCodec, error::DecodeError};
 
 /// Encode and decode every possible test command created using [`TestInstance`](crate::tests::TestInstance).
 #[tokio::test]

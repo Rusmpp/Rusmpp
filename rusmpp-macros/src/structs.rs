@@ -921,7 +921,7 @@ fn quote_test(input: &DeriveInput, test_attrs: &TestAttributes) -> TokenStream {
             let (impl_generics, ty_generics, where_clause) = &input.generics.split_for_impl();
 
             quote! {
-                #[cfg(test)]
+                #[cfg(any(test, feature = "test"))]
                 impl #impl_generics crate::tests::TestInstance for #name #ty_generics #where_clause {
                     fn instances() -> alloc::vec::Vec<Self> {
                         alloc::vec![Self::default(),]

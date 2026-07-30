@@ -8,6 +8,9 @@ members = [
     "rusmppy/rusmppyc",
     "rusmppz",
     "rusmpp-core",
-    "rusmpp-macros", "rusmpp-extra",
+    "rusmpp-macros",
+    "rusmpp-extra",
+    "rusmpp-tokio-codec",
+    "rusmpp-framez",
 ]
 default-members = ["rusmpp"]

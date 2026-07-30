@@ -4,7 +4,7 @@ use crate::{
     CommandId,
     command::borrowed::Command,
     decode::borrowed::{Decode, DecodeWithLength},
-    encode::{Encode, Length},
+    encode::Encode,
     pdus::borrowed::*,
     tests::TestInstance,
     types::borrowed::AnyOctetString,
@@ -141,6 +141,8 @@ pub fn test_commands() -> alloc::vec::Vec<Command<'static, 16>> {
 #[test]
 #[ignore = "observation test"]
 fn print_decode_errors() {
+    use crate::encode::Length;
+
     let mut buf = [0u8; 1024];
 
     for command in test_commands() {

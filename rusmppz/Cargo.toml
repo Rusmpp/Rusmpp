@@ -11,9 +11,8 @@ readme = "Readme.md"
 keywords = ["smpp", "smsc", "messaging", "networking", "protocol"]
 
 [dependencies]
-rusmpp-core = { path = "../rusmpp-core", version = "0.4.0", default-features = false, features = [
-    "framez",
-] }
+rusmpp-core = { path = "../rusmpp-core", version = "0.4.0", default-features = false }
+rusmpp-framez = { path = "../rusmpp-framez", version = "0.1.0", default-features = false, optional = true }
 
 [dev-dependencies]
 embedded-io-adapters = { version = "0.7.0", default-features = false, features = [
@@ -27,13 +26,9 @@ framez = { version = "0.4.0", default-features = false, features = ["tracing"] }
 [features]
 default = ["framez"]
 # Implements framez' Encoder/Decoder traits.
-framez = ["rusmpp-core/framez"]
-# Prints byte slices like: [0x00, 0x00, 0x00, 0x6F] instead of [00, 00, 00, 6F].
-pretty-hex-fmt = ["rusmpp-core/pretty-hex-fmt"]
-# Prints byte slices as characters.
-char-fmt = ["rusmpp-core/char-fmt"]
+framez = ["dep:rusmpp-framez"]
 # Enables logging via the `tracing` crate.
-tracing = ["rusmpp-core/tracing"]
+tracing = ["rusmpp-framez/tracing"]
 
 [[example]]
 name = "rusmppz_client_server"

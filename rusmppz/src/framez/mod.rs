@@ -1,3 +1,3 @@
 //! Codec for encoding and decoding `SMPP` PDUs.
 
-pub use rusmpp_core::framez::*;
+pub use rusmpp_framez::*;

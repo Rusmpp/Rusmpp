@@ -2730,6 +2730,7 @@ dependencies = [
  "futures",
  "rusmpp-core",
  "rusmpp-extra",
+ "rusmpp-tokio-codec",
  "tokio",
  "tokio-util",
  "tracing",
@@ -2742,20 +2743,13 @@ version = "0.4.0"
 dependencies = [
  "arbitrary",
  "bytes",
- "embedded-io-adapters",
- "framez",
- "futures",
  "heapless",
  "pastey",
  "rusmpp-macros",
  "serde",
  "strum",
  "strum_macros",
- "testcontainers",
  "thiserror 2.0.17",
- "tokio",
- "tokio-util",
- "tracing",
 ]
 
 [[package]]
@@ -2770,6 +2764,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "rusmpp-framez"
+version = "0.1.0"
+dependencies = [
+ "embedded-io-adapters",
+ "framez",
+ "rusmpp-core",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "rusmpp-macros"
 version = "0.2.0"
 dependencies = [
@@ -2777,6 +2782,19 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.117",
+]
+
+[[package]]
+name = "rusmpp-tokio-codec"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "futures",
+ "rusmpp-core",
+ "testcontainers",
+ "tokio",
+ "tokio-util",
+ "tracing",
 ]
 
 [[package]]
@@ -2868,6 +2886,7 @@ dependencies = [
  "embedded-io-adapters",
  "framez",
  "rusmpp-core",
+ "rusmpp-framez",
  "tokio",
  "tracing",
  "tracing-subscriber",

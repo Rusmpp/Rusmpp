@@ -3,13 +3,11 @@ use framez::{FramedRead, FramedWrite, ReadError, next};
 
 use tokio::io::AsyncWriteExt;
 
-use crate::{
-    command::borrowed::Command,
-    encode::Encode,
-    framez::{CommandCodec, DecodeError},
-    pdus::borrowed::*,
-    tests::borrowed::test_commands,
+use rusmpp_core::{
+    command::borrowed::Command, encode::Encode, pdus::borrowed::*, tests::borrowed::test_commands,
 };
+
+use crate::{CommandCodec, error::DecodeError};
 
 /// Encode and decode every possible test command created using [`TestInstance`](crate::tests::TestInstance).
 #[tokio::test]

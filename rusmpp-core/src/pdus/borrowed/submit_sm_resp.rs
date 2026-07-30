@@ -107,7 +107,7 @@ impl<'a, const N: usize> SubmitSmRespBuilder<'a, N> {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test"))]
 mod tests {
     use crate::{tests::TestInstance, values::*};
 

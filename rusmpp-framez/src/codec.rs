@@ -1,18 +1,17 @@
 //! Framez [`Encoder`] and [`Decoder`] implementations.
 
-use core::num::TryFromIntError;
-
 use framez::{decode::Decoder, encode::Encoder};
 
-use crate::{
+use rusmpp_core::{
     command::borrowed::Command,
     decode::borrowed::DecodeWithLength,
     encode::{Encode, Length},
-    logging::{debug, error, trace},
 };
 
-#[cfg(test)]
-mod tests;
+use crate::{
+    error::{DecodeError, EncodeError},
+    logging::{debug, error, trace},
+};
 
 /// Codec for encoding and decoding `SMPP` PDUs using [`Encoder`] and [`Decoder`] traits.
 #[derive(Debug)]
@@ -20,6 +19,7 @@ mod tests;
 pub struct CommandCodec<const N: usize> {}
 
 impl<const N: usize> CommandCodec<N> {
+    /// Creates a new [`CommandCodec`].
     pub const fn new() -> Self {
         Self {}
     }
@@ -30,24 +30,6 @@ impl<const N: usize> Default for CommandCodec<N> {
         Self::new()
     }
 }
-
-/// An error that can occur when encoding a [`Command`].
-#[derive(Debug)]
-#[non_exhaustive]
-pub enum EncodeError {
-    /// The input buffer is too small to fit the encoded [`Command`].
-    BufferTooSmall,
-}
-
-impl core::fmt::Display for EncodeError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::BufferTooSmall => write!(f, "Buffer too small"),
-        }
-    }
-}
-
-impl core::error::Error for EncodeError {}
 
 impl<'buf, const N: usize> Encoder<Command<'buf, N>> for CommandCodec<N> {
     type Error = EncodeError;
@@ -63,43 +45,11 @@ impl<'buf, const N: usize> Encoder<Command<'buf, N>> for CommandCodec<N> {
         let _ = item.encode(&mut dst[4..command_length]);
 
         debug!(target: "rusmpp::codec::encode", command=?item, "Encoding");
-        debug!(target: "rusmpp::codec::encode", encoded=?crate::formatter::Formatter(&dst[..command_length]), encoded_length=item.length(), command_length, "Encoded");
+        debug!(target: "rusmpp::codec::encode", encoded=?&dst[..command_length], encoded_length=item.length(), command_length, "Encoded");
 
         Ok(command_length)
     }
 }
-
-/// An error that can occur when decoding a [`Command`].
-#[derive(Debug)]
-#[non_exhaustive]
-pub enum DecodeError {
-    /// Decode error.
-    Decode(crate::decode::DecodeError),
-    /// Minimum command length not met.
-    MinLength { actual: usize, min: usize },
-    /// Integral type conversion failed.
-    InvalidLength(TryFromIntError),
-}
-
-impl core::fmt::Display for DecodeError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            DecodeError::Decode(e) => write!(f, "Decode error: {e}"),
-            DecodeError::MinLength { actual, min } => {
-                write!(
-                    f,
-                    "Minimum command length not met. actual: {actual}, min: {min}"
-                )
-            }
-
-            DecodeError::InvalidLength(e) => {
-                write!(f, "Integral type conversion failed: {e}")
-            }
-        }
-    }
-}
-
-impl core::error::Error for DecodeError {}
 
 impl<const N: usize> framez::decode::DecodeError for CommandCodec<N> {
     type Error = DecodeError;
@@ -144,7 +94,7 @@ impl<'buf, const N: usize> Decoder<'buf> for CommandCodec<N> {
         // command_length is at least 16 bytes
         let pdu_len = command_length - 4;
 
-        debug!(target: "rusmpp::codec::decode", decoding=?crate::formatter::Formatter(&src[..command_length]), "Decoding");
+        debug!(target: "rusmpp::codec::decode", decoding=?&src[..command_length], "Decoding");
 
         let (command, _size) = match Command::decode(&src[4..command_length], pdu_len) {
             Ok((command, size)) => {

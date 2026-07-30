@@ -232,7 +232,7 @@ impl<const N: usize> Default for EmptyOrFullCOctetString<N> {
 impl<const N: usize> core::fmt::Debug for EmptyOrFullCOctetString<N> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("EmptyOrFullCOctetString")
-            .field("bytes", &crate::formatter::Formatter(&self.bytes))
+            .field("bytes", &self.bytes)
             .field("string", &self.to_string())
             .finish()
     }

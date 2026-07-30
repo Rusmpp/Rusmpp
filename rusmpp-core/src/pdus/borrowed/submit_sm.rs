@@ -315,7 +315,7 @@ impl<'a, const N: usize> SubmitSmBuilder<'a, N> {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test"))]
 mod tests {
     use crate::{tests::TestInstance, types::borrowed::AnyOctetString};
 

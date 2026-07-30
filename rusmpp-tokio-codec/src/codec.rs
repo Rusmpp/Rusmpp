@@ -1,6 +1,4 @@
-//! Tokio's util [`Encoder`] and [`Decoder`] implementations for [`CommandCodec`].
-
-use core::num::TryFromIntError;
+//! Tokio's util [`Encoder`] and [`Decoder`] implementations.
 
 use bytes::Buf;
 use tokio_util::{
@@ -8,15 +6,16 @@ use tokio_util::{
     codec::{Decoder, Encoder},
 };
 
-use crate::{
-    command::owned::{Command, CommandDecodeError},
+use rusmpp_core::{
+    command::owned::Command,
     decode::owned::DecodeWithLength,
     encode::{Length, owned::Encode},
-    logging::{debug, error, trace},
 };
 
-#[cfg(test)]
-mod tests;
+use crate::{
+    error::{DecodeError, EncodeError},
+    logging::{debug, error, trace},
+};
 
 #[derive(Debug)]
 enum DecodeState {
@@ -43,19 +42,22 @@ impl CommandCodec {
         }
     }
 
+    /// Returns the maximum length of the command that can be decoded.
     #[inline]
     pub const fn max_length(&self) -> Option<usize> {
         self.max_length
     }
 
+    /// Sets the maximum length of the command that can be decoded.
     #[inline]
-    pub const fn with_max_length(mut self, max_length: usize) -> Self {
+    pub fn with_max_length(mut self, max_length: usize) -> Self {
         self.max_length = Some(max_length);
         self
     }
 
+    /// Removes the maximum length of the command that can be decoded.
     #[inline]
-    pub const fn without_max_length(mut self) -> Self {
+    pub fn without_max_length(mut self) -> Self {
         self.max_length = None;
         self
     }
@@ -79,40 +81,6 @@ impl Default for CommandCodec {
     }
 }
 
-/// An error that can occur when encoding a `Command`.
-#[derive(Debug)]
-#[non_exhaustive]
-pub enum EncodeError {
-    /// I/O error.
-    Io(std::io::Error),
-}
-
-impl From<std::io::Error> for EncodeError {
-    fn from(e: std::io::Error) -> Self {
-        EncodeError::Io(e)
-    }
-}
-
-impl core::fmt::Display for EncodeError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            EncodeError::Io(e) => write!(f, "I/O error: {e}"),
-        }
-    }
-}
-
-impl core::error::Error for EncodeError {
-    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
-        match self {
-            EncodeError::Io(e) => Some(e),
-        }
-    }
-
-    fn cause(&self) -> Option<&dyn core::error::Error> {
-        self.source()
-    }
-}
-
 impl Encoder<&Command> for CommandCodec {
     type Error = EncodeError;
 
@@ -124,7 +92,7 @@ impl Encoder<&Command> for CommandCodec {
         command.encode(dst);
 
         debug!(target: "rusmpp::codec::encode", command=?command, "Encoding");
-        debug!(target: "rusmpp::codec::encode", encoded=?crate::formatter::Formatter(&dst[..command_length]), encoded_length=command.length(), command_length, "Encoded");
+        debug!(target: "rusmpp::codec::encode", encoded=?&dst[..command_length], encoded_length=command.length(), command_length, "Encoded");
 
         Ok(())
     }
@@ -135,68 +103,6 @@ impl Encoder<Command> for CommandCodec {
 
     fn encode(&mut self, command: Command, dst: &mut BytesMut) -> Result<(), Self::Error> {
         self.encode(&command, dst)
-    }
-}
-
-/// An error that can occur when decoding a `Command`.
-#[derive(Debug)]
-#[non_exhaustive]
-pub enum DecodeError {
-    /// I/O error.
-    Io(std::io::Error),
-    /// Decode error.
-    Decode(std::boxed::Box<CommandDecodeError>),
-    /// Minimum command length not met.
-    MinLength { actual: usize, min: usize },
-    /// Maximum command length exceeded.
-    MaxLength { actual: usize, max: usize },
-    /// Integral type conversion failed.
-    InvalidLength(TryFromIntError),
-}
-
-impl From<std::io::Error> for DecodeError {
-    fn from(e: std::io::Error) -> Self {
-        DecodeError::Io(e)
-    }
-}
-
-impl core::fmt::Display for DecodeError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            DecodeError::Io(e) => write!(f, "I/O error: {e}"),
-            DecodeError::Decode(e) => write!(f, "Decode error: {e}"),
-            DecodeError::MinLength { actual, min } => {
-                write!(
-                    f,
-                    "Minimum command length not met. actual: {actual}, min: {min}"
-                )
-            }
-            DecodeError::MaxLength { actual, max } => {
-                write!(
-                    f,
-                    "Maximum command length exceeded. actual: {actual}, max: {max}"
-                )
-            }
-            DecodeError::InvalidLength(e) => {
-                write!(f, "Integral type conversion failed: {e}")
-            }
-        }
-    }
-}
-
-impl core::error::Error for DecodeError {
-    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
-        match self {
-            DecodeError::Io(e) => Some(e),
-            DecodeError::Decode(e) => Some(e),
-            DecodeError::MinLength { .. } => None,
-            DecodeError::MaxLength { .. } => None,
-            DecodeError::InvalidLength(e) => Some(e),
-        }
-    }
-
-    fn cause(&self) -> Option<&dyn core::error::Error> {
-        self.source()
     }
 }
 
@@ -262,7 +168,7 @@ impl Decoder for CommandCodec {
                         return Ok(None);
                     }
 
-                    debug!(target: "rusmpp::codec::decode", command_length, decode_length=pdu_length, decoding=?crate::formatter::Formatter(&src[..pdu_length]), "Decoding");
+                    debug!(target: "rusmpp::codec::decode", command_length, decode_length=pdu_length, decoding=?&src[..pdu_length], "Decoding");
 
                     let (command, _size) = match Command::decode(src, pdu_length) {
                         Ok((command, size)) => {
