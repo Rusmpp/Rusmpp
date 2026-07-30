@@ -21,7 +21,8 @@ jobs:
         os:
           - macos-latest
           - ubuntu-latest
-          - windows-latest
+          # Pin the windows-2022 version until aws-lc-rs supports windows-latest
+          - windows-2022
 
     runs-on: ${{ matrix.os }}
     steps:
