@@ -140,12 +140,12 @@ impl DataSmBuilder {
         self
     }
 
-    pub fn source_addr_ton(mut self, source_addr_ton: Ton) -> Self {
+    pub const fn source_addr_ton(mut self, source_addr_ton: Ton) -> Self {
         self.inner.source_addr_ton = source_addr_ton;
         self
     }
 
-    pub fn source_addr_npi(mut self, source_addr_npi: Npi) -> Self {
+    pub const fn source_addr_npi(mut self, source_addr_npi: Npi) -> Self {
         self.inner.source_addr_npi = source_addr_npi;
         self
     }
@@ -155,12 +155,12 @@ impl DataSmBuilder {
         self
     }
 
-    pub fn dest_addr_ton(mut self, dest_addr_ton: Ton) -> Self {
+    pub const fn dest_addr_ton(mut self, dest_addr_ton: Ton) -> Self {
         self.inner.dest_addr_ton = dest_addr_ton;
         self
     }
 
-    pub fn dest_addr_npi(mut self, dest_addr_npi: Npi) -> Self {
+    pub const fn dest_addr_npi(mut self, dest_addr_npi: Npi) -> Self {
         self.inner.dest_addr_npi = dest_addr_npi;
         self
     }
@@ -170,17 +170,17 @@ impl DataSmBuilder {
         self
     }
 
-    pub fn esm_class(mut self, esm_class: EsmClass) -> Self {
+    pub const fn esm_class(mut self, esm_class: EsmClass) -> Self {
         self.inner.esm_class = esm_class;
         self
     }
 
-    pub fn registered_delivery(mut self, registered_delivery: RegisteredDelivery) -> Self {
+    pub const fn registered_delivery(mut self, registered_delivery: RegisteredDelivery) -> Self {
         self.inner.registered_delivery = registered_delivery;
         self
     }
 
-    pub fn data_coding(mut self, data_coding: DataCoding) -> Self {
+    pub const fn data_coding(mut self, data_coding: DataCoding) -> Self {
         self.inner.data_coding = data_coding;
         self
     }

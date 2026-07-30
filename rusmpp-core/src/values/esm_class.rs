@@ -24,7 +24,7 @@ pub struct EsmClass {
 }
 
 impl EsmClass {
-    pub fn new(
+    pub const fn new(
         messaging_mode: MessagingMode,
         message_type: MessageType,
         ansi41_specific: Ansi41Specific,

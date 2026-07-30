@@ -228,12 +228,12 @@ impl SubmitMultiBuilder {
         self
     }
 
-    pub fn source_addr_ton(mut self, source_addr_ton: Ton) -> Self {
+    pub const fn source_addr_ton(mut self, source_addr_ton: Ton) -> Self {
         self.inner.source_addr_ton = source_addr_ton;
         self
     }
 
-    pub fn source_addr_npi(mut self, source_addr_npi: Npi) -> Self {
+    pub const fn source_addr_npi(mut self, source_addr_npi: Npi) -> Self {
         self.inner.source_addr_npi = source_addr_npi;
         self
     }
@@ -258,17 +258,17 @@ impl SubmitMultiBuilder {
         self
     }
 
-    pub fn esm_class(mut self, esm_class: EsmClass) -> Self {
+    pub const fn esm_class(mut self, esm_class: EsmClass) -> Self {
         self.inner.esm_class = esm_class;
         self
     }
 
-    pub fn protocol_id(mut self, protocol_id: u8) -> Self {
+    pub const fn protocol_id(mut self, protocol_id: u8) -> Self {
         self.inner.protocol_id = protocol_id;
         self
     }
 
-    pub fn priority_flag(mut self, priority_flag: PriorityFlag) -> Self {
+    pub const fn priority_flag(mut self, priority_flag: PriorityFlag) -> Self {
         self.inner.priority_flag = priority_flag;
         self
     }
@@ -286,12 +286,12 @@ impl SubmitMultiBuilder {
         self
     }
 
-    pub fn registered_delivery(mut self, registered_delivery: RegisteredDelivery) -> Self {
+    pub const fn registered_delivery(mut self, registered_delivery: RegisteredDelivery) -> Self {
         self.inner.registered_delivery = registered_delivery;
         self
     }
 
-    pub fn replace_if_present_flag(
+    pub const fn replace_if_present_flag(
         mut self,
         replace_if_present_flag: ReplaceIfPresentFlag,
     ) -> Self {
@@ -299,12 +299,12 @@ impl SubmitMultiBuilder {
         self
     }
 
-    pub fn data_coding(mut self, data_coding: DataCoding) -> Self {
+    pub const fn data_coding(mut self, data_coding: DataCoding) -> Self {
         self.inner.data_coding = data_coding;
         self
     }
 
-    pub fn sm_default_msg_id(mut self, sm_default_msg_id: u8) -> Self {
+    pub const fn sm_default_msg_id(mut self, sm_default_msg_id: u8) -> Self {
         self.inner.sm_default_msg_id = sm_default_msg_id;
         self
     }

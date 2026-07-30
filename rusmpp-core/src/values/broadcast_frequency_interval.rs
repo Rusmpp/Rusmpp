@@ -30,7 +30,7 @@ pub struct BroadcastFrequencyInterval {
 }
 
 impl BroadcastFrequencyInterval {
-    pub fn new(unit: UnitOfTime, value: u16) -> Self {
+    pub const fn new(unit: UnitOfTime, value: u16) -> Self {
         Self { unit, value }
     }
 }

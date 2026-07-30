@@ -50,7 +50,7 @@ impl SubmitMultiResp {
         }
     }
 
-    pub fn no_unsuccess(&self) -> u8 {
+    pub const fn no_unsuccess(&self) -> u8 {
         self.no_unsuccess
     }
 

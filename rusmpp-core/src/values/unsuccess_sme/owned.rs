@@ -34,7 +34,7 @@ impl Default for UnsuccessSme {
 }
 
 impl UnsuccessSme {
-    pub fn new(
+    pub const fn new(
         dest_addr_ton: Ton,
         dest_addr_npi: Npi,
         destination_addr: COctetString<1, 21>,

@@ -83,17 +83,17 @@ macro_rules! bind {
                     Self::default()
                 }
 
-                pub fn system_id(mut self, system_id: COctetString<'a, 1, 16>) -> Self {
+                pub const fn system_id(mut self, system_id: COctetString<'a, 1, 16>) -> Self {
                     self.inner.system_id = system_id;
                     self
                 }
 
-                pub fn password(mut self, password: COctetString<'a, 1, 9>) -> Self {
+                pub const fn password(mut self, password: COctetString<'a, 1, 9>) -> Self {
                     self.inner.password = password;
                     self
                 }
 
-                pub fn system_type(mut self, system_type: COctetString<'a, 1, 13>) -> Self {
+                pub const fn system_type(mut self, system_type: COctetString<'a, 1, 13>) -> Self {
                     self.inner.system_type = system_type;
                     self
                 }
@@ -113,12 +113,12 @@ macro_rules! bind {
                     self
                 }
 
-                pub fn address_range(mut self, address_range: COctetString<'a, 1, 41>) -> Self {
+                pub const fn address_range(mut self, address_range: COctetString<'a, 1, 41>) -> Self {
                     self.inner.address_range = address_range;
                     self
                 }
 
-                pub fn build(self) -> $name<'a> {
+                pub const fn build(self) -> $name<'a> {
                     self.inner
                 }
             }

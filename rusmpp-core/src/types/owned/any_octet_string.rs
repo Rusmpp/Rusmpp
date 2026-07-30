@@ -45,13 +45,13 @@ impl AnyOctetString {
     ///
     /// Equivalent to [`AnyOctetString::empty`].
     #[inline]
-    pub fn null() -> Self {
+    pub const fn null() -> Self {
         Self::empty()
     }
 
     /// Creates a new empty [`AnyOctetString`].
     #[inline]
-    pub fn empty() -> Self {
+    pub const fn empty() -> Self {
         Self {
             bytes: Bytes::new(),
         }
@@ -59,7 +59,7 @@ impl AnyOctetString {
 
     /// Returns the number of bytes contained in the [`AnyOctetString`].
     #[inline]
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.bytes.len()
     }
 
@@ -68,13 +68,13 @@ impl AnyOctetString {
     /// An [`AnyOctetString`] is considered empty if it
     /// contains no octets.
     #[inline]
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.bytes.is_empty()
     }
 
     /// Creates a new [`AnyOctetString`] from [`Bytes`].
     #[inline]
-    pub fn from_bytes(bytes: Bytes) -> Self {
+    pub const fn from_bytes(bytes: Bytes) -> Self {
         Self { bytes }
     }
 
@@ -91,14 +91,14 @@ impl AnyOctetString {
     /// Creates a new [`AnyOctetString`] from `&'static [u8]`.
     ///
     /// This function does not copy or allocate.
-    pub fn from_static_slice(bytes: &'static [u8]) -> Self {
+    pub const fn from_static_slice(bytes: &'static [u8]) -> Self {
         Self::from_bytes(Bytes::from_static(bytes))
     }
 
     /// Creates a new [`AnyOctetString`] from `&'static` [`str`].
     ///
     /// This function does not copy or allocate.
-    pub fn from_static_str(str: &'static str) -> Self {
+    pub const fn from_static_str(str: &'static str) -> Self {
         Self::from_bytes(Bytes::from_static(str.as_bytes()))
     }
 

@@ -107,12 +107,12 @@ impl AlertNotificationBuilder {
         Default::default()
     }
 
-    pub fn source_addr_ton(mut self, source_addr_ton: Ton) -> Self {
+    pub const fn source_addr_ton(mut self, source_addr_ton: Ton) -> Self {
         self.inner.source_addr_ton = source_addr_ton;
         self
     }
 
-    pub fn source_addr_npi(mut self, source_addr_npi: Npi) -> Self {
+    pub const fn source_addr_npi(mut self, source_addr_npi: Npi) -> Self {
         self.inner.source_addr_npi = source_addr_npi;
         self
     }
@@ -122,12 +122,12 @@ impl AlertNotificationBuilder {
         self
     }
 
-    pub fn esme_addr_ton(mut self, esme_addr_ton: Ton) -> Self {
+    pub const fn esme_addr_ton(mut self, esme_addr_ton: Ton) -> Self {
         self.inner.esme_addr_ton = esme_addr_ton;
         self
     }
 
-    pub fn esme_addr_npi(mut self, esme_addr_npi: Npi) -> Self {
+    pub const fn esme_addr_npi(mut self, esme_addr_npi: Npi) -> Self {
         self.inner.esme_addr_npi = esme_addr_npi;
         self
     }

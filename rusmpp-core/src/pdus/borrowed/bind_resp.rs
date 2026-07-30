@@ -77,7 +77,7 @@ macro_rules! bind_resp {
                     Self::default()
                 }
 
-                pub fn system_id(mut self, system_id: COctetString<'a, 1, 16>) -> Self {
+                pub const fn system_id(mut self, system_id: COctetString<'a, 1, 16>) -> Self {
                     self.inner.system_id = system_id;
                     self
                 }
@@ -90,7 +90,7 @@ macro_rules! bind_resp {
                     self
                 }
 
-                pub fn build(self) -> $name<'a> {
+                pub const fn build(self) -> $name<'a> {
                     self.inner
                 }
             }

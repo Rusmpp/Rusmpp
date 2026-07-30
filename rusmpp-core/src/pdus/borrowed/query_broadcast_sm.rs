@@ -114,22 +114,22 @@ impl<'a> QueryBroadcastSmBuilder<'a> {
         Self::default()
     }
 
-    pub fn message_id(mut self, message_id: COctetString<'a, 1, 65>) -> Self {
+    pub const fn message_id(mut self, message_id: COctetString<'a, 1, 65>) -> Self {
         self.inner.message_id = message_id;
         self
     }
 
-    pub fn source_addr_ton(mut self, source_addr_ton: Ton) -> Self {
+    pub const fn source_addr_ton(mut self, source_addr_ton: Ton) -> Self {
         self.inner.source_addr_ton = source_addr_ton;
         self
     }
 
-    pub fn source_addr_npi(mut self, source_addr_npi: Npi) -> Self {
+    pub const fn source_addr_npi(mut self, source_addr_npi: Npi) -> Self {
         self.inner.source_addr_npi = source_addr_npi;
         self
     }
 
-    pub fn source_addr(mut self, source_addr: COctetString<'a, 1, 21>) -> Self {
+    pub const fn source_addr(mut self, source_addr: COctetString<'a, 1, 21>) -> Self {
         self.inner.source_addr = source_addr;
         self
     }
@@ -143,7 +143,7 @@ impl<'a> QueryBroadcastSmBuilder<'a> {
         self
     }
 
-    pub fn build(self) -> QueryBroadcastSm<'a> {
+    pub const fn build(self) -> QueryBroadcastSm<'a> {
         self.inner
     }
 }

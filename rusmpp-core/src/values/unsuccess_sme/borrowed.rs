@@ -33,7 +33,7 @@ impl Default for UnsuccessSme<'_> {
 }
 
 impl<'a> UnsuccessSme<'a> {
-    pub fn new(
+    pub const fn new(
         dest_addr_ton: Ton,
         dest_addr_npi: Npi,
         destination_addr: COctetString<'a, 1, 21>,

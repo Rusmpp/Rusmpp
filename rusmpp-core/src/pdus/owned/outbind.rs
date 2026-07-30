@@ -26,7 +26,7 @@ pub struct Outbind {
 }
 
 impl Outbind {
-    pub fn new(system_id: COctetString<1, 16>, password: COctetString<1, 9>) -> Self {
+    pub const fn new(system_id: COctetString<1, 16>, password: COctetString<1, 9>) -> Self {
         Self {
             system_id,
             password,

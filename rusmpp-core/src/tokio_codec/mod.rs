@@ -49,13 +49,13 @@ impl CommandCodec {
     }
 
     #[inline]
-    pub fn with_max_length(mut self, max_length: usize) -> Self {
+    pub const fn with_max_length(mut self, max_length: usize) -> Self {
         self.max_length = Some(max_length);
         self
     }
 
     #[inline]
-    pub fn without_max_length(mut self) -> Self {
+    pub const fn without_max_length(mut self) -> Self {
         self.max_length = None;
         self
     }

@@ -106,32 +106,32 @@ impl<'a> AlertNotificationBuilder<'a> {
         Default::default()
     }
 
-    pub fn source_addr_ton(mut self, source_addr_ton: Ton) -> Self {
+    pub const fn source_addr_ton(mut self, source_addr_ton: Ton) -> Self {
         self.inner.source_addr_ton = source_addr_ton;
         self
     }
 
-    pub fn source_addr_npi(mut self, source_addr_npi: Npi) -> Self {
+    pub const fn source_addr_npi(mut self, source_addr_npi: Npi) -> Self {
         self.inner.source_addr_npi = source_addr_npi;
         self
     }
 
-    pub fn source_addr(mut self, source_addr: COctetString<'a, 1, 65>) -> Self {
+    pub const fn source_addr(mut self, source_addr: COctetString<'a, 1, 65>) -> Self {
         self.inner.source_addr = source_addr;
         self
     }
 
-    pub fn esme_addr_ton(mut self, esme_addr_ton: Ton) -> Self {
+    pub const fn esme_addr_ton(mut self, esme_addr_ton: Ton) -> Self {
         self.inner.esme_addr_ton = esme_addr_ton;
         self
     }
 
-    pub fn esme_addr_npi(mut self, esme_addr_npi: Npi) -> Self {
+    pub const fn esme_addr_npi(mut self, esme_addr_npi: Npi) -> Self {
         self.inner.esme_addr_npi = esme_addr_npi;
         self
     }
 
-    pub fn esme_addr(mut self, esme_addr: COctetString<'a, 1, 65>) -> Self {
+    pub const fn esme_addr(mut self, esme_addr: COctetString<'a, 1, 65>) -> Self {
         self.inner.esme_addr = esme_addr;
         self
     }
@@ -145,7 +145,7 @@ impl<'a> AlertNotificationBuilder<'a> {
         self
     }
 
-    pub fn build(self) -> AlertNotification<'a> {
+    pub const fn build(self) -> AlertNotification<'a> {
         self.inner
     }
 }

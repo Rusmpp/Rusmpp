@@ -34,7 +34,7 @@ macro_rules! sm_resp {
                 Self { message_id, tlvs }
             }
 
-            pub fn message_id(&'_ self) -> &'_ COctetString<'a, 1, 65> {
+            pub const fn message_id(&'_ self) -> &'_ COctetString<'a, 1, 65> {
                 &self.message_id
             }
 
@@ -72,7 +72,7 @@ macro_rules! sm_resp {
                     Self::default()
                 }
 
-                pub fn message_id(mut self, message_id: COctetString<'a, 1, 65>) -> Self {
+                pub const fn message_id(mut self, message_id: COctetString<'a, 1, 65>) -> Self {
                     self.inner.message_id = message_id;
                     self
                 }

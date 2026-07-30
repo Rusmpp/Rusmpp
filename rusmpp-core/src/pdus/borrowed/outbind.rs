@@ -25,7 +25,7 @@ pub struct Outbind<'a> {
 }
 
 impl<'a> Outbind<'a> {
-    pub fn new(system_id: COctetString<'a, 1, 16>, password: COctetString<'a, 1, 9>) -> Self {
+    pub const fn new(system_id: COctetString<'a, 1, 16>, password: COctetString<'a, 1, 9>) -> Self {
         Self {
             system_id,
             password,
@@ -53,17 +53,17 @@ impl<'a> OutbindBuilder<'a> {
         Self::default()
     }
 
-    pub fn system_id(mut self, system_id: COctetString<'a, 1, 16>) -> Self {
+    pub const fn system_id(mut self, system_id: COctetString<'a, 1, 16>) -> Self {
         self.inner.system_id = system_id;
         self
     }
 
-    pub fn password(mut self, password: COctetString<'a, 1, 9>) -> Self {
+    pub const fn password(mut self, password: COctetString<'a, 1, 9>) -> Self {
         self.inner.password = password;
         self
     }
 
-    pub fn build(self) -> Outbind<'a> {
+    pub const fn build(self) -> Outbind<'a> {
         self.inner
     }
 }
