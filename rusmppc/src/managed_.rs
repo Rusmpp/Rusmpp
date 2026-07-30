@@ -24,6 +24,9 @@ use crate::{
     runtime_::{Delay, Timeout, tokio::Tokio},
 };
 
+#[cfg(test)]
+mod tests;
+
 const TARGET: &str = "rusmppc::managed::client";
 
 /// Events emitted by the [`ManagedClient`].
@@ -610,5 +613,3 @@ impl<'a, E> BackoffStrategy<'a, E> for BackOff {
         }
     }
 }
-
-// TODO: tests
