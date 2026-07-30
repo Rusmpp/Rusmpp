@@ -290,20 +290,19 @@ impl<E: EventChannel + Clone + Send + Sync + 'static, D: Delay, T: Timeout, R>
 }
 
 #[cfg(feature = "tokio")]
-impl<E: EventChannel, D: Delay, T: Timeout> ManagedConnectionBuilder<E, D, T, Tokio>
+impl<E: EventChannel, D: Delay> ManagedConnectionBuilder<E, D, Tokio, Tokio>
 where
     E: Clone + Send + Sync + 'static,
     E::Event: Send + Sync + 'static,
     D: Clone + Send + Sync + 'static,
     D::Future: Send,
-    T: Clone + Send + Sync + 'static,
 {
     async fn run(
         self,
         connect: Connect,
     ) -> Result<
         (
-            ManagedClient<T>,
+            ManagedClient<Tokio>,
             impl Stream<Item = ManagedEvent<E::Event>> + Unpin + 'static,
         ),
         Error,
@@ -366,7 +365,7 @@ where
         f: F,
     ) -> Result<
         (
-            ManagedClient<T>,
+            ManagedClient<Tokio>,
             impl Stream<Item = ManagedEvent<E::Event>> + Unpin + 'static,
         ),
         Error,
@@ -387,7 +386,7 @@ where
         url: impl Into<String>,
     ) -> Result<
         (
-            ManagedClient<T>,
+            ManagedClient<Tokio>,
             impl Stream<Item = ManagedEvent<E::Event>> + Unpin + 'static,
         ),
         Error,
@@ -442,15 +441,14 @@ where
 }
 
 #[cfg(feature = "tokio")]
-impl<E: EventChannel, D: Delay, T: Timeout> BoundClientCreatorImpl<E, D, T, Tokio>
+impl<E: EventChannel, D: Delay> BoundClientCreatorImpl<E, D, Tokio, Tokio>
 where
     E: Clone + Send + Sync + 'static,
     E::Event: Send + Sync + 'static,
     D: Clone + Send + Sync + 'static,
     D::Future: Send,
-    T: Clone + 'static,
 {
-    async fn connect(&self) -> Result<Client<T>, Error> {
+    async fn connect_(&self) -> Result<Client<Tokio>, Error> {
         tracing::debug!(target: TARGET, "Connecting");
 
         let connect = move || async move {
@@ -528,17 +526,17 @@ trait BoundClientCreator<T>: Send + Sync + 'static {
     fn connect(&self) -> Pin<Box<dyn Future<Output = Result<Client<T>, Error>> + Send + '_>>;
 }
 
-impl<E: EventChannel, D: Delay, T: Timeout, R> BoundClientCreator<T>
-    for BoundClientCreatorImpl<E, D, T, R>
+#[cfg(feature = "tokio")]
+impl<E: EventChannel, D: Delay> BoundClientCreator<Tokio>
+    for BoundClientCreatorImpl<E, D, Tokio, Tokio>
 where
     E: Clone + Send + Sync + 'static,
     E::Event: Send + Sync + 'static,
-    D: Send + Sync + 'static,
-    T: Send + Sync + 'static,
-    R: Send + Sync + 'static,
+    D: Clone + Send + Sync + 'static,
+    D::Future: Send,
 {
-    fn connect(&self) -> Pin<Box<dyn Future<Output = Result<Client<T>, Error>> + Send + '_>> {
-        Box::pin(async move { self.connect().await })
+    fn connect(&self) -> Pin<Box<dyn Future<Output = Result<Client<Tokio>, Error>> + Send + '_>> {
+        Box::pin(async move { self.connect_().await })
     }
 }
 
