@@ -63,6 +63,13 @@ impl Client<Tokio> {
     pub fn builder() -> ConnectionBuilder {
         ConnectionBuilder::new()
     }
+
+    /// Creates a new `SMPP` connection builder.
+    ///
+    /// See [`ConnectionBuilder::new`] for more details.
+    pub fn builder_tokio() -> ConnectionBuilder {
+        ConnectionBuilder::new_tokio()
+    }
 }
 
 impl Client<Wasm> {

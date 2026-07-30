@@ -74,6 +74,13 @@ impl DefaultConnectionBuilder {
             _r: std::marker::PhantomData,
         }
     }
+
+    /// Creates a new [`ConnectionBuilder`] with default configurations.
+    ///
+    /// See [`new`](Self::new) for more details.
+    pub fn new_tokio() -> Self {
+        Self::new()
+    }
 }
 
 impl Default for ConnectionBuilder<DefaultEventChannel, Wasm, Wasm, Wasm> {
