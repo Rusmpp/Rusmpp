@@ -45,7 +45,7 @@ impl<'buf, const N: usize> Encoder<Command<'buf, N>> for CommandCodec<N> {
         let _ = item.encode(&mut dst[4..command_length]);
 
         debug!(target: "rusmpp::codec::encode", command=?item, "Encoding");
-        debug!(target: "rusmpp::codec::encode", encoded=?crate::formatter::Formatter(&dst[..command_length]), encoded_length=item.length(), command_length, "Encoded");
+        debug!(target: "rusmpp::codec::encode", encoded=?&dst[..command_length], encoded_length=item.length(), command_length, "Encoded");
 
         Ok(command_length)
     }
@@ -94,7 +94,7 @@ impl<'buf, const N: usize> Decoder<'buf> for CommandCodec<N> {
         // command_length is at least 16 bytes
         let pdu_len = command_length - 4;
 
-        debug!(target: "rusmpp::codec::decode", decoding=?crate::formatter::Formatter(&src[..command_length]), "Decoding");
+        debug!(target: "rusmpp::codec::decode", decoding=?&src[..command_length], "Decoding");
 
         let (command, _size) = match Command::decode(&src[4..command_length], pdu_len) {
             Ok((command, size)) => {
