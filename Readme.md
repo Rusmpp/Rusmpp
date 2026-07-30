@@ -97,8 +97,6 @@ See the [examples](https://github.com/Rusmpp/Rusmpp/tree/main/rusmpp/examples) d
 - `serde`: Implements [`Serialize`](https://docs.rs/serde/latest/serde/trait.Serialize.html) trait for all SMPP types.
 - `serde-deserialize-unchecked`: Implements [`Deserialize`](https://docs.rs/serde/latest/serde/trait.Deserialize.html) trait for all SMPP types, but does not check the validity of the data. Use with caution.
 - `tracing`: Enables logging using [`tracing`](https://docs.rs/tracing/latest/tracing/).
-- `pretty-hex-fmt`: Logs byte slices like `[0x00, 0x00, 0x00, 0x6F]` instead of `[00, 00, 00, 6F]`, if `tracing` feature is enabled.
-- `char-fmt`: Logs byte slices as characters, if `tracing` feature is enabled.
 
 ## License
 

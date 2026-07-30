@@ -26,6 +26,9 @@ embedded-io-adapters = { version = "0.7.0", default-features = false, features =
 
 [features]
 default = []
-
 # Enables logging via the `tracing` crate.
 tracing = ["dep:tracing"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

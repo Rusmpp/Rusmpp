@@ -2743,19 +2743,13 @@ version = "0.4.0"
 dependencies = [
  "arbitrary",
  "bytes",
- "embedded-io-adapters",
- "framez",
- "futures",
  "heapless",
  "pastey",
  "rusmpp-macros",
  "serde",
  "strum",
  "strum_macros",
- "testcontainers",
  "thiserror 2.0.17",
- "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -2892,6 +2886,7 @@ dependencies = [
  "embedded-io-adapters",
  "framez",
  "rusmpp-core",
+ "rusmpp-framez",
  "tokio",
  "tracing",
  "tracing-subscriber",

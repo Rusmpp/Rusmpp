@@ -9,6 +9,11 @@
 
 A `zerocopy` Rust implementation of the [SMPP v5](https://smpp.org/SMPP_v5.pdf) protocol.
 
+## Features
+
+- `framez`: Implements [`framez`](https://docs.rs/framez/latest/framez/index.html) [`Encoder`](https://docs.rs/framez/latest/framez/encode/trait.Encoder.html) and [`Decoder`](https://docs.rs/framez/latest/framez/decode/trait.Decoder.html) traits.
+- `tracing`: Enables logging using [`tracing`](https://docs.rs/tracing/latest/tracing/).
+
 ## License
 
 Licensed under either of

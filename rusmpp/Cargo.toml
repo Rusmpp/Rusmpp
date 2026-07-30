@@ -10,6 +10,15 @@ repository = "https://github.com/Rusmpp/Rusmpp"
 readme = "../Readme.md"
 keywords = ["smpp", "smsc", "messaging", "networking", "protocol"]
 
+[dependencies]
+rusmpp-core = { path = "../rusmpp-core", version = "0.4.0", default-features = false, features = [
+    "alloc",
+] }
+rusmpp-tokio-codec = { path = "../rusmpp-tokio-codec", version = "0.1.0", default-features = false, optional = true }
+rusmpp-extra = { path = "../rusmpp-extra", version = "0.4.0", default-features = false, features = [
+    "alloc",
+] }
+
 [dev-dependencies]
 tracing = { version = "0.1.43" }
 tokio = { version = "1.48.0", features = ["full"] }
@@ -19,14 +28,6 @@ tokio-util = { version = "0.7.17", default-features = false, features = [
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 futures = "0.3.31"
 
-[dependencies]
-rusmpp-core = { path = "../rusmpp-core", version = "0.4.0", default-features = false, features = [
-    "alloc",
-] }
-rusmpp-tokio-codec = { path = "../rusmpp-tokio-codec", version = "0.1.0", default-features = false, optional = true }
-rusmpp-extra = { path = "../rusmpp-extra", version = "0.4.0", default-features = false, features = [
-    "alloc",
-] }
 
 [features]
 default = ["tokio-codec"]
@@ -38,13 +39,8 @@ extra = ["rusmpp-extra/encoding", "rusmpp-extra/concatenation"]
 serde = ["rusmpp-core/serde"]
 # Derives serde Deserialize for all SMPP types. This will allow to create unchecked SMPP values from arbitrary serialized data, which may not be valid SMPP values.
 serde-deserialize-unchecked = ["rusmpp-core/serde-deserialize-unchecked"]
-# Prints byte slices like: [0x00, 0x00, 0x00, 0x6F] instead of [00, 00, 00, 6F].
-pretty-hex-fmt = ["rusmpp-core/pretty-hex-fmt"]
-# Prints byte slices as characters.
-char-fmt = ["rusmpp-core/char-fmt"]
 # Enables logging via the `tracing` crate.
 tracing = ["rusmpp-tokio-codec/tracing"]
-
 
 [[example]]
 name = "client_server"
