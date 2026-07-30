@@ -76,7 +76,6 @@ serde = { version = "1", features = ["derive"] }
 
 [features]
 default = [
-    "wasm",
     "tokio",
     "rustls",
     "rustls-tls-native-roots",
