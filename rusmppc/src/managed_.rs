@@ -40,46 +40,41 @@ pub enum ManagedEvent<E> {
 }
 
 /// A managed `SMPP` client that automatically handles reconnection and binding.
-pub struct ManagedClient<T = Tokio> {
-    inner: Arc<ManagedClientInner<T>>,
+pub struct ManagedClient {
+    inner: Arc<ManagedClientInner>,
     // Used to tell the reconnecting background task to stop when the client is dropped.
     _watch: watch::Receiver<()>,
-    _t: std::marker::PhantomData<T>,
 }
 
-impl<T> Clone for ManagedClient<T> {
+impl Clone for ManagedClient {
     fn clone(&self) -> Self {
         Self {
             inner: self.inner.clone(),
             _watch: self._watch.clone(),
-            _t: std::marker::PhantomData,
         }
     }
 }
 
-impl<T> Debug for ManagedClient<T> {
+impl Debug for ManagedClient {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ManagedClient").finish()
     }
 }
 
-struct ManagedClientInner<T = Tokio> {
-    creator: Box<dyn BoundClientCreator<T>>,
-    client: RwLock<Client<T>>,
+struct ManagedClientInner {
+    creator: Box<dyn BoundClientCreator<Tokio>>,
+    client: RwLock<Client<Tokio>>,
 }
 
-impl<T: Timeout> ManagedClientInner<T> {
-    fn new(creator: Box<dyn BoundClientCreator<T>>, client: Client<T>) -> Self {
+impl ManagedClientInner {
+    fn new(creator: Box<dyn BoundClientCreator<Tokio>>, client: Client<Tokio>) -> Self {
         Self {
             creator,
             client: RwLock::new(client),
         }
     }
 
-    async fn get(&self) -> Result<RwLockReadGuard<'_, Client<T>>, Error>
-    where
-        T: 'static,
-    {
+    async fn get(&self) -> Result<RwLockReadGuard<'_, Client<Tokio>>, Error> {
         {
             let client = self.client.read().await;
 
@@ -96,33 +91,27 @@ impl<T: Timeout> ManagedClientInner<T> {
     }
 }
 
-impl<T: Timeout> ManagedClient<T> {
-    fn new(inner: Arc<ManagedClientInner<T>>, watch: watch::Receiver<()>) -> Self {
+impl ManagedClient {
+    fn new(inner: Arc<ManagedClientInner>, watch: watch::Receiver<()>) -> Self {
         Self {
             inner,
             _watch: watch,
-            _t: std::marker::PhantomData,
         }
     }
 
     /// Gets a connected and bound [`Client`].
     ///
     /// This method will block until a connected [`Client`] is available, and will automatically attempt to reconnect if the connection is lost.
-    pub async fn get(&self) -> Result<Client<T>, Error>
-    where
-        T: 'static,
-    {
+    pub async fn get(&self) -> Result<Client<Tokio>, Error> {
         self.inner.get().await.map(|client| client.clone())
     }
 
-    // TODO: we want to have the same api like `Client`: client.timeout().get()
-
     /// Gets a connected and bound [`Client`] with a timeout.
-    pub async fn get_with_timeout(&self, timeout: Duration) -> Option<Result<Client<T>, Error>>
-    where
-        T: 'static,
-    {
-        T::timeout(timeout, self.get()).await
+    pub async fn get_with_timeout(
+        &self,
+        timeout: Duration,
+    ) -> Option<Result<Client<Tokio>, Error>> {
+        Tokio::timeout(timeout, self.get()).await
     }
 }
 
@@ -141,59 +130,47 @@ impl BindMode {
 }
 
 #[derive(Debug)]
-pub struct UnboundManagedConnectionBuilder<
-    E: EventChannel + Clone + Send + Sync + 'static,
-    D: Delay,
-    T: Timeout,
-    R,
-> {
-    builder: ConnectionBuilder<E, D, T, R>,
+pub struct UnboundManagedConnectionBuilder<E: EventChannel + Clone + Send + Sync + 'static> {
+    builder: ConnectionBuilder<E, Tokio, Tokio, Tokio>,
 }
 
-impl<E: EventChannel + Clone + Send + Sync + 'static, D: Delay, T: Timeout, R>
-    UnboundManagedConnectionBuilder<E, D, T, R>
-{
-    pub(crate) fn new(builder: ConnectionBuilder<E, D, T, R>) -> Self {
+impl<E: EventChannel + Clone + Send + Sync + 'static> UnboundManagedConnectionBuilder<E> {
+    pub(crate) fn new(builder: ConnectionBuilder<E, Tokio, Tokio, Tokio>) -> Self {
         Self { builder }
     }
 
     /// Binds the [`ManagedClient`] as a transmitter.
     ///
     /// Every time the client reconnects, it will automatically bind as a transmitter using the provided [`BindTransmitter`].
-    pub fn transmitter(self, bind: BindTransmitter) -> ManagedConnectionBuilder<E, D, T, R> {
+    pub fn transmitter(self, bind: BindTransmitter) -> ManagedConnectionBuilder<E> {
         ManagedConnectionBuilder::new(self.builder, BindMode::Transmitter(bind))
     }
 
     /// Binds the [`ManagedClient`] as a receiver.
     ///
     /// Every time the client reconnects, it will automatically bind as a receiver using the provided [`BindReceiver`].
-    pub fn receiver(self, bind: BindReceiver) -> ManagedConnectionBuilder<E, D, T, R> {
+    pub fn receiver(self, bind: BindReceiver) -> ManagedConnectionBuilder<E> {
         ManagedConnectionBuilder::new(self.builder, BindMode::Receiver(bind))
     }
 
     /// Binds the [`ManagedClient`] as a transceiver.
     ///
     /// Every time the client reconnects, it will automatically bind as a transceiver using the provided [`BindTransceiver`].
-    pub fn transceiver(self, bind: BindTransceiver) -> ManagedConnectionBuilder<E, D, T, R> {
+    pub fn transceiver(self, bind: BindTransceiver) -> ManagedConnectionBuilder<E> {
         ManagedConnectionBuilder::new(self.builder, BindMode::Transceiver(bind))
     }
 
     /// Does not bind the [`ManagedClient`].
     ///
     /// Every time the client reconnects, it will not automatically bind.
-    pub fn unbound(self) -> ManagedConnectionBuilder<E, D, T, R> {
+    pub fn unbound(self) -> ManagedConnectionBuilder<E> {
         ManagedConnectionBuilder::new(self.builder, BindMode::None)
     }
 }
 
 #[derive(Debug)]
-pub struct ManagedConnectionBuilder<
-    E: EventChannel + Clone + Send + Sync + 'static,
-    D: Delay,
-    T: Timeout,
-    R,
-> {
-    builder: ConnectionBuilder<E, D, T, R>,
+pub struct ManagedConnectionBuilder<E: EventChannel + Clone + Send + Sync + 'static> {
+    builder: ConnectionBuilder<E, Tokio, Tokio, Tokio>,
     bind: BindMode,
     auto_reconnect_interval: Option<Duration>,
     max_delay: Option<Duration>,
@@ -201,10 +178,8 @@ pub struct ManagedConnectionBuilder<
     max_retries: u32,
 }
 
-impl<E: EventChannel + Clone + Send + Sync + 'static, D: Delay, T: Timeout, R>
-    ManagedConnectionBuilder<E, D, T, R>
-{
-    fn new(builder: ConnectionBuilder<E, D, T, R>, bind: BindMode) -> Self {
+impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E> {
+    fn new(builder: ConnectionBuilder<E, Tokio, Tokio, Tokio>, bind: BindMode) -> Self {
         Self {
             builder,
             bind,
@@ -289,20 +264,17 @@ impl<E: EventChannel + Clone + Send + Sync + 'static, D: Delay, T: Timeout, R>
     }
 }
 
-#[cfg(feature = "tokio")]
-impl<E: EventChannel, D: Delay> ManagedConnectionBuilder<E, D, Tokio, Tokio>
+impl<E: EventChannel> ManagedConnectionBuilder<E>
 where
     E: Clone + Send + Sync + 'static,
     E::Event: Send + Sync + 'static,
-    D: Clone + Send + Sync + 'static,
-    D::Future: Send,
 {
     async fn run(
         self,
         connect: Connect,
     ) -> Result<
         (
-            ManagedClient<Tokio>,
+            ManagedClient,
             impl Stream<Item = ManagedEvent<E::Event>> + Unpin + 'static,
         ),
         Error,
@@ -338,7 +310,7 @@ where
 
                             break;
                         }
-                        _ = D::delay(interval) => {
+                        _ = Tokio::delay(interval) => {
                             tracing::trace!(target: TARGET, "Triggering reconnection");
 
                             // Trigger a reconnection if the connection was closed
@@ -365,7 +337,7 @@ where
         f: F,
     ) -> Result<
         (
-            ManagedClient<Tokio>,
+            ManagedClient,
             impl Stream<Item = ManagedEvent<E::Event>> + Unpin + 'static,
         ),
         Error,
@@ -386,7 +358,7 @@ where
         url: impl Into<String>,
     ) -> Result<
         (
-            ManagedClient<Tokio>,
+            ManagedClient,
             impl Stream<Item = ManagedEvent<E::Event>> + Unpin + 'static,
         ),
         Error,
@@ -440,7 +412,6 @@ where
     }
 }
 
-#[cfg(feature = "tokio")]
 impl<E: EventChannel, D: Delay> BoundClientCreatorImpl<E, D, Tokio, Tokio>
 where
     E: Clone + Send + Sync + 'static,
@@ -526,7 +497,6 @@ trait BoundClientCreator<T>: Send + Sync + 'static {
     fn connect(&self) -> Pin<Box<dyn Future<Output = Result<Client<T>, Error>> + Send + '_>>;
 }
 
-#[cfg(feature = "tokio")]
 impl<E: EventChannel, D: Delay> BoundClientCreator<Tokio>
     for BoundClientCreatorImpl<E, D, Tokio, Tokio>
 where
