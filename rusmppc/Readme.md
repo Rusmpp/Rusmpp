@@ -11,8 +11,8 @@ A Rust [SMPP v5](https://smpp.org/SMPP_v5.pdf) client.
 
 ## Features
 
-- `tokio`: Enabled support for [`tokio`](https://docs.rs/tokio/latest/tokio/) runtime. Enabled by default.
-- `wasm`: Enabled support for [`wasm`].
+- `tokio`: Enables support for [`tokio`](https://docs.rs/tokio/latest/tokio/) runtime. Enabled by default.
+- `wasm`: Enables support for [`wasm`].
 - `rustls`:  Enables TLS support via [`rustls`](https://docs.rs/rustls/latest/rustls/). Enabled by default.
 - `rustls-tls-native-roots`: Uses the platform's native root certificates through [`rustls-native-certs`](https://docs.rs/rustls-native-certs/latest/rustls_native_certs/) while using default configuration. Enables the `rustls` feature and is enabled by default.
 - `rustls-tls-webpki-roots`: Uses the [`webpki-roots`](https://docs.rs/webpki-roots/latest/webpki_roots/) crate's root certificates while using default configuration. Enables the `rustls` feature and is enabled by default.
