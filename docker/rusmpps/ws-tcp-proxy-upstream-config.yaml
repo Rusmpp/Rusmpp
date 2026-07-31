@@ -1,0 +1,14 @@
+runtime: CurrentThread
+dns_resolver: Hickory
+hosts:
+  - addr: 0.0.0.0:7776
+    kind: Tls
+    certs:
+      certs: "/etc/upstream/cert.pem"
+      key: "/etc/upstream/key.pem"
+      watch:
+        kind: Dynamic
+    upstreams:
+      - domain: ws-tcp-proxy
+        port: 7777
+        kind: Tcp
