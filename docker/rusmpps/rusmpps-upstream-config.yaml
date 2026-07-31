@@ -7,8 +7,7 @@ hosts:
       certs: "/etc/upstream/cert.pem"
       key: "/etc/upstream/key.pem"
       watch:
-        kind: Debounce
-        duration: 2s
+        kind: Dynamic
     upstreams:
       - domain: rusmpps
         port: 2775

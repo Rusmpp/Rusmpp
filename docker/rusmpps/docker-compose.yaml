@@ -10,10 +10,10 @@ services:
     volumes:
       - ./config.yaml:/etc/rusmpps/config.yaml:ro
 
-  # <https://github.com/JadKHaddad/upstream/tree/0.1.0>
+  # <https://github.com/JadKHaddad/upstream/tree/0.2.0>
   upstream:
-    container_name: upstream
-    image: jadkhaddad/upstream:0.1.0
+    container_name: rusmpps-upstream
+    image: jadkhaddad/upstream:0.2.0
     command:
       - "--config-file"
       - "/etc/upstream/config.yaml"
@@ -21,6 +21,34 @@ services:
       - "2776:2776"
     restart: unless-stopped
     volumes:
-      - ./upstream-config.yaml:/etc/upstream/config.yaml:ro
+      - ./rusmpps-upstream-config.yaml:/etc/upstream/config.yaml:ro
       - /opt/caddy/mnt/data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/rusmpps.rusmpp.org/rusmpps.rusmpp.org.crt:/etc/upstream/cert.pem:ro
       - /opt/caddy/mnt/data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/rusmpps.rusmpp.org/rusmpps.rusmpp.org.key:/etc/upstream/key.pem:ro
+
+  # <https://github.com/JadKHaddad/ws-tcp-proxy/tree/0.2.0>
+  ws-tcp-proxy:
+    container_name: ws-tcp-proxy
+    image: jadkhaddad/ws-tcp-proxy:0.2.0
+    command:
+      - "--socket-addr"
+      - "0.0.0.0:7777"
+    environment:
+      - RUST_LOG=ws_tcp_proxy=debug
+    ports:
+      - "7777:7777"
+    restart: unless-stopped
+
+  # <https://github.com/JadKHaddad/upstream/tree/0.2.0>
+  ws-tcp-proxy-upstream:
+    container_name: ws-tcp-proxy-upstream
+    image: jadkhaddad/upstream:0.2.0
+    command:
+      - "--config-file"
+      - "/etc/upstream/config.yaml"
+    ports:
+      - "7776:7776"
+    restart: unless-stopped
+    volumes:
+      - ./ws-tcp-proxy-upstream-config.yaml:/etc/upstream/config.yaml:ro
+      - /opt/caddy/mnt/data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/proxy.rusmpp.org/proxy.rusmpp.org.crt:/etc/upstream/cert.pem:ro
+      - /opt/caddy/mnt/data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/proxy.rusmpp.org/proxy.rusmpp.org.key:/etc/upstream/key.pem:ro
