@@ -14,6 +14,16 @@ permissions:
   contents: read
 
 jobs:
+  fmt:
+    name: cargo fmt
+    runs-on: unbuntu-latest
+    with:
+      components: rustfmt
+    steps:
+    - uses: actions/checkout@v7
+    - uses: dtolnay/rust-toolchain@stable
+    - run: cargo fmt --check
+      
   tests:
     name: Tests
     strategy:
@@ -48,12 +58,6 @@ jobs:
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
-
-      - name: Check formatting
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: -- --check
 
       - name: Check for clippy warnings
         uses: actions-rs/cargo@v1
