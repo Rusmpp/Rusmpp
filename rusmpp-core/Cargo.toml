@@ -36,8 +36,6 @@ alloc = ["serde/alloc", "dep:bytes"]
 arbitrary = ["dep:arbitrary"]
 # Derives serde Serialize for all SMPP types.
 serde = ["dep:serde", "heapless/serde", "bytes/serde"]
-# Derives serde Deserialize for owned SMPP types. This will allow to create unchecked SMPP values from arbitrary serialized data, which may not be valid SMPP values.
-serde-deserialize-unchecked = ["dep:serde", "heapless/serde", "bytes/serde"]
 # Exposes test utilities for the `rusmpp-core`.
 test = []
 

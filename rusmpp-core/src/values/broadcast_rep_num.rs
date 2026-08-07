@@ -3,8 +3,8 @@ use rusmpp_macros::Rusmpp;
 /// This field indicates the number of repeated broadcasts requested by the Submitter.
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+
 pub struct BroadcastRepNum {
     pub value: u8,
 }

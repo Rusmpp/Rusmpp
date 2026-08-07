@@ -15,8 +15,8 @@ use crate::{
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = owned, test = skip)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+
 pub struct DestAddress {
     flag: DestFlag,
     #[rusmpp(key = flag)]
@@ -48,8 +48,8 @@ impl From<DestAddressValue> for DestAddress {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+
 pub enum DestAddressValue {
     /// SME Format Destination Address.
     SmeAddress(SmeAddress),
@@ -137,8 +137,8 @@ impl DecodeWithKey for DestAddressValue {
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = owned)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+
 pub struct SmeAddress {
     /// Type of Number for destination.
     pub dest_addr_ton: Ton,
@@ -174,8 +174,8 @@ impl From<SmeAddress> for DestAddressValue {
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = owned)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+
 pub struct DistributionListName {
     /// Name of Distribution List.
     pub dl_name: COctetString<1, 21>,

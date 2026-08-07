@@ -6,8 +6,8 @@ use crate::{types::owned::OctetString, values::sub_address::SubaddressTag};
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[rusmpp(decode = owned)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+
 pub struct Subaddress {
     pub tag: SubaddressTag,
     // addr can not be empty, because the whole source_subaddress tlv value is between 2 and 23 bytes long, and the tag is 1 byte long

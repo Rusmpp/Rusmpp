@@ -31,12 +31,6 @@ use crate::{
 /// let string = EmptyOrFullCOctetString::<0>::from_static_slice(b"Hello\0");
 /// ```
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
-#[cfg_attr(
-    any(feature = "serde", feature = "serde-deserialize-unchecked"),
-    serde(transparent)
-)]
 pub struct EmptyOrFullCOctetString<const N: usize> {
     bytes: Bytes,
 }
@@ -369,6 +363,31 @@ impl<const N: usize> TryFrom<Vec<u8>> for EmptyOrFullCOctetString<N> {
         Self::from_vec(bytes)
     }
 }
+
+#[cfg(feature = "serde")]
+const _: () = {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    impl<const N: usize> Serialize for EmptyOrFullCOctetString<N> {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            serializer.serialize_bytes(&self.bytes)
+        }
+    }
+
+    impl<'de, const N: usize> Deserialize<'de> for EmptyOrFullCOctetString<N> {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let bytes = Deserialize::deserialize(deserializer)?;
+
+            Self::from_bytes(bytes).map_err(serde::de::Error::custom)
+        }
+    }
+};
 
 #[cfg(test)]
 mod tests {

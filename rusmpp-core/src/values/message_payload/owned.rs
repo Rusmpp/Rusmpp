@@ -5,8 +5,8 @@ use crate::types::owned::AnyOctetString;
 #[derive(Default, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = owned)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+
 pub struct MessagePayload {
     #[rusmpp(length = "unchecked")]
     pub value: AnyOctetString,

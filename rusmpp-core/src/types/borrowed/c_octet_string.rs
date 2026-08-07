@@ -63,8 +63,6 @@ use crate::{
 /// ```
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct COctetString<'a, const MIN: usize, const MAX: usize> {
     bytes: &'a [u8],
 }
@@ -282,6 +280,34 @@ impl<'a, const MIN: usize, const MAX: usize> Decode<'a> for COctetString<'a, MIN
         Ok((Self { bytes }, bytes.len()))
     }
 }
+
+#[cfg(feature = "serde")]
+const _: () = {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    impl<'a, const MIN: usize, const MAX: usize> Serialize for COctetString<'a, MIN, MAX> {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            serializer.serialize_bytes(&self.bytes)
+        }
+    }
+
+    impl<'a, 'de, const MIN: usize, const MAX: usize> Deserialize<'de> for COctetString<'a, MIN, MAX>
+    where
+        'de: 'a,
+    {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let bytes = Deserialize::deserialize(deserializer)?;
+
+            Self::new(bytes).map_err(serde::de::Error::custom)
+        }
+    }
+};
 
 #[cfg(test)]
 mod tests {
