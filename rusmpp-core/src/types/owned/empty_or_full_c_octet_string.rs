@@ -1,6 +1,6 @@
 #![allow(path_statements)]
 
-use alloc::{string::String, string::ToString, vec::Vec};
+use alloc::{string::String, vec::Vec};
 use bytes::{BufMut, Bytes, BytesMut};
 
 use crate::{
@@ -231,10 +231,7 @@ impl<const N: usize> Default for EmptyOrFullCOctetString<N> {
 
 impl<const N: usize> core::fmt::Debug for EmptyOrFullCOctetString<N> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("EmptyOrFullCOctetString")
-            .field("bytes", &self.bytes)
-            .field("string", &self.to_string())
-            .finish()
+        core::fmt::Debug::fmt(&self.bytes, f)
     }
 }
 
@@ -535,6 +532,8 @@ mod tests {
     }
 
     mod as_str {
+        use alloc::string::ToString;
+
         use super::*;
 
         #[test]

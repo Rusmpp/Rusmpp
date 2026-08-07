@@ -125,10 +125,7 @@ impl<'a, const MIN: usize, const MAX: usize> OctetString<'a, MIN, MAX> {
 
 impl<const MIN: usize, const MAX: usize> core::fmt::Debug for OctetString<'_, MIN, MAX> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("OctetString")
-            .field("bytes", &self.bytes)
-            .field("string", &self.to_str().unwrap_or("<invalid utf-8>"))
-            .finish()
+        core::fmt::Debug::fmt(&self.bytes, f)
     }
 }
 

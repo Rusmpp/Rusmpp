@@ -1,4 +1,4 @@
-use alloc::{string::String, string::ToString, vec::Vec};
+use alloc::{string::String, vec::Vec};
 use bytes::{BufMut, Bytes, BytesMut};
 
 use crate::{
@@ -145,10 +145,7 @@ impl From<AnyOctetString> for Vec<u8> {
 
 impl core::fmt::Debug for AnyOctetString {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("AnyOctetString")
-            .field("bytes", &self.bytes)
-            .field("string", &self.to_string())
-            .finish()
+        core::fmt::Debug::fmt(&self.bytes, f)
     }
 }
 

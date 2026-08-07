@@ -181,10 +181,7 @@ impl<'a, const MIN: usize, const MAX: usize> COctetString<'a, MIN, MAX> {
 
 impl<const MIN: usize, const MAX: usize> core::fmt::Debug for COctetString<'_, MIN, MAX> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("COctetString")
-            .field("bytes", &self.bytes)
-            .field("string", &self.as_str())
-            .finish()
+        core::fmt::Debug::fmt(&self.bytes, f)
     }
 }
 
