@@ -10,7 +10,6 @@ use crate::{
 #[rusmpp(decode = owned, test = skip)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub struct QueryBroadcastSmResp {
     /// Message ID of the queried message. This must be the MC
     /// assigned Message ID allocated to the original short message

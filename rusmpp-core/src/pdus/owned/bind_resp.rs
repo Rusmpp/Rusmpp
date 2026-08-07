@@ -13,7 +13,6 @@ macro_rules! bind_resp {
         #[rusmpp(decode = owned, test = skip)]
         #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
         #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
         pub struct $name {
             /// MC identifier.
             ///

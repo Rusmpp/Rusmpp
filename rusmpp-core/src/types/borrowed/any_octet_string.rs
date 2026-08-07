@@ -146,7 +146,7 @@ const _: () = {
         where
             S: Serializer,
         {
-            serializer.serialize_bytes(&self.bytes)
+            serializer.serialize_bytes(self.bytes)
         }
     }
 

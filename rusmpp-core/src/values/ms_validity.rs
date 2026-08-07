@@ -3,7 +3,6 @@ use rusmpp_macros::Rusmpp;
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub struct MsValidity {
     pub validity_behavior: MsValidityBehavior,
     #[rusmpp(length = "checked")]
@@ -25,7 +24,6 @@ impl MsValidity {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub struct MsValidityInformation {
     pub units_of_time: UnitsOfTime,
     pub number_of_time_units: u16,
@@ -44,7 +42,6 @@ impl MsValidityInformation {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub enum MsValidityBehavior {
     #[default]
     StoreIndefinitely = 0,
@@ -59,7 +56,6 @@ pub enum MsValidityBehavior {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub enum UnitsOfTime {
     #[default]
     Seconds = 0b00000000,

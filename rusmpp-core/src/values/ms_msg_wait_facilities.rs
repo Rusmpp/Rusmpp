@@ -4,7 +4,6 @@ use rusmpp_macros::Rusmpp;
 #[rusmpp(repr = "u8")]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub struct MsMsgWaitFacilities {
     pub indicator: Indicator,
     pub type_of_message: TypeOfMessage,
@@ -38,7 +37,6 @@ impl From<MsMsgWaitFacilities> for u8 {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub enum Indicator {
     #[default]
     Inactive = 0b00000000,
@@ -50,7 +48,6 @@ pub enum Indicator {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub enum TypeOfMessage {
     #[default]
     VoicemailMessageWaiting = 0b00000000,

@@ -11,7 +11,6 @@ use crate::{pdus::owned::Pdu, types::owned::COctetString, values::*};
 #[rusmpp(decode = owned, test = skip)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub struct QuerySm {
     /// Message ID of the message whose state
     /// is to be queried. This must be the MC

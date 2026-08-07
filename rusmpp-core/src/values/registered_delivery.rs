@@ -4,7 +4,6 @@ use rusmpp_macros::Rusmpp;
 #[rusmpp(repr = "u8")]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub struct RegisteredDelivery {
     mc_delivery_receipt: MCDeliveryReceipt,
     sme_originated_acknowledgement: SmeOriginatedAcknowledgement,
@@ -86,7 +85,6 @@ impl From<RegisteredDelivery> for u8 {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub enum MCDeliveryReceipt {
     #[default]
     NoMcDeliveryReceiptRequested = 0b00000000,
@@ -100,7 +98,6 @@ pub enum MCDeliveryReceipt {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub enum SmeOriginatedAcknowledgement {
     #[default]
     NoReceiptSmeAcknowledgementRequested = 0b00000000,
@@ -114,7 +111,6 @@ pub enum SmeOriginatedAcknowledgement {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub enum IntermediateNotification {
     #[default]
     NoIntermediaryNotificationRequested = 0b00000000,
