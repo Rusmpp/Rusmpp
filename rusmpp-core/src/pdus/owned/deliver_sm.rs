@@ -3,7 +3,7 @@ use rusmpp_macros::Rusmpp;
 use crate::{
     encode::Length,
     pdus::owned::Pdu,
-    tlvs::owned::{MessageDeliveryRequestTlvValue, Tlv},
+    tlvs::owned::{MessageDeliveryRequestTlvValue, Tlv, TlvValue},
     types::owned::{COctetString, EmptyOrFullCOctetString, OctetString},
     values::{owned::*, *},
 };
@@ -174,6 +174,17 @@ impl DeliverSm {
 
     pub fn builder() -> DeliverSmBuilder {
         DeliverSmBuilder::new()
+    }
+
+    /// Returns the first value of [`TlvValue::ReceiptedMessageId`] if present.
+    pub fn receipted_message_id(&self) -> Option<&COctetString<1, 65>> {
+        self.tlvs.iter().find_map(|tlv| {
+            if let Some(TlvValue::ReceiptedMessageId(value)) = tlv.value() {
+                Some(value)
+            } else {
+                None
+            }
+        })
     }
 }
 
