@@ -39,7 +39,7 @@ impl EsmClass {
     }
 
     /// Sets the UDH Indicator bit in the GSM Features field.
-    pub const fn with_udhi_indicator(self) -> Self {
+    pub const fn with_udh_indicator(self) -> Self {
         Self {
             messaging_mode: self.messaging_mode,
             message_type: self.message_type,

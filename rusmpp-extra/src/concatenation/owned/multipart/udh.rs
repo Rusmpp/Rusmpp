@@ -162,7 +162,7 @@ where
                         let sm = self
                             .sm
                             .clone()
-                            .with_udhi_indicator()
+                            .with_udh_indicator()
                             .with_short_message(short_message)
                             .with_data_coding(data_coding);
 

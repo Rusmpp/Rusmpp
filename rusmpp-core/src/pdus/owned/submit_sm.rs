@@ -240,8 +240,8 @@ impl SubmitSm {
     }
 
     /// Sets the UDH Indicator bit in the GSM Features field of the [`SubmitSm::esm_class`].
-    pub const fn with_udhi_indicator(mut self) -> Self {
-        self.esm_class = self.esm_class.with_udhi_indicator();
+    pub const fn with_udh_indicator(mut self) -> Self {
+        self.esm_class = self.esm_class.with_udh_indicator();
         self
     }
 
