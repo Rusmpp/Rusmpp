@@ -35,10 +35,8 @@ default = ["tokio-codec"]
 tokio-codec = ["dep:rusmpp-tokio-codec"]
 # Enables encoding/decoding and concatenation support for SubmitSm.
 extra = ["rusmpp-extra/encoding", "rusmpp-extra/concatenation"]
-# Derives serde Serialize for all SMPP types.
+# Derives serde Serialize and Deserialize for all SMPP types.
 serde = ["rusmpp-core/serde"]
-# Derives serde Deserialize for all SMPP types. This will allow to create unchecked SMPP values from arbitrary serialized data, which may not be valid SMPP values.
-serde-deserialize-unchecked = ["rusmpp-core/serde-deserialize-unchecked"]
 # Enables logging via the `tracing` crate.
 tracing = ["rusmpp-tokio-codec/tracing"]
 

@@ -3,8 +3,8 @@ use rusmpp_macros::Rusmpp;
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[rusmpp(repr = "u8")]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+
 pub struct RegisteredDelivery {
     mc_delivery_receipt: MCDeliveryReceipt,
     sme_originated_acknowledgement: SmeOriginatedAcknowledgement,
@@ -85,8 +85,8 @@ impl From<RegisteredDelivery> for u8 {
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+
 pub enum MCDeliveryReceipt {
     #[default]
     NoMcDeliveryReceiptRequested = 0b00000000,
@@ -99,8 +99,8 @@ pub enum MCDeliveryReceipt {
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+
 pub enum SmeOriginatedAcknowledgement {
     #[default]
     NoReceiptSmeAcknowledgementRequested = 0b00000000,
@@ -113,8 +113,8 @@ pub enum SmeOriginatedAcknowledgement {
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+
 pub enum IntermediateNotification {
     #[default]
     NoIntermediaryNotificationRequested = 0b00000000,

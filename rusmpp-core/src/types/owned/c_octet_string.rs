@@ -68,12 +68,6 @@ use crate::{
 /// let string = COctetString::<10, 6>::from_static_slice(b"Hello\0");
 /// ```
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
-#[cfg_attr(
-    any(feature = "serde", feature = "serde-deserialize-unchecked"),
-    serde(transparent)
-)]
 pub struct COctetString<const MIN: usize, const MAX: usize> {
     bytes: Bytes,
 }
@@ -415,6 +409,31 @@ impl<const MIN: usize, const MAX: usize> TryFrom<Vec<u8>> for COctetString<MIN, 
         Self::from_vec(bytes)
     }
 }
+
+#[cfg(feature = "serde")]
+const _: () = {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    impl<const MIN: usize, const MAX: usize> Serialize for COctetString<MIN, MAX> {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            serializer.serialize_bytes(&self.bytes)
+        }
+    }
+
+    impl<'de, const MIN: usize, const MAX: usize> Deserialize<'de> for COctetString<MIN, MAX> {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let bytes = Deserialize::deserialize(deserializer)?;
+
+            Self::from_bytes(bytes).map_err(serde::de::Error::custom)
+        }
+    }
+};
 
 #[cfg(test)]
 mod tests {

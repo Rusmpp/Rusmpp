@@ -20,8 +20,8 @@ use rusmpp_macros::Rusmpp;
 #[rusmpp(test = skip)]
 #[cfg_attr(test, derive(strum_macros::EnumIter))]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+
 pub enum CommandId {
     BindReceiver = 0x00000001,
     BindTransmitter = 0x00000002,
