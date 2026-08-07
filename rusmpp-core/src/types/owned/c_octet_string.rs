@@ -1,6 +1,6 @@
 #![allow(path_statements)]
 
-use alloc::{string::String, string::ToString, vec::Vec};
+use alloc::{string::String, vec::Vec};
 use bytes::{BufMut, Bytes, BytesMut};
 
 use crate::{
@@ -281,10 +281,7 @@ impl<const MIN: usize, const MAX: usize> Default for COctetString<MIN, MAX> {
 
 impl<const MIN: usize, const MAX: usize> core::fmt::Debug for COctetString<MIN, MAX> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("COctetString")
-            .field("bytes", &self.bytes)
-            .field("string", &self.to_string())
-            .finish()
+        core::fmt::Debug::fmt(&self.bytes, f)
     }
 }
 
@@ -636,6 +633,8 @@ mod tests {
     }
 
     mod as_str {
+        use alloc::string::ToString;
+
         use super::*;
 
         #[test]

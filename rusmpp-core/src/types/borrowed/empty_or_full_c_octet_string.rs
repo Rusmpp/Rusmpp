@@ -134,10 +134,7 @@ impl<'a, const N: usize> EmptyOrFullCOctetString<'a, N> {
 
 impl<const N: usize> core::fmt::Debug for EmptyOrFullCOctetString<'_, N> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("EmptyOrFullCOctetString")
-            .field("bytes", &self.bytes)
-            .field("string", &self.as_str())
-            .finish()
+        core::fmt::Debug::fmt(&self.bytes, f)
     }
 }
 
