@@ -5,7 +5,6 @@ use rusmpp_macros::Rusmpp;
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub enum Npi {
     #[default]
     Unknown = 0b00000000,

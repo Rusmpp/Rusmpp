@@ -12,7 +12,6 @@ use crate::{pdus::owned::Pdu, types::owned::COctetString};
 #[rusmpp(decode = owned, test = skip)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub struct Outbind {
     /// MC identifier.
     ///

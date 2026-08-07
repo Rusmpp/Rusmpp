@@ -9,7 +9,6 @@ use super::BroadcastAreaFormat;
 #[rusmpp(decode = owned)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub struct BroadcastAreaIdentifier {
     pub format: BroadcastAreaFormat,
     #[rusmpp(length = "unchecked")]

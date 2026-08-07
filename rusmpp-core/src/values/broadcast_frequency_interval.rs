@@ -4,7 +4,6 @@ use rusmpp_macros::Rusmpp;
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub enum UnitOfTime {
     #[default]
     AsFrequentlyAsPossible = 0x00,
@@ -23,7 +22,6 @@ pub enum UnitOfTime {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub struct BroadcastFrequencyInterval {
     pub unit: UnitOfTime,
     pub value: u16,

@@ -4,7 +4,6 @@ use rusmpp_macros::Rusmpp;
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub enum TypeOfNetwork {
     #[default]
     Generic = 0,
@@ -18,7 +17,6 @@ pub enum TypeOfNetwork {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub enum EncodingContentType {
     #[default]
     Index = 0x0000,
@@ -72,7 +70,6 @@ pub enum EncodingContentType {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub struct BroadcastContentType {
     pub type_of_network: TypeOfNetwork,
     pub encoding_content_type: EncodingContentType,

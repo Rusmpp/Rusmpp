@@ -27,7 +27,6 @@ use crate::{
 #[rusmpp(decode = owned, test = skip)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub struct CancelBroadcastSm {
     /// Set to indicate CBS Application service, if
     /// cancellation of a group of application service

@@ -34,7 +34,6 @@ pub use query_broadcast_response::*;
 #[rusmpp(decode = owned, test = skip)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub struct Tlv {
     tag: TlvTag,
     value_length: u16,

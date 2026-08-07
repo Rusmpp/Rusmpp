@@ -18,7 +18,6 @@ use crate::{
 #[rusmpp(decode = owned, test = skip)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub struct ReplaceSm {
     /// Message ID of the message to be replaced.
     /// This must be the MC assigned Message ID

@@ -10,7 +10,6 @@ use rusmpp_macros::Rusmpp;
 #[rusmpp(test = skip)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub enum DestFlag {
     SmeAddress = 0x01,
     DistributionListName = 0x02,

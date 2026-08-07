@@ -5,7 +5,6 @@ use rusmpp_macros::Rusmpp;
 #[rusmpp(repr = "u8")]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub struct PriorityFlag {
     pub value: u8,
 }

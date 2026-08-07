@@ -4,7 +4,6 @@ use rusmpp_macros::Rusmpp;
 #[rusmpp(repr = "u8")]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub struct CallbackNumPresInd {
     pub presentation: Presentation,
     pub screening: Screening,
@@ -38,7 +37,6 @@ impl From<CallbackNumPresInd> for u8 {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub enum Presentation {
     #[default]
     PresentationAllowed = 0b00000000,
@@ -51,7 +49,6 @@ pub enum Presentation {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-
 pub enum Screening {
     #[default]
     NotScreened = 0b00000000,
