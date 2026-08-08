@@ -24,6 +24,7 @@ use crate::{Sealed, encode::Length, udhs::errors::ConcatenatedShortMessageError}
 ///
 /// The first 3 bytes `(06 08 04)` are part of the UDH header and are not stored in the struct.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct ConcatenatedShortMessage16Bit {
     /// Reference number for the concatenated message.
     reference: u16,

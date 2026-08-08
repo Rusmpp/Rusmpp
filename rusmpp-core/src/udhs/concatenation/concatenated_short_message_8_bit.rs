@@ -27,6 +27,7 @@ use crate::{
 ///
 /// The first 3 bytes `(05 00 03)` are part of the UDH header and are not stored in the struct.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct ConcatenatedShortMessage8Bit {
     /// Reference number for the concatenated message.
     reference: u8,

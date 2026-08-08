@@ -5,6 +5,7 @@ use rusmpp_macros::Rusmpp;
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[repr(u8)]
 #[rusmpp(test = skip)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub enum UdhId {
     /// Concatenated short messages, 8-bit reference number.
     ConcatenatedShortMessages8Bit = 0x00,
