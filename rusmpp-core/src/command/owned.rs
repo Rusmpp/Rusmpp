@@ -38,7 +38,7 @@ use crate::{CommandId, CommandStatus, pdus::owned::Pdu};
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = owned)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Command {
     /// See [`CommandId`]
     id: CommandId,
@@ -157,6 +157,54 @@ impl PduBuilder {
         self.inner
     }
 }
+
+#[cfg(feature = "serde")]
+const _: () = {
+    use serde::{Deserialize, Deserializer};
+
+    #[derive(::serde::Deserialize)]
+    struct DeCommand {
+        id: CommandId,
+        status: CommandStatus,
+        sequence_number: u32,
+        pdu: Option<Pdu>,
+    }
+
+    impl<'de> Deserialize<'de> for Command {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let DeCommand {
+                id,
+                status,
+                sequence_number,
+                pdu,
+            } = DeCommand::deserialize(deserializer)?;
+
+            match pdu {
+                Some(pdu) => {
+                    let pdu_id = pdu.command_id();
+
+                    if pdu_id != id {
+                        return Err(::serde::de::Error::custom(::alloc::format!(
+                            "Command id mismatch: expected {id:?}, got {pdu_id:?}",
+                        )));
+                    }
+
+                    Ok(Self::new(status, sequence_number, pdu))
+                }
+
+                None => Ok(Self {
+                    id,
+                    status,
+                    sequence_number,
+                    pdu: None,
+                }),
+            }
+        }
+    }
+};
 
 #[cfg(test)]
 mod tests {

@@ -10,7 +10,7 @@ use crate::{
 #[derive(Default, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = owned, test = skip)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct SubmitMultiResp {
     /// This field contains the MC message ID of the submitted
     /// message. It may be used at a later stage to query the status
@@ -148,6 +148,31 @@ impl SubmitMultiRespBuilder {
         self.inner
     }
 }
+
+#[cfg(feature = "serde")]
+const _: () = {
+    use serde::{Deserialize, Deserializer};
+
+    impl<'de> Deserialize<'de> for SubmitMultiResp {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let SubmitMultiRespParts {
+                message_id,
+                no_unsuccess: _,
+                unsuccess_sme,
+                tlvs,
+            } = SubmitMultiRespParts::deserialize(deserializer)?;
+
+            let mut this = Self::new(message_id, unsuccess_sme, alloc::vec::Vec::new());
+
+            this.tlvs = tlvs;
+
+            Ok(this)
+        }
+    }
+};
 
 #[cfg(any(test, feature = "test"))]
 mod tests {

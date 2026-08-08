@@ -137,6 +137,7 @@ impl ConcatenatedShortMessage16Bit {
 
 /// Parts of a [`ConcatenatedShortMessage16Bit`].
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct ConcatenatedShortMessage16BitParts {
     /// Reference number for the concatenated message.
     pub reference: u16,
