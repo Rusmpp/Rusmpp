@@ -17,7 +17,7 @@ use crate::{
 /// User Data Header (UDH).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = owned, test = skip)]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Udh {
     /// UDH length (excluding the length field itself).
     length: u8,
@@ -65,6 +65,46 @@ impl From<UdhValue> for Udh {
         Self::new(value)
     }
 }
+
+#[cfg(feature = "serde")]
+const _: () = {
+    use serde::{Deserialize, Deserializer};
+
+    #[derive(::serde::Deserialize)]
+    struct DeUdh {
+        id: UdhId,
+        value: Option<UdhValue>,
+    }
+
+    impl<'de> Deserialize<'de> for Udh {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let DeUdh { id, value } = DeUdh::deserialize(deserializer)?;
+
+            match value {
+                Some(value) => {
+                    let value_id = value.id();
+
+                    if value_id != id {
+                        return Err(::serde::de::Error::custom(::alloc::format!(
+                            "Udh id mismatch: expected {id:?}, got {value_id:?}",
+                        )));
+                    }
+
+                    Ok(Self::new(value))
+                }
+
+                None => Ok(Self {
+                    length: id.length() as u8,
+                    id,
+                    value: None,
+                }),
+            }
+        }
+    }
+};
 
 /// User Data Header (UDH) value.
 #[non_exhaustive]

@@ -39,6 +39,7 @@ pub struct ConcatenatedShortMessage8Bit {
 
 /// Parts of a [`ConcatenatedShortMessage8Bit`].
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct ConcatenatedShortMessage8BitParts {
     /// Reference number for the concatenated message.
     pub reference: u8,

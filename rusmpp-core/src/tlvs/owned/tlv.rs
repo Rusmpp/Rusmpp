@@ -36,7 +36,6 @@ pub use query_broadcast_response::*;
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Tlv {
     tag: TlvTag,
-    #[cfg_attr(feature = "serde", serde(skip))]
     value_length: u16,
     #[rusmpp(key = tag, length = value_length)]
     value: Option<TlvValue>,

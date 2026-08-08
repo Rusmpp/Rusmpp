@@ -15,7 +15,7 @@ pub struct SubmitSmResp<'a, const N: usize> {
     /// This field contains the MC message ID of the submitted message.
     /// It may be used at a later stage to query the status of a message,
     /// cancel or replace the message.
-    message_id: COctetString<'a, 1, 65>,
+    pub message_id: COctetString<'a, 1, 65>,
     /// Message submission response TLVs ([`MessageSubmissionResponseTlvValue`])
     #[rusmpp(length = "unchecked")]
     #[cfg_attr(feature = "arbitrary", arbitrary(default))]

@@ -16,7 +16,7 @@ macro_rules! sm_resp {
             /// This field contains the MC message ID of the submitted message.
             /// It may be used at a later stage to query the status of a message,
             /// cancel or replace the message.
-            message_id: COctetString<1, 65>,
+            pub message_id: COctetString<1, 65>,
             /// Message delivery response TLVs ([`MessageDeliveryResponseTlvValue`])
             #[rusmpp(length = "unchecked")]
             tlvs: alloc::vec::Vec<Tlv>,

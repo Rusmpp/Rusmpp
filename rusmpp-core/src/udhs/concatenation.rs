@@ -13,6 +13,7 @@ pub mod parts {
 
 /// Concatenated short message.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub enum ConcatenatedShortMessage {
     /// 8-bit reference number concatenated short message.
     EightBit(ConcatenatedShortMessage8Bit),
@@ -46,6 +47,7 @@ impl ConcatenatedShortMessage {
 
 /// Bytes representation of [`ConcatenatedShortMessage`] as full UDH.
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub enum ConcatenatedShortMessageUdhBytes {
     /// 8-bit UDH bytes
     EightBit([u8; 6]),
@@ -65,6 +67,7 @@ impl ConcatenatedShortMessageUdhBytes {
 
 /// Concatenated short message type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub enum ConcatenatedShortMessageType {
     /// 8-bit reference number concatenated short message.
     EightBit { reference: u8 },
