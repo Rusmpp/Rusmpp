@@ -1,5 +1,7 @@
 # Rusmpp
 
+A collection of crates for the Rust implementation of the [SMPP v5](https://smpp.org/SMPP_v5.pdf) protocol, providing low-level protocol primitives, client and server building blocks, and high-level tools for building SMS messaging applications.
+
 ![Build Status](https://github.com/Rusmpp/Rusmpp/actions/workflows/build-and-test.yml/badge.svg)
 [![crates.io](https://img.shields.io/crates/v/rusmpp.svg)](https://crates.io/crates/rusmpp)
 [![Crates.io (MSRV)](https://img.shields.io/crates/msrv/rusmpp)](https://crates.io/crates/rusmpp)
@@ -7,96 +9,167 @@
 [![Crates.io (Downloads)](https://img.shields.io/crates/d/rusmpp)](https://crates.io/crates/rusmpp)
 [![Crates.io (License)](https://img.shields.io/crates/l/rusmpp)](https://crates.io/crates/rusmpp)
 
-Rust implementation of the [SMPP v5](https://smpp.org/SMPP_v5.pdf) protocol.
+[Rusmpp egui web client (UNOFFICIAL)](https://rusmppc-egui.pages.dev/)
 
-This is a low level library for implementing clients and servers. If you are looking for a client, check out [rusmppc](https://crates.io/crates/rusmppc).
+## Overview
 
-See it in action with the [web client](https://rusmppc-egui.pages.dev/).
+- **rusmppc**: High-level SMPP client built on top of _rusmpp_.
+
+- **rusmpp**: Main low-level SMPP v5 implementation. Provides PDUs, commands, client/server. 
+
+- **rusmpp-extra**: Additional helpers for features like message encoding, decoding, and concatenated SMS handling.
+
+- **rusmpps**: SMPP server-simulator for testing SMPP clients.
+
+## Usage Example
+
+Send a message over the SMPP simulator _`rusmpps.rusmpp.org:2775`_.
 
 ```rust
-use core::error::Error;
-use futures::{SinkExt, StreamExt};
+use std::{str::FromStr, time::Duration};
+
+use futures::StreamExt;
 use rusmpp::{
-    tokio_codec::{EncodeError, CommandCodec},
-    Command, CommandId, CommandStatus, Pdu,
+    CommandId, CommandStatus,
+    pdus::{BindTransceiver, DeliverSmResp, SubmitSm},
+    types::{COctetString, OctetString},
+    values::{EsmClass, Npi, RegisteredDelivery, ServiceType, Ton},
 };
-use tokio::io::DuplexStream;
-use tokio_util::codec::Framed;
-use tracing::info;
+use rusmppc::{ConnectionBuilder, event::Event};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
-    // Rusmpp produces a lot of logs while decoding and encoding PDUs.
-    // You can filter them out by setting the `rusmpp` target to `off`,
-    // or by disabling the `tracing` feature.
+async fn main() -> Result<(), Box<dyn core::error::Error>> {
+    // Rusmppc produces a lot of logs while managing the SMPP connection in the background.
+    // You can filter them out by setting the `rusmppc` target to `off`.
     tracing_subscriber::fmt()
-        .with_env_filter("client=info,server=info,rusmpp=trace")
+        .with_env_filter("rusmppc_submit_sm=info,rusmpp=debug,rusmppc=debug")
         .init();
 
-    // In-memory duplex stream to simulate a server and client.
-    let (server_stream, client_stream) = tokio::io::duplex(4096);
+    let (client, mut events) = ConnectionBuilder::new()
+        // Every 5 seconds send an enquire link command to the server.
+        .enquire_link_interval(Duration::from_secs(5))
+        // If the server does not respond within 2 seconds, consider it a timeout.
+        .response_timeout(Duration::from_secs(2))
+        // connect to the SMPP server using plain TCP
+        // or use `smpps://rusmpps.rusmpp.org:2776` for a TLS connection.
+        .connect("smpp://rusmpps.rusmpp.org:2775")
+        .await?;
 
-    launch_server(server_stream).await?;
+    client
+        .bind_transceiver(
+            BindTransceiver::builder()
+                .system_id(COctetString::from_str("NfDfddEKVI0NCxO")?)
+                .password(COctetString::from_str("rEZYMq5j")?)
+                .system_type(COctetString::empty())
+                .addr_ton(Ton::Unknown)
+                .addr_npi(Npi::Unknown)
+                .address_range(COctetString::empty())
+                .build(),
+        )
+        .await?;
 
-    // The CommandCodec encodes/decodes SMPP commands into/from bytes.
-    let mut framed = Framed::new(client_stream, CommandCodec::new());
+    let client_clone = client.clone();
 
-    // Rusmpp takes care of setting the correct command ID.
-    let command = Command::new(CommandStatus::EsmeRok, 1, Pdu::EnquireLink);
+    let events = tokio::spawn(async move {
+        // Listen for events like incoming commands and background errors.
+        while let Some(event) = events.next().await {
+            tracing::info!(?event, "Event");
 
-    info!(target: "client", "EnquireLink sent");
+            if let Event::Incoming(command) = event {
+                if command.id() == CommandId::DeliverSm {
+                    tracing::info!("Received DeliverSm");
 
-    framed.send(command).await?;
-
-    while let Some(Ok(command)) = framed.next().await {
-        if let CommandId::EnquireLinkResp = command.id() {
-            info!(target: "client", "EnquireLink response received");
-
-            break;
-        }
-    }
-
-    Ok(())
-}
-
-async fn launch_server(stream: DuplexStream) -> Result<(), Box<dyn Error>> {
-    tokio::spawn(async move {
-        let mut framed = Framed::new(stream, CommandCodec::new());
-
-        while let Some(Ok(command)) = framed.next().await {
-            if let CommandId::EnquireLink = command.id() {
-                info!(target: "server", "EnquireLink received");
-
-                // We can also use the Command::builder() to create commands.
-                let response = Command::builder()
-                    .status(CommandStatus::EsmeRok)
-                    .sequence_number(command.sequence_number())
-                    .pdu(Pdu::EnquireLinkResp);
-
-                framed.send(response).await?;
-
-                info!(target: "server", "EnquireLink response sent");
-
-                break;
+                    let _ = client_clone
+                        .deliver_sm_resp(command.sequence_number(), DeliverSmResp::default())
+                        .await;
+                }
             }
         }
 
-        Ok::<(), EncodeError>(())
+        tracing::info!("Connection closed");
     });
+
+    let submit = SubmitSm::builder()
+        .service_type(ServiceType::default())
+        .source_addr_ton(Ton::Unknown)
+        .source_addr_npi(Npi::Unknown)
+        .source_addr(COctetString::from_str("12345")?)
+        .destination_addr(COctetString::from_str("491701234567")?)
+        .esm_class(EsmClass::default())
+        .registered_delivery(RegisteredDelivery::request_all())
+        .short_message(OctetString::from_str("Hi, I am a short message.")?)
+        .build();
+
+    tracing::info!("Sending SubmitSm");
+
+    let response = client.submit_sm(submit.clone()).await?;
+
+    tracing::info!(?response, "Got SubmitSmResp");
+
+    // Send a command with a custom timeout.
+
+    tracing::info!("Sending SubmitSm with a custom timeout");
+
+    let response = client
+        .response_timeout(Duration::from_secs(30))
+        .submit_sm(submit.clone())
+        .await?;
+
+    tracing::info!(?response, "Got SubmitSmResp");
+
+    // Send a command without a timeout.
+
+    tracing::info!("Sending SubmitSm without a timeout");
+
+    let response = client
+        .no_response_timeout()
+        .submit_sm(submit.clone())
+        .await?;
+
+    tracing::info!(?response, "Got SubmitSmResp");
+
+    // Send a command without waiting for a response.
+    // The response, if any, will be passed to the event stream.
+
+    tracing::info!("Sending SubmitSm without waiting for a response");
+
+    let sequence_number = client.no_wait().submit_sm(submit.clone()).await?;
+
+    tracing::info!(?sequence_number, "Sent SubmitSm");
+
+    // Send a command with a custom status.
+
+    tracing::info!("Sending SubmitSm with a custom status");
+
+    client
+        .status(CommandStatus::EsmeRunknownerr) // This error code does not make any sense, but it is just an example.
+        .submit_sm(submit.clone())
+        .await
+        .ok();
+
+    // Wait a little bit to see the incoming events.
+
+    tokio::time::sleep(Duration::from_secs(10)).await;
+
+    tracing::info!("Unbinding from the server");
+
+    client.unbind().await?;
+
+    tracing::info!("Closing the connection");
+
+    client.close().await?;
+
+    tracing::info!("Waiting for the connection to terminate");
+
+    client.closed().await;
+
+    events.await?;
 
     Ok(())
 }
 ```
 
-See the [examples](https://github.com/Rusmpp/Rusmpp/tree/main/rusmpp/examples) directory for more examples.
-
-## Features
-
-- `tokio-codec`: Implements [`Encoder`](https://docs.rs/tokio-util/latest/tokio_util/codec/trait.Encoder.html) and [`Decoder`](https://docs.rs/tokio-util/latest/tokio_util/codec/trait.Decoder.html) traits.
-- `extra`: Enables encoding/decoding and concatenation support for `SubmitSm`.
-- `serde`: Implements [`Serialize`](https://docs.rs/serde/latest/serde/trait.Serialize.html) trait for all SMPP types.
-- `serde-deserialize-unchecked`: Implements [`Deserialize`](https://docs.rs/serde/latest/serde/trait.Deserialize.html) trait for all SMPP types, but does not check the validity of the data. Use with caution.
-- `tracing`: Enables logging using [`tracing`](https://docs.rs/tracing/latest/tracing/).
+You can find this [example](https://github.com/Rusmpp/Rusmpp/tree/main/rusmppc/examples/rusmppc_submit_sm.rs) as well as other client example projects in the [example directory](https://github.com/Rusmpp/Rusmpp/tree/main/rusmppc/examples).
 
 ## License
 

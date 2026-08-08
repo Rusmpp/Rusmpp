@@ -7,7 +7,7 @@ description = "A Rust SMPP library."
 authors = ["Jad K. Haddad <jadkhaddad@gmail.com>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/Rusmpp/Rusmpp"
-readme = "../Readme.md"
+readme = "./Readme.md"
 keywords = ["smpp", "smsc", "messaging", "networking", "protocol"]
 
 [dependencies]
