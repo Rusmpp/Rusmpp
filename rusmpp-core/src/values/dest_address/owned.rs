@@ -15,7 +15,7 @@ use crate::{
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = owned, test = skip)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct DestAddress {
     flag: DestFlag,
     #[rusmpp(key = flag)]
@@ -188,6 +188,36 @@ impl From<DistributionListName> for DestAddressValue {
         DestAddressValue::DistributionListName(val)
     }
 }
+
+#[cfg(feature = "serde")]
+const _: () = {
+    use serde::{Deserialize, Deserializer};
+
+    #[derive(::serde::Deserialize)]
+    struct DeDestAddress {
+        flag: DestFlag,
+        value: DestAddressValue,
+    }
+
+    impl<'de> Deserialize<'de> for DestAddress {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let DeDestAddress { flag, value } = DeDestAddress::deserialize(deserializer)?;
+
+            let value_flag = value.flag();
+
+            if value_flag != flag {
+                return Err(::serde::de::Error::custom(::alloc::format!(
+                    "Dest address flag mismatch: expected {flag:?}, got {value_flag:?}",
+                )));
+            }
+
+            Ok(Self::new(value))
+        }
+    }
+};
 
 #[cfg(test)]
 mod tests {
