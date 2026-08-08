@@ -37,16 +37,22 @@ pub fn quote_parts(input: &DeriveInput, fields_named: &FieldsNamed) -> TokenStre
         .clone()
         .map(|ident| quote! { #ident: self.#ident });
 
-    let serde_bound = if input.generics.lifetimes().next().is_some() {
-        quote! {
-            #[cfg_attr(
-                feature = "serde",
-                serde(bound(deserialize = "'de: 'a"))
-            )]
-        }
-    } else {
-        quote! {}
-    };
+    let serde_bound = input
+        .generics
+        .lifetimes()
+        .next()
+        .map(|param| {
+            let lifetime = &param.lifetime;
+            let bound = syn::LitStr::new(&format!("'de: {}", lifetime), lifetime.span());
+
+            quote! {
+                #[cfg_attr(
+                    feature = "serde",
+                    serde(bound(deserialize = #bound))
+                )]
+            }
+        })
+        .unwrap_or_default();
 
     quote! {
         #[derive(Debug)]
