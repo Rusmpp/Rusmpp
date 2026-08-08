@@ -17,6 +17,7 @@ use crate::{
 /// User Data Header (UDH).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = owned, test = skip)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct Udh {
     /// UDH length (excluding the length field itself).
     length: u8,
@@ -68,6 +69,7 @@ impl From<UdhValue> for Udh {
 /// User Data Header (UDH) value.
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub enum UdhValue {
     /// 8-bit Concatenated Short Message UDH.
     ConcatenatedShortMessage8Bit(ConcatenatedShortMessage8Bit),
