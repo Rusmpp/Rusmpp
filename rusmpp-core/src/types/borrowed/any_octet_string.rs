@@ -150,10 +150,7 @@ const _: () = {
         }
     }
 
-    impl<'a, 'de> Deserialize<'de> for AnyOctetString<'a>
-    where
-        'de: 'a,
-    {
+    impl<'de: 'a, 'a> Deserialize<'de> for AnyOctetString<'a> {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
             D: Deserializer<'de>,

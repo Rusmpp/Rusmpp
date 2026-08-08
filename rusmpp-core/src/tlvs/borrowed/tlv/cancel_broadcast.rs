@@ -11,7 +11,8 @@ use crate::{
 
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, TlvValue)]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(bound(deserialize = "'de: 'a")))]
 pub enum CancelBroadcastTlvValue<'a> {
     /// Specifies the content type of the message.
     BroadcastContentType(BroadcastContentType),
