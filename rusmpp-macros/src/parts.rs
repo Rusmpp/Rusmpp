@@ -37,8 +37,21 @@ pub fn quote_parts(input: &DeriveInput, fields_named: &FieldsNamed) -> TokenStre
         .clone()
         .map(|ident| quote! { #ident: self.#ident });
 
+    let serde_bound = if input.generics.lifetimes().next().is_some() {
+        quote! {
+            #[cfg_attr(
+                feature = "serde",
+                serde(bound(deserialize = "'de: 'a"))
+            )]
+        }
+    } else {
+        quote! {}
+    };
+
     quote! {
         #[derive(Debug)]
+        #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+        #serde_bound
         pub struct #parts_struct_name #generics {
             #(#parts_struct_fields),*
         }
