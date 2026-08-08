@@ -248,10 +248,7 @@ const _: () = {
         }
     }
 
-    impl<'a, 'de, const N: usize> Deserialize<'de> for EmptyOrFullCOctetString<'a, N>
-    where
-        'de: 'a,
-    {
+    impl<'de: 'a, 'a, const N: usize> Deserialize<'de> for EmptyOrFullCOctetString<'a, N> {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
             D: Deserializer<'de>,

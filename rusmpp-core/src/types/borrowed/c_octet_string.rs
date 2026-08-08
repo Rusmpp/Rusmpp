@@ -294,9 +294,8 @@ const _: () = {
         }
     }
 
-    impl<'a, 'de, const MIN: usize, const MAX: usize> Deserialize<'de> for COctetString<'a, MIN, MAX>
-    where
-        'de: 'a,
+    impl<'de: 'a, 'a, const MIN: usize, const MAX: usize> Deserialize<'de>
+        for COctetString<'a, MIN, MAX>
     {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
