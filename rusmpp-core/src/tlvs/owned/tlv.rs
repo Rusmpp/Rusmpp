@@ -33,7 +33,6 @@ pub use query_broadcast_response::*;
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = owned, test = skip)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Tlv {
     tag: TlvTag,
     value_length: u16,
@@ -75,12 +74,50 @@ impl From<TlvValue> for Tlv {
 
 #[cfg(feature = "serde")]
 const _: () = {
-    use serde::{Deserialize, Deserializer};
+    use alloc::borrow::Cow;
 
-    #[derive(::serde::Deserialize)]
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    #[derive(Serialize)]
+    #[serde(transparent)]
+    struct SerTlv<'a> {
+        value: Cow<'a, TlvValue>,
+    }
+
+    impl<'a> From<&'a Tlv> for SerTlv<'a> {
+        fn from(tlv: &'a Tlv) -> Self {
+            let value =
+                tlv.value
+                    .as_ref()
+                    .map(Cow::Borrowed)
+                    .unwrap_or(Cow::Owned(TlvValue::Other {
+                        tag: tlv.tag,
+                        value: Default::default(),
+                    }));
+
+            Self { value }
+        }
+    }
+
+    impl Serialize for Tlv {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            SerTlv::from(self).serialize(serializer)
+        }
+    }
+
+    #[derive(Deserialize)]
+    #[serde(transparent)]
     struct DeTlv {
-        tag: TlvTag,
-        value: Option<TlvValue>,
+        value: TlvValue,
+    }
+
+    impl From<DeTlv> for Tlv {
+        fn from(tlv: DeTlv) -> Self {
+            Self::new(tlv.value)
+        }
     }
 
     impl<'de> Deserialize<'de> for Tlv {
@@ -88,27 +125,9 @@ const _: () = {
         where
             D: Deserializer<'de>,
         {
-            let DeTlv { tag, value } = DeTlv::deserialize(deserializer)?;
+            let tlv = DeTlv::deserialize(deserializer)?;
 
-            match value {
-                Some(value) => {
-                    let value_tag = value.tag();
-
-                    if value_tag != tag {
-                        return Err(::serde::de::Error::custom(::alloc::format!(
-                            "Tlv tag mismatch: expected {tag:?}, got {value_tag:?}",
-                        )));
-                    }
-
-                    Ok(Self::new(value))
-                }
-
-                None => Ok(Self {
-                    tag,
-                    value_length: 0,
-                    value: None,
-                }),
-            }
+            Ok(Self::from(tlv))
         }
     }
 };

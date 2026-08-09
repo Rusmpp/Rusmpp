@@ -17,7 +17,6 @@ use crate::{
 /// User Data Header (UDH).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = owned, test = skip)]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Udh {
     /// UDH length (excluding the length field itself).
     length: u8,
@@ -68,12 +67,50 @@ impl From<UdhValue> for Udh {
 
 #[cfg(feature = "serde")]
 const _: () = {
-    use serde::{Deserialize, Deserializer};
+    use alloc::borrow::Cow;
 
-    #[derive(::serde::Deserialize)]
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    #[derive(Serialize)]
+    #[serde(transparent)]
+    struct SerUdh<'a> {
+        value: Cow<'a, UdhValue>,
+    }
+
+    impl<'a> From<&'a Udh> for SerUdh<'a> {
+        fn from(udh: &'a Udh) -> Self {
+            let value =
+                udh.value
+                    .as_ref()
+                    .map(Cow::Borrowed)
+                    .unwrap_or(Cow::Owned(UdhValue::Other {
+                        udh_id: udh.id,
+                        value: Default::default(),
+                    }));
+
+            Self { value }
+        }
+    }
+
+    impl Serialize for Udh {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            SerUdh::from(self).serialize(serializer)
+        }
+    }
+
+    #[derive(Deserialize)]
+    #[serde(transparent)]
     struct DeUdh {
-        id: UdhId,
-        value: Option<UdhValue>,
+        value: UdhValue,
+    }
+
+    impl From<DeUdh> for Udh {
+        fn from(udh: DeUdh) -> Self {
+            Self::new(udh.value)
+        }
     }
 
     impl<'de> Deserialize<'de> for Udh {
@@ -81,27 +118,9 @@ const _: () = {
         where
             D: Deserializer<'de>,
         {
-            let DeUdh { id, value } = DeUdh::deserialize(deserializer)?;
+            let udh = DeUdh::deserialize(deserializer)?;
 
-            match value {
-                Some(value) => {
-                    let value_id = value.id();
-
-                    if value_id != id {
-                        return Err(::serde::de::Error::custom(::alloc::format!(
-                            "Udh id mismatch: expected {id:?}, got {value_id:?}",
-                        )));
-                    }
-
-                    Ok(Self::new(value))
-                }
-
-                None => Ok(Self {
-                    length: id.length() as u8,
-                    id,
-                    value: None,
-                }),
-            }
+            Ok(Self::from(udh))
         }
     }
 };

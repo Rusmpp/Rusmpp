@@ -15,7 +15,6 @@ use crate::{
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = owned, test = skip)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct DestAddress {
     flag: DestFlag,
     #[rusmpp(key = flag)]
@@ -191,12 +190,41 @@ impl From<DistributionListName> for DestAddressValue {
 
 #[cfg(feature = "serde")]
 const _: () = {
-    use serde::{Deserialize, Deserializer};
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-    #[derive(::serde::Deserialize)]
+    #[derive(Serialize)]
+    #[serde(transparent)]
+    struct SerDestAddress<'a> {
+        value: &'a DestAddressValue,
+    }
+
+    impl<'a> From<&'a DestAddress> for SerDestAddress<'a> {
+        fn from(dest_address: &'a DestAddress) -> Self {
+            Self {
+                value: &dest_address.value,
+            }
+        }
+    }
+
+    impl Serialize for DestAddress {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            SerDestAddress::from(self).serialize(serializer)
+        }
+    }
+
+    #[derive(Deserialize)]
+    #[serde(transparent)]
     struct DeDestAddress {
-        flag: DestFlag,
         value: DestAddressValue,
+    }
+
+    impl From<DeDestAddress> for DestAddress {
+        fn from(dest_address: DeDestAddress) -> Self {
+            Self::new(dest_address.value)
+        }
     }
 
     impl<'de> Deserialize<'de> for DestAddress {
@@ -204,17 +232,9 @@ const _: () = {
         where
             D: Deserializer<'de>,
         {
-            let DeDestAddress { flag, value } = DeDestAddress::deserialize(deserializer)?;
+            let dest_address = DeDestAddress::deserialize(deserializer)?;
 
-            let value_flag = value.flag();
-
-            if value_flag != flag {
-                return Err(::serde::de::Error::custom(::alloc::format!(
-                    "Dest address flag mismatch: expected {flag:?}, got {value_flag:?}",
-                )));
-            }
-
-            Ok(Self::new(value))
+            Ok(Self::from(dest_address))
         }
     }
 };

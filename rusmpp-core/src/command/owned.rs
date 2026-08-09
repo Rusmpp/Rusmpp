@@ -38,7 +38,6 @@ use crate::{CommandId, CommandStatus, pdus::owned::Pdu};
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = owned)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Command {
     /// See [`CommandId`]
     id: CommandId,
@@ -160,14 +159,56 @@ impl PduBuilder {
 
 #[cfg(feature = "serde")]
 const _: () = {
-    use serde::{Deserialize, Deserializer};
+    use alloc::borrow::Cow;
 
-    #[derive(::serde::Deserialize)]
-    struct DeCommand {
-        id: CommandId,
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    #[derive(Serialize)]
+    struct SerCommand<'a> {
         status: CommandStatus,
         sequence_number: u32,
-        pdu: Option<Pdu>,
+        pdu: Cow<'a, Pdu>,
+    }
+
+    impl<'a> From<&'a Command> for SerCommand<'a> {
+        fn from(command: &'a Command) -> Self {
+            let pdu = command
+                .pdu
+                .as_ref()
+                .map(Cow::Borrowed)
+                .unwrap_or(Cow::Owned(Pdu::Other {
+                    command_id: command.id(),
+                    body: Default::default(),
+                }));
+
+            Self {
+                status: command.status,
+                sequence_number: command.sequence_number,
+                pdu,
+            }
+        }
+    }
+
+    impl Serialize for Command {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            SerCommand::from(self).serialize(serializer)
+        }
+    }
+
+    #[derive(Deserialize)]
+    struct DeCommand {
+        status: CommandStatus,
+        sequence_number: u32,
+        pdu: Pdu,
+    }
+
+    impl From<DeCommand> for Command {
+        fn from(command: DeCommand) -> Self {
+            Self::new(command.status, command.sequence_number, command.pdu)
+        }
     }
 
     impl<'de> Deserialize<'de> for Command {
@@ -175,33 +216,9 @@ const _: () = {
         where
             D: Deserializer<'de>,
         {
-            let DeCommand {
-                id,
-                status,
-                sequence_number,
-                pdu,
-            } = DeCommand::deserialize(deserializer)?;
+            let command = DeCommand::deserialize(deserializer)?;
 
-            match pdu {
-                Some(pdu) => {
-                    let pdu_id = pdu.command_id();
-
-                    if pdu_id != id {
-                        return Err(::serde::de::Error::custom(::alloc::format!(
-                            "Command id mismatch: expected {id:?}, got {pdu_id:?}",
-                        )));
-                    }
-
-                    Ok(Self::new(status, sequence_number, pdu))
-                }
-
-                None => Ok(Self {
-                    id,
-                    status,
-                    sequence_number,
-                    pdu: None,
-                }),
-            }
+            Ok(Self::from(command))
         }
     }
 };
@@ -288,5 +305,98 @@ mod tests {
             password_err,
             COctetStringDecodeError::NotNullTerminated
         ));
+    }
+
+    #[cfg(feature = "serde")]
+    mod serde {
+        use std::println;
+
+        use crate::pdus::owned::SubmitSm;
+
+        use super::*;
+
+        #[test]
+        #[ignore = "Prints the serialized JSON for manual inspection"]
+        fn serialize() {
+            let command = Command::builder()
+                .status(CommandStatus::EsmeRok)
+                .sequence_number(1)
+                .pdu(SubmitSm::builder().build());
+
+            let serialized =
+                serde_json::to_string_pretty(&command).expect("Failed to serialize command");
+
+            println!("{serialized}");
+        }
+
+        #[test]
+        fn deserialize() {
+            let json = r#"
+{
+  "status": "EsmeRok",
+  "sequence_number": 1,
+  "pdu": {
+    "SubmitSm": {
+      "service_type": {
+        "value": [
+          0
+        ]
+      },
+      "source_addr_ton": "Unknown",
+      "source_addr_npi": "Unknown",
+      "source_addr": [
+        0
+      ],
+      "dest_addr_ton": "Unknown",
+      "dest_addr_npi": "Unknown",
+      "destination_addr": [
+        0
+      ],
+      "esm_class": {
+        "messaging_mode": "Default",
+        "message_type": "Default",
+        "ansi41_specific": "ShortMessageContainsDeliveryAcknowledgement",
+        "gsm_features": "NotSelected"
+      },
+      "protocol_id": 0,
+      "priority_flag": {
+        "value": 0
+      },
+      "schedule_delivery_time": [
+        0
+      ],
+      "validity_period": [
+        0
+      ],
+      "registered_delivery": {
+        "mc_delivery_receipt": "NoMcDeliveryReceiptRequested",
+        "sme_originated_acknowledgement": "NoReceiptSmeAcknowledgementRequested",
+        "intermediate_notification": "NoIntermediaryNotificationRequested",
+        "other": 0
+      },
+      "replace_if_present_flag": "DoNotReplace",
+      "data_coding": "McSpecific",
+      "sm_default_msg_id": 0,
+      "sm_length": 0,
+      "short_message": [],
+      "tlvs": []
+    }
+  }
+}"#;
+
+            let command: Command =
+                serde_json::from_str(json).expect("Failed to deserialize command");
+
+            assert_eq!(command.status(), CommandStatus::EsmeRok);
+            assert_eq!(command.sequence_number(), 1);
+
+            let pdu = command.pdu().expect("Expected PDU to be present");
+            let pdu = match pdu {
+                Pdu::SubmitSm(submit_sm) => submit_sm,
+                _ => panic!("Expected PDU to be SubmitSm"),
+            };
+
+            assert_eq!(pdu, &SubmitSm::builder().build());
+        }
     }
 }
