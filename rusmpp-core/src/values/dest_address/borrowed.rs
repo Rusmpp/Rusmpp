@@ -14,8 +14,6 @@ use crate::{
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = borrowed, test = skip)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-#[cfg_attr(feature = "serde", serde(bound(deserialize = "'de: 'a")))]
 pub struct DestAddress<'a> {
     flag: DestFlag,
     #[rusmpp(key = flag)]
@@ -170,6 +168,57 @@ impl<'a> From<DistributionListName<'a>> for DestAddressValue<'a> {
         DestAddressValue::DistributionListName(val)
     }
 }
+
+#[cfg(feature = "serde")]
+const _: () = {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    #[derive(Serialize)]
+    #[serde(transparent)]
+    struct SerDestAddress<'a> {
+        value: &'a DestAddressValue<'a>,
+    }
+
+    impl<'a> From<&'a DestAddress<'a>> for SerDestAddress<'a> {
+        fn from(dest_address: &'a DestAddress<'a>) -> Self {
+            Self {
+                value: &dest_address.value,
+            }
+        }
+    }
+
+    impl<'a> Serialize for DestAddress<'a> {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            SerDestAddress::from(self).serialize(serializer)
+        }
+    }
+
+    #[derive(Deserialize)]
+    #[serde(transparent, bound(deserialize = "'de: 'a"))]
+    struct DeDestAddress<'a> {
+        value: DestAddressValue<'a>,
+    }
+
+    impl<'a> From<DeDestAddress<'a>> for DestAddress<'a> {
+        fn from(dest_address: DeDestAddress<'a>) -> Self {
+            Self::new(dest_address.value)
+        }
+    }
+
+    impl<'de: 'a, 'a> Deserialize<'de> for DestAddress<'a> {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let dest_address = DeDestAddress::deserialize(deserializer)?;
+
+            Ok(Self::from(dest_address))
+        }
+    }
+};
 
 #[cfg(test)]
 mod tests {
