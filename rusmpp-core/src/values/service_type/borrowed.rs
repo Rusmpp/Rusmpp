@@ -50,11 +50,12 @@ impl<'a> From<GenericServiceType> for ServiceType<'a> {
 /// supported.
 ///
 /// See [`GenericServiceType`].
+#[repr(transparent)]
 #[derive(Default, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = borrowed)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-#[cfg_attr(feature = "serde", serde(bound(deserialize = "'de: 'a")))]
+#[cfg_attr(feature = "serde", serde(bound(deserialize = "'de: 'a"), transparent))]
 pub struct ServiceType<'a> {
     pub value: COctetString<'a, 1, 6>,
 }
