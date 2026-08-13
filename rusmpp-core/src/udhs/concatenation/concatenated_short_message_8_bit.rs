@@ -274,7 +274,6 @@ mod tests {
     }
 
     mod decode {
-        use super::*;
 
         #[cfg(feature = "alloc")]
         mod owned {
@@ -282,7 +281,7 @@ mod tests {
 
             use crate::decode::{ConcatenatedShortMessageDecodeError, owned::Decode};
 
-            use super::*;
+            use super::super::*;
 
             #[test]
             fn ok() {
