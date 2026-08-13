@@ -5,7 +5,7 @@ use rusmpp_macros::Rusmpp;
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct RegisteredDelivery {
-    mc_delivery_receipt: MCDeliveryReceipt,
+    mc_delivery_receipt: McDeliveryReceipt,
     sme_originated_acknowledgement: SmeOriginatedAcknowledgement,
     intermediate_notification: IntermediateNotification,
     other: u8,
@@ -13,7 +13,7 @@ pub struct RegisteredDelivery {
 
 impl RegisteredDelivery {
     pub const fn new(
-        mc_delivery_receipt: MCDeliveryReceipt,
+        mc_delivery_receipt: McDeliveryReceipt,
         sme_originated_acknowledgement: SmeOriginatedAcknowledgement,
         intermediate_notification: IntermediateNotification,
         other: u8,
@@ -32,14 +32,14 @@ impl RegisteredDelivery {
     /// Request all delivery receipts, acknowledgements and notifications
     pub const fn request_all() -> Self {
         Self::new(
-            MCDeliveryReceipt::McDeliveryReceiptRequestedWhereFinalDeliveryOutcomeIsSuccessOrFailure,
+            McDeliveryReceipt::McDeliveryReceiptRequestedWhereFinalDeliveryOutcomeIsSuccessOrFailure,
             SmeOriginatedAcknowledgement::BothDeliveryAndUserAcknowledgmentRequested,
             IntermediateNotification::IntermediateNotificationRequested,
             0,
         )
     }
 
-    pub const fn mc_delivery_receipt(&self) -> MCDeliveryReceipt {
+    pub const fn mc_delivery_receipt(&self) -> McDeliveryReceipt {
         self.mc_delivery_receipt
     }
 
@@ -58,7 +58,7 @@ impl RegisteredDelivery {
 
 impl From<u8> for RegisteredDelivery {
     fn from(value: u8) -> Self {
-        let mc_delivery_receipt = MCDeliveryReceipt::from(value & 0b00000011);
+        let mc_delivery_receipt = McDeliveryReceipt::from(value & 0b00000011);
         let sme_originated_acknowledgement = SmeOriginatedAcknowledgement::from(value & 0b00001100);
         let intermediate_notification = IntermediateNotification::from(value & 0b00010000);
         let other = value & 0b11100000;
@@ -85,7 +85,7 @@ impl From<RegisteredDelivery> for u8 {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-pub enum MCDeliveryReceipt {
+pub enum McDeliveryReceipt {
     #[default]
     NoMcDeliveryReceiptRequested = 0b00000000,
     McDeliveryReceiptRequestedWhereFinalDeliveryOutcomeIsSuccessOrFailure = 0b00000001,
@@ -128,8 +128,8 @@ mod tests {
         crate::tests::owned::encode_decode_test_instances::<RegisteredDelivery>();
         crate::tests::borrowed::encode_decode_test_instances::<RegisteredDelivery>();
         #[cfg(feature = "alloc")]
-        crate::tests::owned::encode_decode_test_instances::<MCDeliveryReceipt>();
-        crate::tests::borrowed::encode_decode_test_instances::<MCDeliveryReceipt>();
+        crate::tests::owned::encode_decode_test_instances::<McDeliveryReceipt>();
+        crate::tests::borrowed::encode_decode_test_instances::<McDeliveryReceipt>();
         #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<SmeOriginatedAcknowledgement>();
         crate::tests::borrowed::encode_decode_test_instances::<SmeOriginatedAcknowledgement>();

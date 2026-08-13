@@ -4365,21 +4365,21 @@ pub enum MCDeliveryReceipt {
     Other(u8),
 }
 
-impl From<rusmpp_types::MCDeliveryReceipt> for MCDeliveryReceipt {
-    fn from(value: rusmpp_types::MCDeliveryReceipt) -> Self {
+impl From<rusmpp_types::McDeliveryReceipt> for MCDeliveryReceipt {
+    fn from(value: rusmpp_types::McDeliveryReceipt) -> Self {
         match value {
-            rusmpp_types::MCDeliveryReceipt::NoMcDeliveryReceiptRequested => MCDeliveryReceipt::NoMcDeliveryReceiptRequested(),
-            rusmpp_types::MCDeliveryReceipt::McDeliveryReceiptRequestedWhereFinalDeliveryOutcomeIsSuccessOrFailure => MCDeliveryReceipt::McDeliveryReceiptRequestedWhereFinalDeliveryOutcomeIsSuccessOrFailure(),
-            rusmpp_types::MCDeliveryReceipt::McDeliveryReceiptRequestedWhereFinalDeliveryOutcomeIsFailure => MCDeliveryReceipt::McDeliveryReceiptRequestedWhereFinalDeliveryOutcomeIsFailure(),
-            rusmpp_types::MCDeliveryReceipt::McDeliveryReceiptRequestedWhereFinalDeliveryOutcomeIsSuccess => MCDeliveryReceipt::McDeliveryReceiptRequestedWhereFinalDeliveryOutcomeIsSuccess(),
-            rusmpp_types::MCDeliveryReceipt::Other(inner) => MCDeliveryReceipt::Other(inner.into()),
+            rusmpp_types::McDeliveryReceipt::NoMcDeliveryReceiptRequested => MCDeliveryReceipt::NoMcDeliveryReceiptRequested(),
+            rusmpp_types::McDeliveryReceipt::McDeliveryReceiptRequestedWhereFinalDeliveryOutcomeIsSuccessOrFailure => MCDeliveryReceipt::McDeliveryReceiptRequestedWhereFinalDeliveryOutcomeIsSuccessOrFailure(),
+            rusmpp_types::McDeliveryReceipt::McDeliveryReceiptRequestedWhereFinalDeliveryOutcomeIsFailure => MCDeliveryReceipt::McDeliveryReceiptRequestedWhereFinalDeliveryOutcomeIsFailure(),
+            rusmpp_types::McDeliveryReceipt::McDeliveryReceiptRequestedWhereFinalDeliveryOutcomeIsSuccess => MCDeliveryReceipt::McDeliveryReceiptRequestedWhereFinalDeliveryOutcomeIsSuccess(),
+            rusmpp_types::McDeliveryReceipt::Other(inner) => MCDeliveryReceipt::Other(inner.into()),
         }
     }
 }
 
 impl MCDeliveryReceipt {
     pub fn default_() -> Self {
-        Self::from(rusmpp_types::MCDeliveryReceipt::default())
+        Self::from(rusmpp_types::McDeliveryReceipt::default())
     }
 }
 

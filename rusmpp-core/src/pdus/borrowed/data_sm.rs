@@ -249,7 +249,7 @@ mod tests {
                     .destination_addr(COctetString::new(b"destination_addr\0").unwrap())
                     .esm_class(EsmClass::default())
                     .registered_delivery(RegisteredDelivery::new(
-                        MCDeliveryReceipt::NoMcDeliveryReceiptRequested,
+                        McDeliveryReceipt::NoMcDeliveryReceiptRequested,
                         SmeOriginatedAcknowledgement::SmeUserAcknowledgementRequested,
                         IntermediateNotification::IntermediateNotificationRequested,
                         0,

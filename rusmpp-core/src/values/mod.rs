@@ -121,7 +121,7 @@ pub use privacy_indicator::PrivacyIndicator;
 
 mod registered_delivery;
 pub use registered_delivery::{
-    IntermediateNotification, MCDeliveryReceipt, RegisteredDelivery, SmeOriginatedAcknowledgement,
+    IntermediateNotification, McDeliveryReceipt, RegisteredDelivery, SmeOriginatedAcknowledgement,
 };
 
 mod replace_if_present_flag;

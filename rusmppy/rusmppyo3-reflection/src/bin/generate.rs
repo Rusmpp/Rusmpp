@@ -28,7 +28,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracer.trace_simple_type::<DestAddress>()?;
     tracer.trace_simple_type::<GsmFeatures>()?;
     tracer.trace_simple_type::<IntermediateNotification>()?;
-    tracer.trace_simple_type::<MCDeliveryReceipt>()?;
+    tracer.trace_simple_type::<McDeliveryReceipt>()?;
     tracer.trace_simple_type::<MessageState>()?;
     tracer.trace_simple_type::<MessageType>()?;
     tracer.trace_simple_type::<MessagingMode>()?;
