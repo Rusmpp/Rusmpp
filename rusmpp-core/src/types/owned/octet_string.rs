@@ -45,6 +45,7 @@ use crate::{
 /// // does not compile
 /// let string = OctetString::<10,5>::from_static_slice(b"Hello");
 /// ```
+#[repr(transparent)]
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct OctetString<const MIN: usize, const MAX: usize> {
     bytes: Bytes,

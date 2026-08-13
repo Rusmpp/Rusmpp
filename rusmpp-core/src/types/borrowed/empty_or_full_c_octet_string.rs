@@ -24,6 +24,7 @@ use crate::{
 /// // does not compile
 /// let string = EmptyOrFullCOctetString::<0>::new(b"Hello\0");
 /// ```
+#[repr(transparent)]
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 pub struct EmptyOrFullCOctetString<'a, const N: usize> {

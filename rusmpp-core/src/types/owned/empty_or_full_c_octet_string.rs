@@ -30,6 +30,7 @@ use crate::{
 /// // does not compile
 /// let string = EmptyOrFullCOctetString::<0>::from_static_slice(b"Hello\0");
 /// ```
+#[repr(transparent)]
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct EmptyOrFullCOctetString<const N: usize> {
     bytes: Bytes,

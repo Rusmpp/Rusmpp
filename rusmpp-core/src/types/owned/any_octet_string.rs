@@ -11,6 +11,7 @@ use crate::{
 };
 
 /// No fixed size [`OctetString`](struct@crate::types::owned::octet_string::OctetString).
+#[repr(transparent)]
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct AnyOctetString {
     bytes: Bytes,

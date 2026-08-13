@@ -5,6 +5,7 @@ use crate::{
 };
 
 /// No fixed size [`OctetString`](struct@crate::types::borrowed::octet_string::OctetString).
+#[repr(transparent)]
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 pub struct AnyOctetString<'a> {

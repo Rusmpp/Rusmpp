@@ -67,6 +67,7 @@ use crate::{
 /// // does not compile
 /// let string = COctetString::<10, 6>::from_static_slice(b"Hello\0");
 /// ```
+#[repr(transparent)]
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct COctetString<const MIN: usize, const MAX: usize> {
     bytes: Bytes,

@@ -40,6 +40,7 @@ use crate::{
 /// // does not compile
 /// let string = OctetString::<10,5>::new(b"Hello");
 /// ```
+#[repr(transparent)]
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 pub struct OctetString<'a, const MIN: usize, const MAX: usize> {

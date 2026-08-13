@@ -14,7 +14,6 @@ pub mod parts {
 }
 
 pub mod errors {
-
     pub use rusmpp_core::values::owned::errors::{
         BroadcastAreaIdentifierDecodeError, BroadcastAreaIdentifierDecodeErrorContext,
         BroadcastContentTypeDecodeError, BroadcastContentTypeDecodeErrorContext,
