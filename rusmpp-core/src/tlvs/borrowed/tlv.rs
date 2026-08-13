@@ -29,6 +29,8 @@ pub use message_submission_response::*;
 mod query_broadcast_response;
 pub use query_broadcast_response::*;
 
+// TODO: serde like owned.
+
 /// See module level documentation.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = borrowed, test = skip)]

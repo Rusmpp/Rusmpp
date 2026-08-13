@@ -17,7 +17,7 @@ use crate::{
 #[derive(Default, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = borrowed, test = skip)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 #[cfg_attr(feature = "serde", serde(bound(deserialize = "'de: 'a")))]
 pub struct ReplaceSm<'a> {
     /// Message ID of the message to be replaced.
@@ -238,6 +238,49 @@ impl<'a> ReplaceSmBuilder<'a> {
         self.inner
     }
 }
+
+#[cfg(feature = "serde")]
+const _: () = {
+    use serde::{Deserialize, Deserializer};
+
+    impl<'de: 'a, 'a> Deserialize<'de> for ReplaceSm<'a> {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let ReplaceSmParts {
+                message_id,
+                source_addr_ton,
+                source_addr_npi,
+                source_addr,
+                schedule_delivery_time,
+                validity_period,
+                registered_delivery,
+                sm_default_msg_id,
+                sm_length: _,
+                short_message,
+                message_payload,
+            } = ReplaceSmParts::deserialize(deserializer)?;
+
+            let mut this = Self::new(
+                message_id,
+                source_addr_ton,
+                source_addr_npi,
+                source_addr,
+                schedule_delivery_time,
+                validity_period,
+                registered_delivery,
+                sm_default_msg_id,
+                short_message,
+                None,
+            );
+
+            this.message_payload = message_payload;
+
+            Ok(this)
+        }
+    }
+};
 
 #[cfg(any(test, feature = "test"))]
 mod tests {

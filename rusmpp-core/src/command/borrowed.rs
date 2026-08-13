@@ -2,6 +2,8 @@ use rusmpp_macros::Rusmpp;
 
 use crate::{CommandId, CommandStatus, pdus::borrowed::Pdu};
 
+// TODO: serde like owned.
+
 /// `SMPP` command.
 ///
 /// The following PDU example illustrates how a `SMPP` PDU is decoded:
