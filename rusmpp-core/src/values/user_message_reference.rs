@@ -7,9 +7,11 @@ use rusmpp_macros::Rusmpp;
 /// means of identifying a previously submitted message. In such cases, the
 /// user_message_reference can be used to substitute an actual message_id or may be used in
 /// conjunction with a message_id.
+#[repr(transparent)]
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct UserMessageReference {
     pub value: u16,
 }
