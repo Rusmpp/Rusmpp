@@ -3,7 +3,7 @@ use rusmpp_macros::Rusmpp;
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[rusmpp(repr = "u8")]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct RegisteredDelivery {
     mc_delivery_receipt: McDeliveryReceipt,
     sme_originated_acknowledgement: SmeOriginatedAcknowledgement,
@@ -117,6 +117,41 @@ pub enum IntermediateNotification {
     IntermediateNotificationRequested = 0b00010000,
     Other(u8),
 }
+
+#[cfg(feature = "serde")]
+const _: () = {
+    use serde::{Deserialize, Deserializer};
+
+    #[derive(Deserialize)]
+    struct DeRegisteredDelivery {
+        mc_delivery_receipt: McDeliveryReceipt,
+        sme_originated_acknowledgement: SmeOriginatedAcknowledgement,
+        intermediate_notification: IntermediateNotification,
+        other: u8,
+    }
+
+    impl From<DeRegisteredDelivery> for RegisteredDelivery {
+        fn from(value: DeRegisteredDelivery) -> Self {
+            Self::new(
+                value.mc_delivery_receipt,
+                value.sme_originated_acknowledgement,
+                value.intermediate_notification,
+                value.other,
+            )
+        }
+    }
+
+    impl<'de> Deserialize<'de> for RegisteredDelivery {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let command = DeRegisteredDelivery::deserialize(deserializer)?;
+
+            Ok(Self::from(command))
+        }
+    }
+};
 
 #[cfg(test)]
 mod tests {
