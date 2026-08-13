@@ -65,7 +65,7 @@ impl From<GenericServiceType> for ServiceType {
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct ServiceType {
-    value: COctetString<1, 6>,
+    pub value: COctetString<1, 6>,
 }
 
 impl ServiceType {

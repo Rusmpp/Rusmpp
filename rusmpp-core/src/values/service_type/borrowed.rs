@@ -56,7 +56,7 @@ impl<'a> From<GenericServiceType> for ServiceType<'a> {
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(bound(deserialize = "'de: 'a")))]
 pub struct ServiceType<'a> {
-    value: COctetString<'a, 1, 6>,
+    pub value: COctetString<'a, 1, 6>,
 }
 
 impl<'a> ServiceType<'a> {
