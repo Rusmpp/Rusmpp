@@ -329,6 +329,17 @@ mod tests {
         }
 
         #[test]
+        fn ok_zero() {
+            let mut buf = BytesMut::from(&b"Hello"[..]);
+            let (string, size) = AnyOctetString::decode(&mut buf, 0).unwrap();
+
+            assert_eq!(string.as_ref(), b"");
+            assert_eq!(string.length(), 0);
+            assert_eq!(size, 0);
+            assert_eq!(&buf[..], b"Hello");
+        }
+
+        #[test]
         fn ok_all() {
             let mut buf = BytesMut::from(&b"Hello"[..]);
             let (string, size) = AnyOctetString::decode(&mut buf, 5).unwrap();

@@ -224,6 +224,17 @@ mod tests {
         }
 
         #[test]
+        fn ok_zero() {
+            let bytes = b"Hello";
+            let (string, size) = AnyOctetString::decode(bytes, 0).unwrap();
+
+            assert_eq!(string.as_ref(), b"");
+            assert_eq!(string.length(), 0);
+            assert_eq!(size, 0);
+            assert_eq!(&bytes[size..], b"Hello");
+        }
+
+        #[test]
         fn ok_all() {
             let bytes = b"Hello";
             let (string, size) = AnyOctetString::decode(bytes, 5).unwrap();
