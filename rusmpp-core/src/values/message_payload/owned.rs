@@ -2,11 +2,12 @@ use rusmpp_macros::Rusmpp;
 
 use crate::types::owned::AnyOctetString;
 
+#[repr(transparent)]
 #[derive(Default, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = owned)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct MessagePayload {
     #[rusmpp(length = "unchecked")]
     pub value: AnyOctetString,

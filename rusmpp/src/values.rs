@@ -14,7 +14,6 @@ pub mod parts {
 }
 
 pub mod errors {
-
     pub use rusmpp_core::values::owned::errors::{
         BroadcastAreaIdentifierDecodeError, BroadcastAreaIdentifierDecodeErrorContext,
         BroadcastContentTypeDecodeError, BroadcastContentTypeDecodeErrorContext,
@@ -40,7 +39,7 @@ pub use rusmpp_core::values::{
     DisplayTime, DpfResult, EncodingContentType, ErrorCodeNetworkType, EsmClass,
     GenericServiceType, GsmCbs, GsmFeatures, GsmSms, Indicator, InterfaceVersion,
     IntermediateNotification, Is95, ItsReplyType, ItsSessionInfo, LanguageIndicator,
-    MCDeliveryReceipt, MessageState, MessageType, MessagingMode, MoreMessagesToSend,
+    McDeliveryReceipt, MessageState, MessageType, MessagingMode, MoreMessagesToSend,
     MsAvailabilityStatus, MsMsgWaitFacilities, MsValidity, MsValidityBehavior,
     MsValidityInformation, NetworkErrorCode, NetworkType, Npi, NumberOfMessages, PayloadType,
     Presentation, PriorityFlag, PriorityFlagType, PrivacyIndicator, RegisteredDelivery,

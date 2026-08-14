@@ -40,10 +40,9 @@ use crate::{
 /// // does not compile
 /// let string = OctetString::<10,5>::new(b"Hello");
 /// ```
+#[repr(transparent)]
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct OctetString<'a, const MIN: usize, const MAX: usize> {
     bytes: &'a [u8],
 }
@@ -229,6 +228,33 @@ impl<'a, const MIN: usize, const MAX: usize> DecodeWithLength<'a> for OctetStrin
         Ok((Self { bytes }, length))
     }
 }
+
+#[cfg(feature = "serde")]
+const _: () = {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    impl<'a, const MIN: usize, const MAX: usize> Serialize for OctetString<'a, MIN, MAX> {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            serializer.serialize_bytes(self.bytes)
+        }
+    }
+
+    impl<'de: 'a, 'a, const MIN: usize, const MAX: usize> Deserialize<'de>
+        for OctetString<'a, MIN, MAX>
+    {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let bytes = Deserialize::deserialize(deserializer)?;
+
+            Self::new(bytes).map_err(serde::de::Error::custom)
+        }
+    }
+};
 
 #[cfg(test)]
 mod tests {

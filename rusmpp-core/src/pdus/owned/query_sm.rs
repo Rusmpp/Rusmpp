@@ -10,8 +10,7 @@ use crate::{pdus::owned::Pdu, types::owned::COctetString, values::*};
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[rusmpp(decode = owned, test = skip)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct QuerySm {
     /// Message ID of the message whose state
     /// is to be queried. This must be the MC

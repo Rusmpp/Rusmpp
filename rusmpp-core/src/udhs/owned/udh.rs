@@ -65,9 +65,70 @@ impl From<UdhValue> for Udh {
     }
 }
 
+#[cfg(feature = "serde")]
+const _: () = {
+    use alloc::borrow::Cow;
+
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    #[derive(Serialize)]
+    #[serde(transparent)]
+    struct SerUdh<'a> {
+        value: Cow<'a, UdhValue>,
+    }
+
+    impl<'a> From<&'a Udh> for SerUdh<'a> {
+        fn from(udh: &'a Udh) -> Self {
+            let value =
+                udh.value
+                    .as_ref()
+                    .map(Cow::Borrowed)
+                    .unwrap_or(Cow::Owned(UdhValue::Other {
+                        udh_id: udh.id,
+                        value: Default::default(),
+                    }));
+
+            Self { value }
+        }
+    }
+
+    impl Serialize for Udh {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            SerUdh::from(self).serialize(serializer)
+        }
+    }
+
+    #[derive(Deserialize)]
+    #[serde(transparent)]
+    struct DeUdh {
+        value: UdhValue,
+    }
+
+    impl From<DeUdh> for Udh {
+        fn from(udh: DeUdh) -> Self {
+            Self::new(udh.value)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Udh {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let udh = DeUdh::deserialize(deserializer)?;
+
+            Ok(Self::from(udh))
+        }
+    }
+};
+
 /// User Data Header (UDH) value.
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub enum UdhValue {
     /// 8-bit Concatenated Short Message UDH.
     ConcatenatedShortMessage8Bit(ConcatenatedShortMessage8Bit),

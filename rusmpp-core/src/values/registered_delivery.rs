@@ -4,9 +4,8 @@ use rusmpp_macros::Rusmpp;
 #[rusmpp(repr = "u8")]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
 pub struct RegisteredDelivery {
-    mc_delivery_receipt: MCDeliveryReceipt,
+    mc_delivery_receipt: McDeliveryReceipt,
     sme_originated_acknowledgement: SmeOriginatedAcknowledgement,
     intermediate_notification: IntermediateNotification,
     other: u8,
@@ -14,7 +13,7 @@ pub struct RegisteredDelivery {
 
 impl RegisteredDelivery {
     pub const fn new(
-        mc_delivery_receipt: MCDeliveryReceipt,
+        mc_delivery_receipt: McDeliveryReceipt,
         sme_originated_acknowledgement: SmeOriginatedAcknowledgement,
         intermediate_notification: IntermediateNotification,
         other: u8,
@@ -33,14 +32,14 @@ impl RegisteredDelivery {
     /// Request all delivery receipts, acknowledgements and notifications
     pub const fn request_all() -> Self {
         Self::new(
-            MCDeliveryReceipt::McDeliveryReceiptRequestedWhereFinalDeliveryOutcomeIsSuccessOrFailure,
+            McDeliveryReceipt::McDeliveryReceiptRequestedWhereFinalDeliveryOutcomeIsSuccessOrFailure,
             SmeOriginatedAcknowledgement::BothDeliveryAndUserAcknowledgmentRequested,
             IntermediateNotification::IntermediateNotificationRequested,
             0,
         )
     }
 
-    pub const fn mc_delivery_receipt(&self) -> MCDeliveryReceipt {
+    pub const fn mc_delivery_receipt(&self) -> McDeliveryReceipt {
         self.mc_delivery_receipt
     }
 
@@ -59,7 +58,7 @@ impl RegisteredDelivery {
 
 impl From<u8> for RegisteredDelivery {
     fn from(value: u8) -> Self {
-        let mc_delivery_receipt = MCDeliveryReceipt::from(value & 0b00000011);
+        let mc_delivery_receipt = McDeliveryReceipt::from(value & 0b00000011);
         let sme_originated_acknowledgement = SmeOriginatedAcknowledgement::from(value & 0b00001100);
         let intermediate_notification = IntermediateNotification::from(value & 0b00010000);
         let other = value & 0b11100000;
@@ -85,9 +84,8 @@ impl From<RegisteredDelivery> for u8 {
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
-pub enum MCDeliveryReceipt {
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+pub enum McDeliveryReceipt {
     #[default]
     NoMcDeliveryReceiptRequested = 0b00000000,
     McDeliveryReceiptRequestedWhereFinalDeliveryOutcomeIsSuccessOrFailure = 0b00000001,
@@ -99,8 +97,7 @@ pub enum MCDeliveryReceipt {
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub enum SmeOriginatedAcknowledgement {
     #[default]
     NoReceiptSmeAcknowledgementRequested = 0b00000000,
@@ -113,14 +110,48 @@ pub enum SmeOriginatedAcknowledgement {
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub enum IntermediateNotification {
     #[default]
     NoIntermediaryNotificationRequested = 0b00000000,
     IntermediateNotificationRequested = 0b00010000,
     Other(u8),
 }
+
+#[cfg(feature = "serde")]
+const _: () = {
+    use serde::{Deserialize, Deserializer};
+
+    #[derive(Deserialize)]
+    struct DeRegisteredDelivery {
+        mc_delivery_receipt: McDeliveryReceipt,
+        sme_originated_acknowledgement: SmeOriginatedAcknowledgement,
+        intermediate_notification: IntermediateNotification,
+        other: u8,
+    }
+
+    impl From<DeRegisteredDelivery> for RegisteredDelivery {
+        fn from(value: DeRegisteredDelivery) -> Self {
+            Self::new(
+                value.mc_delivery_receipt,
+                value.sme_originated_acknowledgement,
+                value.intermediate_notification,
+                value.other,
+            )
+        }
+    }
+
+    impl<'de> Deserialize<'de> for RegisteredDelivery {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let command = DeRegisteredDelivery::deserialize(deserializer)?;
+
+            Ok(Self::from(command))
+        }
+    }
+};
 
 #[cfg(test)]
 mod tests {
@@ -132,8 +163,8 @@ mod tests {
         crate::tests::owned::encode_decode_test_instances::<RegisteredDelivery>();
         crate::tests::borrowed::encode_decode_test_instances::<RegisteredDelivery>();
         #[cfg(feature = "alloc")]
-        crate::tests::owned::encode_decode_test_instances::<MCDeliveryReceipt>();
-        crate::tests::borrowed::encode_decode_test_instances::<MCDeliveryReceipt>();
+        crate::tests::owned::encode_decode_test_instances::<McDeliveryReceipt>();
+        crate::tests::borrowed::encode_decode_test_instances::<McDeliveryReceipt>();
         #[cfg(feature = "alloc")]
         crate::tests::owned::encode_decode_test_instances::<SmeOriginatedAcknowledgement>();
         crate::tests::borrowed::encode_decode_test_instances::<SmeOriginatedAcknowledgement>();

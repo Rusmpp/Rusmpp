@@ -15,8 +15,6 @@ use crate::{
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = owned, test = skip)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
 pub struct DestAddress {
     flag: DestFlag,
     #[rusmpp(key = flag)]
@@ -48,8 +46,7 @@ impl From<DestAddressValue> for DestAddress {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub enum DestAddressValue {
     /// SME Format Destination Address.
     SmeAddress(SmeAddress),
@@ -137,8 +134,7 @@ impl DecodeWithKey for DestAddressValue {
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = owned)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct SmeAddress {
     /// Type of Number for destination.
     pub dest_addr_ton: Ton,
@@ -174,8 +170,7 @@ impl From<SmeAddress> for DestAddressValue {
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = owned)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct DistributionListName {
     /// Name of Distribution List.
     pub dl_name: COctetString<1, 21>,
@@ -192,6 +187,57 @@ impl From<DistributionListName> for DestAddressValue {
         DestAddressValue::DistributionListName(val)
     }
 }
+
+#[cfg(feature = "serde")]
+const _: () = {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    #[derive(Serialize)]
+    #[serde(transparent)]
+    struct SerDestAddress<'a> {
+        value: &'a DestAddressValue,
+    }
+
+    impl<'a> From<&'a DestAddress> for SerDestAddress<'a> {
+        fn from(dest_address: &'a DestAddress) -> Self {
+            Self {
+                value: &dest_address.value,
+            }
+        }
+    }
+
+    impl Serialize for DestAddress {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            SerDestAddress::from(self).serialize(serializer)
+        }
+    }
+
+    #[derive(Deserialize)]
+    #[serde(transparent)]
+    struct DeDestAddress {
+        value: DestAddressValue,
+    }
+
+    impl From<DeDestAddress> for DestAddress {
+        fn from(dest_address: DeDestAddress) -> Self {
+            Self::new(dest_address.value)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for DestAddress {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let dest_address = DeDestAddress::deserialize(deserializer)?;
+
+            Ok(Self::from(dest_address))
+        }
+    }
+};
 
 #[cfg(test)]
 mod tests {

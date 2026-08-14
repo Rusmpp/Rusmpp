@@ -33,8 +33,6 @@ pub use query_broadcast_response::*;
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = owned, test = skip)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
 pub struct Tlv {
     tag: TlvTag,
     value_length: u16,
@@ -73,3 +71,63 @@ impl From<TlvValue> for Tlv {
         Self::new(value)
     }
 }
+
+#[cfg(feature = "serde")]
+const _: () = {
+    use alloc::borrow::Cow;
+
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    #[derive(Serialize)]
+    #[serde(transparent)]
+    struct SerTlv<'a> {
+        value: Cow<'a, TlvValue>,
+    }
+
+    impl<'a> From<&'a Tlv> for SerTlv<'a> {
+        fn from(tlv: &'a Tlv) -> Self {
+            let value =
+                tlv.value
+                    .as_ref()
+                    .map(Cow::Borrowed)
+                    .unwrap_or(Cow::Owned(TlvValue::Other {
+                        tag: tlv.tag,
+                        value: Default::default(),
+                    }));
+
+            Self { value }
+        }
+    }
+
+    impl Serialize for Tlv {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            SerTlv::from(self).serialize(serializer)
+        }
+    }
+
+    #[derive(Deserialize)]
+    #[serde(transparent)]
+    struct DeTlv {
+        value: TlvValue,
+    }
+
+    impl From<DeTlv> for Tlv {
+        fn from(tlv: DeTlv) -> Self {
+            Self::new(tlv.value)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Tlv {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let tlv = DeTlv::deserialize(deserializer)?;
+
+            Ok(Self::from(tlv))
+        }
+    }
+};

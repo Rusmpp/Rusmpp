@@ -1129,7 +1129,7 @@ impl From<g::RegisteredDelivery> for RegisteredDelivery {
     }
 }
 
-impl From<g::MCDeliveryReceipt> for MCDeliveryReceipt {
+impl From<g::MCDeliveryReceipt> for McDeliveryReceipt {
     fn from(value: g::MCDeliveryReceipt) -> Self {
         match value {
             g::MCDeliveryReceipt::NoMcDeliveryReceiptRequested() => Self::NoMcDeliveryReceiptRequested,

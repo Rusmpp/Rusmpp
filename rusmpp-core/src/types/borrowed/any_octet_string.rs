@@ -5,10 +5,9 @@ use crate::{
 };
 
 /// No fixed size [`OctetString`](struct@crate::types::borrowed::octet_string::OctetString).
+#[repr(transparent)]
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct AnyOctetString<'a> {
     bytes: &'a [u8],
 }
@@ -138,6 +137,31 @@ impl<'a> DecodeWithLength<'a> for AnyOctetString<'a> {
         Ok((Self { bytes }, length))
     }
 }
+
+#[cfg(feature = "serde")]
+const _: () = {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    impl<'a> Serialize for AnyOctetString<'a> {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            serializer.serialize_bytes(self.bytes)
+        }
+    }
+
+    impl<'de: 'a, 'a> Deserialize<'de> for AnyOctetString<'a> {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let bytes = Deserialize::deserialize(deserializer)?;
+
+            Ok(Self::new(bytes))
+        }
+    }
+};
 
 #[cfg(test)]
 mod tests {

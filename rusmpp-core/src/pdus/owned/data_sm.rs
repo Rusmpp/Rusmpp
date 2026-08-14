@@ -13,8 +13,7 @@ use crate::{
 #[derive(Default, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = owned, test = skip)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct DataSm {
     /// The service_type parameter can be used to indicate the
     /// SMS Application service associated with the message.
@@ -239,7 +238,7 @@ mod tests {
                     .destination_addr(COctetString::from_str("destination_addr").unwrap())
                     .esm_class(EsmClass::default())
                     .registered_delivery(RegisteredDelivery::new(
-                        MCDeliveryReceipt::NoMcDeliveryReceiptRequested,
+                        McDeliveryReceipt::NoMcDeliveryReceiptRequested,
                         SmeOriginatedAcknowledgement::SmeUserAcknowledgementRequested,
                         IntermediateNotification::IntermediateNotificationRequested,
                         0,

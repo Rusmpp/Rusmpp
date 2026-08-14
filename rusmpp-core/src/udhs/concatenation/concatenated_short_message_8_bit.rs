@@ -27,6 +27,7 @@ use crate::{
 ///
 /// The first 3 bytes `(05 00 03)` are part of the UDH header and are not stored in the struct.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct ConcatenatedShortMessage8Bit {
     /// Reference number for the concatenated message.
     reference: u8,
@@ -38,6 +39,7 @@ pub struct ConcatenatedShortMessage8Bit {
 
 /// Parts of a [`ConcatenatedShortMessage8Bit`].
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct ConcatenatedShortMessage8BitParts {
     /// Reference number for the concatenated message.
     pub reference: u8,
@@ -272,7 +274,6 @@ mod tests {
     }
 
     mod decode {
-        use super::*;
 
         #[cfg(feature = "alloc")]
         mod owned {
@@ -280,7 +281,7 @@ mod tests {
 
             use crate::decode::{ConcatenatedShortMessageDecodeError, owned::Decode};
 
-            use super::*;
+            use super::super::*;
 
             #[test]
             fn ok() {

@@ -24,6 +24,7 @@ use crate::{Sealed, encode::Length, udhs::errors::ConcatenatedShortMessageError}
 ///
 /// The first 3 bytes `(06 08 04)` are part of the UDH header and are not stored in the struct.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct ConcatenatedShortMessage16Bit {
     /// Reference number for the concatenated message.
     reference: u16,
@@ -136,6 +137,7 @@ impl ConcatenatedShortMessage16Bit {
 
 /// Parts of a [`ConcatenatedShortMessage16Bit`].
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct ConcatenatedShortMessage16BitParts {
     /// Reference number for the concatenated message.
     pub reference: u16,
@@ -260,7 +262,6 @@ mod tests {
     }
 
     mod decode {
-        use super::*;
 
         #[cfg(feature = "alloc")]
         mod owned {
@@ -268,7 +269,7 @@ mod tests {
 
             use crate::decode::{ConcatenatedShortMessageDecodeError, owned::Decode};
 
-            use super::*;
+            use super::super::*;
 
             #[test]
             fn ok() {

@@ -14,7 +14,6 @@ use crate::{
 #[rusmpp(decode = owned, test = skip)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[cfg_attr(feature = "serde-deserialize-unchecked", derive(::serde::Deserialize))]
 pub struct DeliverSm {
     /// The service_type parameter can be used to
     /// indicate the SMS Application service
@@ -314,6 +313,65 @@ impl DeliverSmBuilder {
         self.inner
     }
 }
+
+#[cfg(feature = "serde")]
+const _: () = {
+    use serde::{Deserialize, Deserializer};
+
+    impl<'de> Deserialize<'de> for DeliverSm {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let DeliverSmParts {
+                service_type,
+                source_addr_ton,
+                source_addr_npi,
+                source_addr,
+                dest_addr_ton,
+                dest_addr_npi,
+                destination_addr,
+                esm_class,
+                protocol_id,
+                priority_flag,
+                schedule_delivery_time,
+                validity_period,
+                registered_delivery,
+                replace_if_present_flag,
+                data_coding,
+                sm_default_msg_id,
+                sm_length: _,
+                short_message,
+                tlvs,
+            } = DeliverSmParts::deserialize(deserializer)?;
+
+            let mut this = Self::new(
+                service_type,
+                source_addr_ton,
+                source_addr_npi,
+                source_addr,
+                dest_addr_ton,
+                dest_addr_npi,
+                destination_addr,
+                esm_class,
+                protocol_id,
+                priority_flag,
+                schedule_delivery_time,
+                validity_period,
+                registered_delivery,
+                replace_if_present_flag,
+                data_coding,
+                sm_default_msg_id,
+                short_message,
+                alloc::vec::Vec::new(),
+            );
+
+            this.tlvs = tlvs;
+
+            Ok(this)
+        }
+    }
+};
 
 #[cfg(any(test, feature = "test"))]
 mod tests {
