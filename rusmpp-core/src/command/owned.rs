@@ -337,11 +337,9 @@ mod tests {
   "sequence_number": 1,
   "pdu": {
     "SubmitSm": {
-      "service_type": {
-        "value": [
-          0
-        ]
-      },
+      "service_type": [
+        0
+      ],
       "source_addr_ton": "Unknown",
       "source_addr_npi": "Unknown",
       "source_addr": [
@@ -359,9 +357,7 @@ mod tests {
         "gsm_features": "NotSelected"
       },
       "protocol_id": 0,
-      "priority_flag": {
-        "value": 0
-      },
+      "priority_flag": 0,
       "schedule_delivery_time": [
         0
       ],
