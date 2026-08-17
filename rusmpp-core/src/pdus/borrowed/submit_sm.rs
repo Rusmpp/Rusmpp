@@ -397,7 +397,7 @@ mod tests {
                     .destination_addr(COctetString::new(b"Destination Address\0").unwrap())
                     .esm_class(EsmClass::new(
                         MessagingMode::StoreAndForward,
-                        MessageType::ShortMessageContainsMCDeliveryReceipt,
+                        MessageType::ShortMessageContainsMcDeliveryReceipt,
                         Ansi41Specific::ShortMessageContainsDeliveryAcknowledgement,
                         GsmFeatures::SetUdhiAndReplyPath,
                     ))

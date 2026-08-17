@@ -99,7 +99,7 @@ pub enum MessageType {
     #[default]
     Default = 0b00_00_00_00,
     /// Short Message contains MC Delivery Receipt.
-    ShortMessageContainsMCDeliveryReceipt = 0b00_00_01_00,
+    ShortMessageContainsMcDeliveryReceipt = 0b00_00_01_00,
     /// Short Message contains Intermediate Delivery Notification.
     ShortMessageContainsIntermediateDeliveryNotification = 0b00_10_00_00,
     Other(u8),
@@ -157,7 +157,7 @@ mod tests {
                 ),
                 Self::new(
                     MessagingMode::Datagram,
-                    MessageType::ShortMessageContainsMCDeliveryReceipt,
+                    MessageType::ShortMessageContainsMcDeliveryReceipt,
                     Ansi41Specific::ShortMessageContainsUserAcknowledgment,
                     GsmFeatures::UdhIndicator,
                 ),

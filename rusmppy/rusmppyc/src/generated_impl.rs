@@ -1069,7 +1069,7 @@ impl From<g::MessageType> for MessageType {
         match value {
             g::MessageType::Default() => Self::Default,
             g::MessageType::ShortMessageContainsMCDeliveryReceipt() => {
-                Self::ShortMessageContainsMCDeliveryReceipt
+                Self::ShortMessageContainsMcDeliveryReceipt
             }
             g::MessageType::ShortMessageContainsIntermediateDeliveryNotification() => {
                 Self::ShortMessageContainsIntermediateDeliveryNotification

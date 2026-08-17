@@ -4173,7 +4173,7 @@ impl From<rusmpp_types::MessageType> for MessageType {
     fn from(value: rusmpp_types::MessageType) -> Self {
         match value {
             rusmpp_types::MessageType::Default => MessageType::Default(),
-            rusmpp_types::MessageType::ShortMessageContainsMCDeliveryReceipt => {
+            rusmpp_types::MessageType::ShortMessageContainsMcDeliveryReceipt => {
                 MessageType::ShortMessageContainsMCDeliveryReceipt()
             }
             rusmpp_types::MessageType::ShortMessageContainsIntermediateDeliveryNotification => {
