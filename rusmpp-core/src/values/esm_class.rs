@@ -111,8 +111,10 @@ pub enum MessageType {
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub enum Ansi41Specific {
-    /// Short Message contains Delivery Acknowledgement.
+    /// No specific features selected.
     #[default]
+    NotSelected = 0b00_00_00_00,
+    /// Short Message contains Delivery Acknowledgement.
     ShortMessageContainsDeliveryAcknowledgement = 0b00_00_10_00,
     /// Short Message contains Manual/User Acknowledgement.
     ShortMessageContainsUserAcknowledgment = 0b00_01_00_00,

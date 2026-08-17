@@ -1082,6 +1082,7 @@ impl From<g::MessageType> for MessageType {
 impl From<g::Ansi41Specific> for Ansi41Specific {
     fn from(value: g::Ansi41Specific) -> Self {
         match value {
+            g::Ansi41Specific::NotSelected() => Self::NotSelected,
             g::Ansi41Specific::ShortMessageContainsDeliveryAcknowledgement() => {
                 Self::ShortMessageContainsDeliveryAcknowledgement
             }
