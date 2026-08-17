@@ -4073,6 +4073,7 @@ impl CommandId {
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 #[::pyo3::pyclass(get_all, set_all)]
 pub enum Ansi41Specific {
+    NotSelected(),
     ShortMessageContainsDeliveryAcknowledgement(),
     ShortMessageContainsUserAcknowledgment(),
     ShortMessageContainsConversationAbort(),
@@ -4082,6 +4083,7 @@ pub enum Ansi41Specific {
 impl From<rusmpp_types::Ansi41Specific> for Ansi41Specific {
     fn from(value: rusmpp_types::Ansi41Specific) -> Self {
         match value {
+            rusmpp_types::Ansi41Specific::NotSelected => Ansi41Specific::NotSelected(),
             rusmpp_types::Ansi41Specific::ShortMessageContainsDeliveryAcknowledgement => {
                 Ansi41Specific::ShortMessageContainsDeliveryAcknowledgement()
             }
@@ -4173,7 +4175,7 @@ impl From<rusmpp_types::MessageType> for MessageType {
     fn from(value: rusmpp_types::MessageType) -> Self {
         match value {
             rusmpp_types::MessageType::Default => MessageType::Default(),
-            rusmpp_types::MessageType::ShortMessageContainsMCDeliveryReceipt => {
+            rusmpp_types::MessageType::ShortMessageContainsMcDeliveryReceipt => {
                 MessageType::ShortMessageContainsMCDeliveryReceipt()
             }
             rusmpp_types::MessageType::ShortMessageContainsIntermediateDeliveryNotification => {

@@ -1069,7 +1069,7 @@ impl From<g::MessageType> for MessageType {
         match value {
             g::MessageType::Default() => Self::Default,
             g::MessageType::ShortMessageContainsMCDeliveryReceipt() => {
-                Self::ShortMessageContainsMCDeliveryReceipt
+                Self::ShortMessageContainsMcDeliveryReceipt
             }
             g::MessageType::ShortMessageContainsIntermediateDeliveryNotification() => {
                 Self::ShortMessageContainsIntermediateDeliveryNotification
@@ -1082,6 +1082,7 @@ impl From<g::MessageType> for MessageType {
 impl From<g::Ansi41Specific> for Ansi41Specific {
     fn from(value: g::Ansi41Specific) -> Self {
         match value {
+            g::Ansi41Specific::NotSelected() => Self::NotSelected,
             g::Ansi41Specific::ShortMessageContainsDeliveryAcknowledgement() => {
                 Self::ShortMessageContainsDeliveryAcknowledgement
             }

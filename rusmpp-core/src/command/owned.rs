@@ -353,7 +353,7 @@ mod tests {
       "esm_class": {
         "messaging_mode": "Default",
         "message_type": "Default",
-        "ansi41_specific": "ShortMessageContainsDeliveryAcknowledgement",
+        "ansi41_specific": "NotSelected",
         "gsm_features": "NotSelected"
       },
       "protocol_id": 0,
