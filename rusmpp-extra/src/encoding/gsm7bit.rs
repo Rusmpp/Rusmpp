@@ -4,7 +4,9 @@ mod alphabet;
 mod errors;
 mod unpacked;
 
-pub use alphabet::{Gsm7BitAlphabet, Gsm7BitDefaultAlphabet};
+pub use alphabet::{
+    ESCAPE_CHARACTER, Encoded, Gsm7BitAlphabet, Gsm7BitDefaultAlphabet, Gsm7BitSpanishAlphabet,
+};
 pub use errors::{Gsm7BitConcatenateError, Gsm7BitEncodeError};
 pub use unpacked::Gsm7BitUnpacked;
 

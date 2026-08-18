@@ -14,6 +14,7 @@ pub const ESCAPE_CHARACTER: u8 = 0x1B;
 pub enum Gsm7BitAlphabet {
     /// Default GSM 7-bit alphabet.
     Default(Gsm7BitDefaultAlphabet),
+    /// Spanish GSM 7-bit alphabet.
     Spanish(Gsm7BitSpanishAlphabet),
 }
 
@@ -24,20 +25,44 @@ impl Default for Gsm7BitAlphabet {
 }
 
 impl Gsm7BitAlphabet {
+    /// Returns the GSM 7-bit escape character `0x1B` ([`ESCAPE_CHARACTER`]).
+    pub const fn escape_character() -> u8 {
+        ESCAPE_CHARACTER
+    }
+
+    /// Creates a new [`Gsm7BitAlphabet`] with the [`Gsm7BitDefaultAlphabet`].
     pub const fn default() -> Self {
         Self::Default(Gsm7BitDefaultAlphabet::new())
     }
 
-    /// Create a [`Gsm7BitDefaultAlphabet`] GSM 7-bit alphabet with spanish table Character Set.
+    /// Creates a new [`Gsm7BitAlphabet`] with the [`Gsm7BitSpanishAlphabet`].
     pub const fn spanish() -> Self {
         Self::Spanish(Gsm7BitSpanishAlphabet::new())
     }
 
+    /// Returns the standard GSM 7-bit character set.
+    pub const fn standard(&self) -> &'static [(char, u8)] {
+        match self {
+            Self::Default(_) => Gsm7BitDefaultAlphabet::standard(),
+            Self::Spanish(_) => Gsm7BitSpanishAlphabet::standard(),
+        }
+    }
+
+    /// Returns the extended GSM 7-bit character set.
+    pub const fn extended(&self) -> &'static [(char, u8)] {
+        match self {
+            Self::Default(_) => Gsm7BitDefaultAlphabet::extended(),
+            Self::Spanish(_) => Gsm7BitSpanishAlphabet::extended(),
+        }
+    }
+
+    /// Encodes the given character into a GSM 7-bit encoded byte.
+    ///
     /// # Returns
     ///
     /// - `Some(Encoded)` if the character is found in the GSM 7-bit tables.
     /// - `None` if the character is not found.
-    const fn encode(&self, ch: char) -> Option<Encoded> {
+    pub const fn encode(&self, ch: char) -> Option<Encoded> {
         match self {
             Self::Default(alphabet) => alphabet.encode(ch),
             Self::Spanish(alphabet) => alphabet.encode(ch),
@@ -80,11 +105,13 @@ impl Gsm7BitAlphabet {
     }
 }
 
-enum Encoded {
+/// Encoded GSM 7-bit character.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Encoded {
     /// Standard GSM 7-bit character.
     Standard(u8),
     /// Extended GSM 7-bit character.
     ///
-    /// Requires the escape character `0x1B` before the value.
+    /// Requires the escape character `0x1B` ([`ESCAPE_CHARACTER`]) before the value.
     Extended(u8),
 }
