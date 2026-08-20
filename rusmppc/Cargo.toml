@@ -116,11 +116,6 @@ path = "examples/insights.rs"
 required-features = []
 
 [[example]]
-name = "manual_reconnect"
-path = "examples/manual_reconnect.rs"
-required-features = []
-
-[[example]]
 name = "raw_client"
 path = "examples/raw_client.rs"
 required-features = []
