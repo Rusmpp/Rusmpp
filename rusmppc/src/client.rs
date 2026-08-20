@@ -26,10 +26,9 @@ use rusmpp::{
 use tokio::sync::{mpsc::UnboundedSender, oneshot, watch};
 
 use crate::{
-    Action, CloseRequest, CommandExt, ConnectionBuilder, PendingResponses, RegisteredRequest,
-    RequestFutureGuard, UnregisteredRequest,
+    Action, CloseRequest, CommandExt, DefaultTokioConnectionBuilder, DefaultWasmConnectionBuilder,
+    PendingResponses, RegisteredRequest, RequestFutureGuard, UnregisteredRequest,
     error::Error,
-    event_::DefaultEventChannel,
     runtime_::{Timeout, tokio::Tokio, wasm::Wasm},
 };
 
@@ -59,25 +58,25 @@ impl<T> Debug for Client<T> {
 impl Client<Tokio> {
     /// Creates a new `SMPP` connection builder.
     ///
-    /// See [`ConnectionBuilder::new`] for more details.
-    pub fn builder() -> ConnectionBuilder {
-        ConnectionBuilder::new()
+    /// See [`DefaultTokioConnectionBuilder::new`] for more details.
+    pub fn builder() -> DefaultTokioConnectionBuilder {
+        DefaultTokioConnectionBuilder::new()
     }
 
     /// Creates a new `SMPP` connection builder.
     ///
-    /// See [`ConnectionBuilder::new`] for more details.
-    pub fn builder_tokio() -> ConnectionBuilder {
-        ConnectionBuilder::new_tokio()
+    /// See [`DefaultTokioConnectionBuilder::new`] for more details.
+    pub fn builder_tokio() -> DefaultTokioConnectionBuilder {
+        DefaultTokioConnectionBuilder::new_tokio()
     }
 }
 
 impl Client<Wasm> {
     /// Creates a new `SMPP` connection builder.
     ///
-    /// See [`ConnectionBuilder::new_wasm`] for more details.
-    pub fn builder_wasm() -> ConnectionBuilder<DefaultEventChannel, Wasm, Wasm, Wasm> {
-        ConnectionBuilder::new_wasm()
+    /// See [`DefaultWasmConnectionBuilder::new_wasm`] for more details.
+    pub fn builder_wasm() -> DefaultWasmConnectionBuilder {
+        DefaultWasmConnectionBuilder::new_wasm()
     }
 }
 

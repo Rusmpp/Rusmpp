@@ -214,13 +214,6 @@ pub mod delay {
         }
     }
 
-    impl MockDelay {
-        /// Creates a new [`MockDelay`].
-        pub const fn new() -> Self {
-            Self {}
-        }
-    }
-
     /// Future returned by the [`MockDelay`].
     ///
     /// Each poll corresponds to one millisecond in the requested duration.

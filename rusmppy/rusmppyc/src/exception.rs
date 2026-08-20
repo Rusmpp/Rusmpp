@@ -92,7 +92,7 @@ create_exception!(
 
 /// Errors that can occur while calling Rusmppyc functions.
 ///
-/// These errors are not send through the event stream, but are raised directly when calling the functions.
+/// These errors are not sent through the event stream, but are raised directly when calling the functions.
 ///
 /// See [`Error`](rusmppc::error::Error).
 #[derive(Debug, Clone)]

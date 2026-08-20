@@ -11,12 +11,16 @@ use crate::{
     runtime_::{Delay, Timeout, tokio::Tokio, wasm::Wasm},
 };
 
-/// Default connection builder that sends [`Event`](crate::event::Event)s through the event stream.
-pub type DefaultConnectionBuilder = ConnectionBuilder<DefaultEventChannel, Tokio, Tokio, Tokio>;
+/// Default [`tokio`] connection builder that sends [`Event`](crate::event::Event)s through the event stream.
+pub type DefaultTokioConnectionBuilder =
+    ConnectionBuilder<DefaultEventChannel, Tokio, Tokio, Tokio>;
+
+/// Default `wasm` connection builder that sends [`Event`](crate::event::Event)s through the event stream.
+pub type DefaultWasmConnectionBuilder = ConnectionBuilder<DefaultEventChannel, Wasm, Wasm, Wasm>;
 
 /// Builder for creating a new `SMPP` connection.
 #[derive(Debug, Clone)]
-pub struct ConnectionBuilder<E = DefaultEventChannel, D = Tokio, T = Tokio, R = Tokio> {
+pub struct ConnectionBuilder<E, D, T, R> {
     pub(crate) max_command_length: usize,
     pub(crate) enquire_link_interval: Option<Duration>,
     /// Timeout for waiting for a an enquire link response from the server.
@@ -38,14 +42,14 @@ pub struct ConnectionBuilder<E = DefaultEventChannel, D = Tokio, T = Tokio, R = 
     _r: std::marker::PhantomData<R>,
 }
 
-impl Default for DefaultConnectionBuilder {
+impl Default for DefaultTokioConnectionBuilder {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DefaultConnectionBuilder {
-    /// Creates a new [`ConnectionBuilder`] with default configurations.
+impl DefaultTokioConnectionBuilder {
+    /// Creates a new [`DefaultTokioConnectionBuilder`] with default configurations.
     ///
     /// # Defaults
     /// - `max_command_length`: 4096 bytes
@@ -75,7 +79,7 @@ impl DefaultConnectionBuilder {
         }
     }
 
-    /// Creates a new [`ConnectionBuilder`] with default configurations.
+    /// Creates a new [`DefaultTokioConnectionBuilder`] with default configurations.
     ///
     /// See [`new`](Self::new) for more details.
     pub fn new_tokio() -> Self {
@@ -83,14 +87,14 @@ impl DefaultConnectionBuilder {
     }
 }
 
-impl Default for ConnectionBuilder<DefaultEventChannel, Wasm, Wasm, Wasm> {
+impl Default for DefaultWasmConnectionBuilder {
     fn default() -> Self {
         Self::new_wasm()
     }
 }
 
-impl ConnectionBuilder<DefaultEventChannel, Wasm, Wasm, Wasm> {
-    /// Creates a new [`ConnectionBuilder`] with default configurations.
+impl DefaultWasmConnectionBuilder {
+    /// Creates a new [`DefaultWasmConnectionBuilder`] with default configurations.
     ///
     /// # Defaults
     /// - `max_command_length`: 4096 bytes
@@ -407,9 +411,28 @@ impl<E, D, T, R> ConnectionBuilder<E, D, T, R> {
         EventsConnectionBuilder { builder: self }
     }
 
-    #[cfg(test)]
-    /// TODO: why the fk does clippy want me to document this?
-    pub fn mock_delay(self) -> ConnectionBuilder<E, crate::mock::delay::MockDelay, T, R> {
+    /// Configures the connection to use the [`tokio`] runtime.
+    pub fn tokio(self) -> ConnectionBuilder<E, Tokio, Tokio, Tokio> {
+        ConnectionBuilder {
+            max_command_length: self.max_command_length,
+            enquire_link_interval: self.enquire_link_interval,
+            enquire_link_response_timeout: self.enquire_link_response_timeout,
+            auto_enquire_link_response: self.auto_enquire_link_response,
+            response_timeout: self.response_timeout,
+            check_interface_version: self.check_interface_version,
+            #[cfg(all(feature = "tokio", feature = "rustls"))]
+            rustls_config: self.rustls_config,
+            #[cfg(all(feature = "tokio", feature = "native-tls"))]
+            native_tls_connector: self.native_tls_connector,
+            _e: std::marker::PhantomData,
+            _d: std::marker::PhantomData,
+            _t: std::marker::PhantomData,
+            _r: std::marker::PhantomData,
+        }
+    }
+
+    /// Configures the connection to use the `wasm` runtime.
+    pub fn wasm(self) -> ConnectionBuilder<E, Wasm, Wasm, Wasm> {
         ConnectionBuilder {
             max_command_length: self.max_command_length,
             enquire_link_interval: self.enquire_link_interval,
@@ -598,7 +621,7 @@ impl<E: EventChannel, D: Delay, T: Timeout, R> NoSpawnConnectionBuilder<E, D, T,
     }
 }
 
-/// Builder for configuring the event stream
+/// Builder for configuring the event stream.
 #[derive(Debug)]
 pub struct EventsConnectionBuilder<E = DefaultEventChannel, D = Tokio, T = Tokio, R = Tokio> {
     builder: ConnectionBuilder<E, D, T, R>,
@@ -638,6 +661,28 @@ impl<E, D, T, R> EventsConnectionBuilder<E, D, T, R> {
             rustls_config: self.builder.rustls_config,
             #[cfg(all(feature = "tokio", feature = "native-tls"))]
             native_tls_connector: self.builder.native_tls_connector,
+            _e: std::marker::PhantomData,
+            _d: std::marker::PhantomData,
+            _t: std::marker::PhantomData,
+            _r: std::marker::PhantomData,
+        }
+    }
+}
+
+#[cfg(test)]
+impl<E, D, T, R> ConnectionBuilder<E, D, T, R> {
+    pub(crate) fn mock_delay(self) -> ConnectionBuilder<E, crate::mock::delay::MockDelay, T, R> {
+        ConnectionBuilder {
+            max_command_length: self.max_command_length,
+            enquire_link_interval: self.enquire_link_interval,
+            enquire_link_response_timeout: self.enquire_link_response_timeout,
+            auto_enquire_link_response: self.auto_enquire_link_response,
+            response_timeout: self.response_timeout,
+            check_interface_version: self.check_interface_version,
+            #[cfg(all(feature = "tokio", feature = "rustls"))]
+            rustls_config: self.rustls_config,
+            #[cfg(all(feature = "tokio", feature = "native-tls"))]
+            native_tls_connector: self.native_tls_connector,
             _e: std::marker::PhantomData,
             _d: std::marker::PhantomData,
             _t: std::marker::PhantomData,

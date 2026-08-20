@@ -108,7 +108,7 @@ pub(crate) use action::Action;
 mod connection;
 
 mod builder;
-pub use builder::{ConnectionBuilder, DefaultConnectionBuilder};
+pub use builder::{ConnectionBuilder, DefaultTokioConnectionBuilder, DefaultWasmConnectionBuilder};
 
 mod event_;
 
