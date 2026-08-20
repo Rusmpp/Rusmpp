@@ -454,7 +454,7 @@ impl<E, D, T, R> ConnectionBuilder<E, D, T, R> {
 
 /// Builder for creating a new `SMPP` connection without spawning it in the background.
 #[derive(Debug)]
-pub struct NoSpawnConnectionBuilder<E = DefaultEventChannel, D = Tokio, T = Tokio, R = Tokio> {
+pub struct NoSpawnConnectionBuilder<E, D, T, R> {
     pub(crate) builder: ConnectionBuilder<E, D, T, R>,
 }
 
@@ -623,7 +623,7 @@ impl<E: EventChannel, D: Delay, T: Timeout, R> NoSpawnConnectionBuilder<E, D, T,
 
 /// Builder for configuring the event stream.
 #[derive(Debug)]
-pub struct EventsConnectionBuilder<E = DefaultEventChannel, D = Tokio, T = Tokio, R = Tokio> {
+pub struct EventsConnectionBuilder<E, D, T, R> {
     builder: ConnectionBuilder<E, D, T, R>,
 }
 
