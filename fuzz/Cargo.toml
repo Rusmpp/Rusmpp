@@ -14,11 +14,15 @@ bytes = "1.11.1"
 tokio-util = { version = "0.7.16", default-features = false, features = [
     "codec",
 ] }
-framez = { version = "0.3.0", default-features = false }
+framez = { version = "0.4.0", default-features = false }
 rusmpp-core = { path = "../rusmpp-core", features = [
     "arbitrary",
-    "framez",
+], default-features = false }
+rusmpp = { path = "../rusmpp", features = [
     "tokio-codec",
+], default-features = false }
+rusmppz = { path = "../rusmppz", features = [
+    "framez",
 ], default-features = false }
 
 [workspace]
