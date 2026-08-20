@@ -125,8 +125,12 @@ pub mod channel {
 }
 
 pub mod builder {
-    //! Types related to building an `SMPP` connection.
+    //! Types related to building an `SMPP` connection or operations.
     pub use super::builder_::{EventsConnectionBuilder, NoSpawnConnectionBuilder};
+    pub use super::client::{
+        NoWaitRequestBuilder, RawRegisteredRequestBuilder, RegisteredRequestBuilder,
+        UnregisteredRequestBuilder,
+    };
 }
 
 mod request;

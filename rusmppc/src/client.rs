@@ -455,8 +455,11 @@ impl<T: Timeout> ClientInner<T> {
     }
 }
 
+/// Builder for creating an unregistered requests.
+///
+/// Unregistered requests are requests that do not expect a response from the server, such as [`EnquireLinkResp`](Pdu::EnquireLinkResp), [`DeliverSmResp`](Pdu::DeliverSmResp), and [`UnbindResp`](Pdu::UnbindResp).
 #[derive(Debug)]
-pub struct UnregisteredRequestBuilder<'a, T = Tokio> {
+pub struct UnregisteredRequestBuilder<'a, T> {
     client: &'a Client<T>,
     status: CommandStatus,
 }
@@ -474,19 +477,23 @@ impl<'a, T: Timeout> UnregisteredRequestBuilder<'a, T> {
         NoWaitRequestBuilder::new(self.client, self.status)
     }
 
+    /// Sets the command status for the next request.
     pub const fn status(mut self, status: CommandStatus) -> Self {
         self.status = status;
         self
     }
 
+    /// Sets the response timeout for the next request.
     pub fn response_timeout(&'_ self, timeout: Duration) -> RegisteredRequestBuilder<'_, T> {
         self.registered_request().response_timeout(timeout)
     }
 
+    /// Disables the response timeout for the next request.
     pub fn no_response_timeout(&'_ self) -> RegisteredRequestBuilder<'_, T> {
         self.registered_request().no_response_timeout()
     }
 
+    /// Sends a request without waiting for a response.
     pub const fn no_wait(&'_ self) -> NoWaitRequestBuilder<'_, T> {
         self.no_wait_request()
     }
@@ -655,8 +662,11 @@ impl<'a, T: Timeout> UnregisteredRequestBuilder<'a, T> {
     }
 }
 
+/// Builder for creating a registered requests.
+///
+/// Registered requests are requests that expect a response from the server, such as [`BindTransmitter`](Pdu::BindTransmitter), [`SubmitSm`](Pdu::SubmitSm), and [`QuerySm`](Pdu::QuerySm).
 #[derive(Debug)]
-pub struct RegisteredRequestBuilder<'a, T = Tokio> {
+pub struct RegisteredRequestBuilder<'a, T> {
     client: &'a Client<T>,
     status: CommandStatus,
     response_timeout: Option<Duration>,
@@ -681,16 +691,19 @@ impl<'a, T: Timeout> RegisteredRequestBuilder<'a, T> {
         }
     }
 
+    /// Sets the command status for the next request.
     pub const fn status(mut self, status: CommandStatus) -> Self {
         self.status = status;
         self
     }
 
+    /// Sets the response timeout for the next request.
     pub fn response_timeout(mut self, timeout: Duration) -> Self {
         self.response_timeout = Some(timeout);
         self
     }
 
+    /// Disables the response timeout for the next request.
     pub fn no_response_timeout(mut self) -> Self {
         self.response_timeout = None;
         self
@@ -875,8 +888,9 @@ impl<'a, T: Timeout> RegisteredRequestBuilder<'a, T> {
     }
 }
 
+/// Builder for creating a no-wait requests.
 #[derive(Debug)]
-pub struct NoWaitRequestBuilder<'a, T = Tokio> {
+pub struct NoWaitRequestBuilder<'a, T> {
     client: &'a Client<T>,
     status: CommandStatus,
 }
@@ -890,6 +904,7 @@ impl<'a, T: Timeout> NoWaitRequestBuilder<'a, T> {
         UnregisteredRequestBuilder::new(self.client, self.status)
     }
 
+    /// Sets the command status for the next request.
     pub const fn status(mut self, status: CommandStatus) -> Self {
         self.status = status;
         self
@@ -968,8 +983,11 @@ impl<'a, T: Timeout> NoWaitRequestBuilder<'a, T> {
     }
 }
 
+/// Builder for creating a raw registered requests.
+///
+/// Raw registered requests are requests that expect a response from the server, but do not poll the response automatically.
 #[derive(Debug)]
-pub struct RawRegisteredRequestBuilder<'a, T = Tokio> {
+pub struct RawRegisteredRequestBuilder<'a, T> {
     client: &'a Client<T>,
     status: CommandStatus,
     response_timeout: Option<Duration>,
@@ -984,16 +1002,19 @@ impl<'a, T: Timeout> RawRegisteredRequestBuilder<'a, T> {
         }
     }
 
+    /// Sets the command status for the next request.
     pub const fn status(mut self, status: CommandStatus) -> Self {
         self.status = status;
         self
     }
 
+    /// Sets the response timeout for the next request.
     pub fn response_timeout(mut self, timeout: Duration) -> Self {
         self.response_timeout = Some(timeout);
         self
     }
 
+    /// Disables the response timeout for the next request.
     pub fn no_response_timeout(mut self) -> Self {
         self.response_timeout = None;
         self
