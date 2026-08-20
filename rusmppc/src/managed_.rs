@@ -1,3 +1,5 @@
+// XXX: Only available with tokio, because tryhard only supports tokio.
+
 use std::{
     fmt::Debug,
     pin::Pin,
