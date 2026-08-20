@@ -390,3 +390,35 @@ pub mod timeout {
         }
     }
 }
+
+pub mod runtime {
+    use crate::runtime_::{Delay, Timeout};
+
+    /// A combined mock runtime that implements both [`Delay`] and [`Timeout`].
+    pub struct MockRuntime<D, T> {
+        _delay: std::marker::PhantomData<D>,
+        _timeout: std::marker::PhantomData<T>,
+    }
+
+    impl<D, T> Delay for MockRuntime<D, T>
+    where
+        D: Delay,
+    {
+        type Future = D::Future;
+
+        fn delay(duration: std::time::Duration) -> Self::Future {
+            D::delay(duration)
+        }
+    }
+
+    impl<D, T> Timeout for MockRuntime<D, T>
+    where
+        T: Timeout,
+    {
+        type Future<F: Future> = T::Future<F>;
+
+        fn timeout<F: Future>(duration: std::time::Duration, future: F) -> Self::Future<F> {
+            T::timeout(duration, future)
+        }
+    }
+}

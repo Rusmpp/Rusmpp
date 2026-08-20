@@ -12,15 +12,14 @@ use crate::{
 };
 
 /// Default [`tokio`] connection builder that sends [`Event`](crate::event::Event)s through the event stream.
-pub type DefaultTokioConnectionBuilder =
-    ConnectionBuilder<DefaultEventChannel, Tokio, Tokio, Tokio>;
+pub type DefaultTokioConnectionBuilder = ConnectionBuilder<DefaultEventChannel, Tokio>;
 
 /// Default `wasm` connection builder that sends [`Event`](crate::event::Event)s through the event stream.
-pub type DefaultWasmConnectionBuilder = ConnectionBuilder<DefaultEventChannel, Wasm, Wasm, Wasm>;
+pub type DefaultWasmConnectionBuilder = ConnectionBuilder<DefaultEventChannel, Wasm>;
 
 /// Builder for creating a new `SMPP` connection.
 #[derive(Debug, Clone)]
-pub struct ConnectionBuilder<E, D, T, R> {
+pub struct ConnectionBuilder<E, R> {
     pub(crate) max_command_length: usize,
     pub(crate) enquire_link_interval: Option<Duration>,
     /// Timeout for waiting for a an enquire link response from the server.
@@ -37,8 +36,6 @@ pub struct ConnectionBuilder<E, D, T, R> {
     #[cfg(all(feature = "tokio", feature = "native-tls"))]
     native_tls_connector: Option<native_tls::TlsConnector>,
     _e: std::marker::PhantomData<E>,
-    _d: std::marker::PhantomData<D>,
-    _t: std::marker::PhantomData<T>,
     _r: std::marker::PhantomData<R>,
 }
 
@@ -73,8 +70,6 @@ impl DefaultTokioConnectionBuilder {
             #[cfg(all(feature = "tokio", feature = "native-tls"))]
             native_tls_connector: None,
             _e: std::marker::PhantomData,
-            _d: std::marker::PhantomData,
-            _t: std::marker::PhantomData,
             _r: std::marker::PhantomData,
         }
     }
@@ -116,15 +111,13 @@ impl DefaultWasmConnectionBuilder {
             #[cfg(all(feature = "tokio", feature = "native-tls"))]
             native_tls_connector: None,
             _e: std::marker::PhantomData,
-            _d: std::marker::PhantomData,
-            _t: std::marker::PhantomData,
             _r: std::marker::PhantomData,
         }
     }
 }
 
 #[cfg(feature = "tokio")]
-impl<E: EventChannel, D: Delay, T: Timeout> ConnectionBuilder<E, D, T, Tokio> {
+impl<E: EventChannel> ConnectionBuilder<E, Tokio> {
     /// Connects to the `SMPP` server.
     ///
     /// Opens and manages a connection in the background and returns a client and an event stream.
@@ -180,12 +173,13 @@ impl<E: EventChannel, D: Delay, T: Timeout> ConnectionBuilder<E, D, T, Tokio> {
     pub async fn connect(
         self,
         url: impl AsRef<str>,
-    ) -> Result<(Client<T>, impl Stream<Item = E::Event> + Unpin + 'static), crate::error::Error>
-    where
-        D: Send + 'static,
-        D::Future: Send,
-        T: 'static,
-    {
+    ) -> Result<
+        (
+            Client<Tokio>,
+            impl Stream<Item = E::Event> + Unpin + 'static,
+        ),
+        crate::error::Error,
+    > {
         let (client, events, connection) = self.no_spawn().connect(url).await?;
 
         Tokio::spawn(connection);
@@ -202,12 +196,12 @@ impl<E: EventChannel, D: Delay, T: Timeout> ConnectionBuilder<E, D, T, Tokio> {
     pub fn connected<S>(
         self,
         stream: S,
-    ) -> (Client<T>, impl Stream<Item = E::Event> + Unpin + 'static)
+    ) -> (
+        Client<Tokio>,
+        impl Stream<Item = E::Event> + Unpin + 'static,
+    )
     where
         S: AsyncRead + AsyncWrite + Send + 'static,
-        D: Send + 'static,
-        D::Future: Send,
-        T: 'static,
     {
         let (client, events, connection) = self.no_spawn().connected(stream);
 
@@ -218,7 +212,7 @@ impl<E: EventChannel, D: Delay, T: Timeout> ConnectionBuilder<E, D, T, Tokio> {
 }
 
 #[cfg(feature = "wasm")]
-impl<E: EventChannel, D: Delay, T: Timeout> ConnectionBuilder<E, D, T, Wasm> {
+impl<E: EventChannel> ConnectionBuilder<E, Wasm> {
     /// Creates a client from an existing connection.
     ///
     /// Manages a connection in the background and returns a client and an event stream.
@@ -228,11 +222,9 @@ impl<E: EventChannel, D: Delay, T: Timeout> ConnectionBuilder<E, D, T, Wasm> {
     pub fn connected<S>(
         self,
         stream: S,
-    ) -> (Client<T>, impl Stream<Item = E::Event> + Unpin + 'static)
+    ) -> (Client<Wasm>, impl Stream<Item = E::Event> + Unpin + 'static)
     where
         S: AsyncRead + AsyncWrite + 'static,
-        D: 'static,
-        T: 'static,
     {
         let (client, events, connection) = self.no_spawn().connected(stream);
 
@@ -243,7 +235,7 @@ impl<E: EventChannel, D: Delay, T: Timeout> ConnectionBuilder<E, D, T, Wasm> {
 }
 
 #[cfg(feature = "tokio")]
-impl<E: EventChannel> ConnectionBuilder<E, Tokio, Tokio, Tokio> {
+impl<E: EventChannel> ConnectionBuilder<E, Tokio> {
     /// Creates a managed connection builder that handles reconnection automatically.
     pub fn managed(self) -> crate::managed_::UnboundManagedConnectionBuilder<E>
     where
@@ -254,7 +246,7 @@ impl<E: EventChannel> ConnectionBuilder<E, Tokio, Tokio, Tokio> {
     }
 }
 
-impl<E, D, T, R> ConnectionBuilder<E, D, T, R> {
+impl<E, R> ConnectionBuilder<E, R> {
     /// Sets the maximum command length for incoming commands.
     pub const fn max_command_length(mut self, max_command_length: usize) -> Self {
         self.max_command_length = max_command_length;
@@ -402,17 +394,17 @@ impl<E, D, T, R> ConnectionBuilder<E, D, T, R> {
     /// Does not spawn the connection in the background.
     ///
     /// It is your responsibility to run the connection to completion.
-    pub fn no_spawn(self) -> NoSpawnConnectionBuilder<E, D, T, R> {
+    pub fn no_spawn(self) -> NoSpawnConnectionBuilder<E, R> {
         NoSpawnConnectionBuilder { builder: self }
     }
 
     /// Configures the connection event stream.
-    pub fn events(self) -> EventsConnectionBuilder<E, D, T, R> {
+    pub fn events(self) -> EventsConnectionBuilder<E, R> {
         EventsConnectionBuilder { builder: self }
     }
 
     /// Configures the connection to use the [`tokio`] runtime.
-    pub fn tokio(self) -> ConnectionBuilder<E, Tokio, Tokio, Tokio> {
+    pub fn tokio(self) -> ConnectionBuilder<E, Tokio> {
         ConnectionBuilder {
             max_command_length: self.max_command_length,
             enquire_link_interval: self.enquire_link_interval,
@@ -425,14 +417,12 @@ impl<E, D, T, R> ConnectionBuilder<E, D, T, R> {
             #[cfg(all(feature = "tokio", feature = "native-tls"))]
             native_tls_connector: self.native_tls_connector,
             _e: std::marker::PhantomData,
-            _d: std::marker::PhantomData,
-            _t: std::marker::PhantomData,
             _r: std::marker::PhantomData,
         }
     }
 
     /// Configures the connection to use the `wasm` runtime.
-    pub fn wasm(self) -> ConnectionBuilder<E, Wasm, Wasm, Wasm> {
+    pub fn wasm(self) -> ConnectionBuilder<E, Wasm> {
         ConnectionBuilder {
             max_command_length: self.max_command_length,
             enquire_link_interval: self.enquire_link_interval,
@@ -445,8 +435,6 @@ impl<E, D, T, R> ConnectionBuilder<E, D, T, R> {
             #[cfg(all(feature = "tokio", feature = "native-tls"))]
             native_tls_connector: self.native_tls_connector,
             _e: std::marker::PhantomData,
-            _d: std::marker::PhantomData,
-            _t: std::marker::PhantomData,
             _r: std::marker::PhantomData,
         }
     }
@@ -454,12 +442,12 @@ impl<E, D, T, R> ConnectionBuilder<E, D, T, R> {
 
 /// Builder for creating a new `SMPP` connection without spawning it in the background.
 #[derive(Debug)]
-pub struct NoSpawnConnectionBuilder<E, D, T, R> {
-    pub(crate) builder: ConnectionBuilder<E, D, T, R>,
+pub struct NoSpawnConnectionBuilder<E, R> {
+    pub(crate) builder: ConnectionBuilder<E, R>,
 }
 
 #[cfg(feature = "tokio")]
-impl<E: EventChannel, D: Delay, T: Timeout> NoSpawnConnectionBuilder<E, D, T, Tokio> {
+impl<E: EventChannel> NoSpawnConnectionBuilder<E, Tokio> {
     /// Connects to the `SMPP` server without spawning the connection in the background.
     ///
     /// # Errors
@@ -479,16 +467,12 @@ impl<E: EventChannel, D: Delay, T: Timeout> NoSpawnConnectionBuilder<E, D, T, To
         url: impl AsRef<str>,
     ) -> Result<
         (
-            Client<T>,
+            Client<Tokio>,
             impl Stream<Item = E::Event> + Unpin + 'static,
             impl Future<Output = ()> + 'static,
         ),
         crate::error::Error,
-    >
-    where
-        D: 'static,
-        T: 'static,
-    {
+    > {
         use crate::{MaybeTlsStream, error::Error};
 
         enum Scheme {
@@ -599,13 +583,13 @@ impl<E: EventChannel, D: Delay, T: Timeout> NoSpawnConnectionBuilder<E, D, T, To
     }
 }
 
-impl<E: EventChannel, D: Delay, T: Timeout, R> NoSpawnConnectionBuilder<E, D, T, R> {
+impl<E: EventChannel, R: Delay + Timeout> NoSpawnConnectionBuilder<E, R> {
     /// Creates a client from an existing connection without spawning the connection in the background.
     pub fn connected<S>(
         self,
         stream: S,
     ) -> (
-        Client<T>,
+        Client<R>,
         impl Stream<Item = E::Event> + Unpin + 'static,
         impl Future<Output = ()>,
     )
@@ -623,13 +607,13 @@ impl<E: EventChannel, D: Delay, T: Timeout, R> NoSpawnConnectionBuilder<E, D, T,
 
 /// Builder for configuring the event stream.
 #[derive(Debug)]
-pub struct EventsConnectionBuilder<E, D, T, R> {
-    builder: ConnectionBuilder<E, D, T, R>,
+pub struct EventsConnectionBuilder<E, R> {
+    builder: ConnectionBuilder<E, R>,
 }
 
-impl<E, D, T, R> EventsConnectionBuilder<E, D, T, R> {
+impl<E, R> EventsConnectionBuilder<E, R> {
     /// Discards all events from the background connection.
-    pub fn discard(self) -> ConnectionBuilder<DiscardEventChannel, D, T, R> {
+    pub fn discard(self) -> ConnectionBuilder<DiscardEventChannel, R> {
         ConnectionBuilder {
             max_command_length: self.builder.max_command_length,
             enquire_link_interval: self.builder.enquire_link_interval,
@@ -642,14 +626,12 @@ impl<E, D, T, R> EventsConnectionBuilder<E, D, T, R> {
             #[cfg(all(feature = "tokio", feature = "native-tls"))]
             native_tls_connector: self.builder.native_tls_connector,
             _e: std::marker::PhantomData,
-            _d: std::marker::PhantomData,
-            _t: std::marker::PhantomData,
             _r: std::marker::PhantomData,
         }
     }
 
     /// Enables insight events from the background connection.
-    pub fn insights(self) -> ConnectionBuilder<InsightEventChannel, D, T, R> {
+    pub fn insights(self) -> ConnectionBuilder<InsightEventChannel, R> {
         ConnectionBuilder {
             max_command_length: self.builder.max_command_length,
             enquire_link_interval: self.builder.enquire_link_interval,
@@ -662,16 +644,17 @@ impl<E, D, T, R> EventsConnectionBuilder<E, D, T, R> {
             #[cfg(all(feature = "tokio", feature = "native-tls"))]
             native_tls_connector: self.builder.native_tls_connector,
             _e: std::marker::PhantomData,
-            _d: std::marker::PhantomData,
-            _t: std::marker::PhantomData,
             _r: std::marker::PhantomData,
         }
     }
 }
 
 #[cfg(test)]
-impl<E, D, T, R> ConnectionBuilder<E, D, T, R> {
-    pub(crate) fn mock_delay(self) -> ConnectionBuilder<E, crate::mock::delay::MockDelay, T, R> {
+impl<E, R> ConnectionBuilder<E, R> {
+    pub(crate) fn mock_delay(
+        self,
+    ) -> ConnectionBuilder<E, crate::mock::runtime::MockRuntime<crate::mock::delay::MockDelay, Tokio>>
+    {
         ConnectionBuilder {
             max_command_length: self.max_command_length,
             enquire_link_interval: self.enquire_link_interval,
@@ -684,8 +667,6 @@ impl<E, D, T, R> ConnectionBuilder<E, D, T, R> {
             #[cfg(all(feature = "tokio", feature = "native-tls"))]
             native_tls_connector: self.native_tls_connector,
             _e: std::marker::PhantomData,
-            _d: std::marker::PhantomData,
-            _t: std::marker::PhantomData,
             _r: std::marker::PhantomData,
         }
     }
