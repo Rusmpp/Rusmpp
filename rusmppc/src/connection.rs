@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     Action, Client, Request, Timer,
-    builder::NoSpawnConnectionBuilder,
+    builder_::NoSpawnConnectionBuilder,
     error::Error,
     event_::{EventChannel, Insight},
     request::ObligatedRequest,

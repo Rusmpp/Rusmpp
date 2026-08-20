@@ -14,7 +14,7 @@ use rusmpp::{
 pub enum Error {
     /// Connection to `SMPP` server failed.
     ///
-    /// This error is returned by [`ConnectionBuilder::connect`](crate::builder::ConnectionBuilder::connect).
+    /// This error is returned by [`ConnectionBuilder::connect`](crate::ConnectionBuilder::connect).
     #[error("Failed to connect to the server: {0}")]
     Connect(#[source] std::io::Error),
     /// I/O error occurred.

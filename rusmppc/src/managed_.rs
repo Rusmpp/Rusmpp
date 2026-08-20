@@ -134,6 +134,7 @@ impl BindMode {
     }
 }
 
+/// Builder for creating an unbound managed connection.
 #[derive(Debug)]
 pub struct UnboundManagedConnectionBuilder<E: EventChannel + Clone + Send + Sync + 'static> {
     builder: ConnectionBuilder<E, Tokio>,
@@ -173,6 +174,7 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> UnboundManagedConnectionBu
     }
 }
 
+/// Builder for creating a managed connection.
 #[derive(Debug)]
 pub struct ManagedConnectionBuilder<E: EventChannel + Clone + Send + Sync + 'static> {
     builder: ConnectionBuilder<E, Tokio>,
