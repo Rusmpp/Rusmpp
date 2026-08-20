@@ -27,10 +27,15 @@ use std::{str::FromStr, time::Duration};
 use axum::{Json, Router, extract::State, http::StatusCode, routing::post};
 use futures::StreamExt;
 use rusmpp::{
-    pdus::{BindTransceiver, SubmitSm},
+    Pdu,
+    pdus::{BindTransceiver, DeliverSmResp, SubmitSm},
     types::{COctetString, OctetString},
 };
-use rusmppc::{ConnectionBuilder, managed::ManagedClient};
+use rusmppc::{
+    ConnectionBuilder,
+    event::Event,
+    managed::{ManagedClient, ManagedEvent},
+};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn core::error::Error>> {
@@ -56,9 +61,31 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
 
     tracing::info!("Connected to SMPP server");
 
+    let client_clone = client.clone();
     tokio::spawn(async move {
         while let Some(event) = events.next().await {
             tracing::info!(?event, "Event");
+
+            if let ManagedEvent::Event(Event::Incoming(command)) = event {
+                if let Some(Pdu::DeliverSm(deliver_sm)) = command.pdu() {
+                    tracing::info!("Received DeliverSm");
+
+                    let deliver_sm_resp = DeliverSmResp::builder()
+                        .message_id(
+                            deliver_sm
+                                .receipted_message_id()
+                                .cloned()
+                                .unwrap_or(COctetString::empty()),
+                        )
+                        .build();
+
+                    if let Ok(client) = client_clone.get().await {
+                        let _ = client
+                            .deliver_sm_resp(command.sequence_number(), deliver_sm_resp)
+                            .await;
+                    }
+                }
+            }
         }
 
         tracing::info!("Connection closed");

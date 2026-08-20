@@ -107,8 +107,10 @@ pub(crate) use action::Action;
 
 mod connection;
 
-mod builder;
-pub use builder::{ConnectionBuilder, DefaultConnectionBuilder};
+mod builder_;
+pub use builder_::{
+    ConnectionBuilder, DefaultTokioConnectionBuilder, DefaultWasmConnectionBuilder,
+};
 
 mod event_;
 
@@ -120,6 +122,15 @@ pub mod event {
 pub mod channel {
     //! Types related to event channels.
     pub use super::event_::{DefaultEventChannel, DiscardEventChannel, InsightEventChannel};
+}
+
+pub mod builder {
+    //! Types related to building an `SMPP` connection or operations.
+    pub use super::builder_::{EventsConnectionBuilder, NoSpawnConnectionBuilder};
+    pub use super::client::{
+        NoWaitRequestBuilder, RawRegisteredRequestBuilder, RegisteredRequestBuilder,
+        UnregisteredRequestBuilder,
+    };
 }
 
 mod request;
@@ -167,4 +178,11 @@ mod managed_;
 pub mod managed {
     //! A managed `SMPP` client that automatically handles reconnection and binding.
     pub use super::managed_::{ManagedClient, ManagedEvent};
+
+    pub mod builder {
+        //! Types related to building a managed `SMPP` client.
+        pub use super::super::managed_::{
+            ManagedConnectionBuilder, UnboundManagedConnectionBuilder,
+        };
+    }
 }

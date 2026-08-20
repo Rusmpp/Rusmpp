@@ -12,7 +12,7 @@ use std::{str::FromStr, time::Duration};
 
 use futures::StreamExt;
 use rusmpp::{
-    CommandId, CommandStatus,
+    CommandStatus, Pdu,
     pdus::{BindTransceiver, DeliverSmResp, SubmitSm},
     types::{COctetString, OctetString},
     values::{EsmClass, Npi, RegisteredDelivery, ServiceType, Ton},
@@ -58,11 +58,20 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
             tracing::info!(?event, "Event");
 
             if let Event::Incoming(command) = event {
-                if command.id() == CommandId::DeliverSm {
+                if let Some(Pdu::DeliverSm(deliver_sm)) = command.pdu() {
                     tracing::info!("Received DeliverSm");
 
+                    let deliver_sm_resp = DeliverSmResp::builder()
+                        .message_id(
+                            deliver_sm
+                                .receipted_message_id()
+                                .cloned()
+                                .unwrap_or(COctetString::empty()),
+                        )
+                        .build();
+
                     let _ = client_clone
-                        .deliver_sm_resp(command.sequence_number(), DeliverSmResp::default())
+                        .deliver_sm_resp(command.sequence_number(), deliver_sm_resp)
                         .await;
                 }
             }

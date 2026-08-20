@@ -1,3 +1,5 @@
+// XXX: Only available with tokio, because tryhard only supports tokio.
+
 use std::{
     fmt::Debug,
     pin::Pin,
@@ -132,13 +134,14 @@ impl BindMode {
     }
 }
 
+/// Builder for creating an unbound managed connection.
 #[derive(Debug)]
 pub struct UnboundManagedConnectionBuilder<E: EventChannel + Clone + Send + Sync + 'static> {
-    builder: ConnectionBuilder<E, Tokio, Tokio, Tokio>,
+    builder: ConnectionBuilder<E, Tokio>,
 }
 
 impl<E: EventChannel + Clone + Send + Sync + 'static> UnboundManagedConnectionBuilder<E> {
-    pub(crate) fn new(builder: ConnectionBuilder<E, Tokio, Tokio, Tokio>) -> Self {
+    pub(crate) fn new(builder: ConnectionBuilder<E, Tokio>) -> Self {
         Self { builder }
     }
 
@@ -171,9 +174,10 @@ impl<E: EventChannel + Clone + Send + Sync + 'static> UnboundManagedConnectionBu
     }
 }
 
+/// Builder for creating a managed connection.
 #[derive(Debug)]
 pub struct ManagedConnectionBuilder<E: EventChannel + Clone + Send + Sync + 'static> {
-    builder: ConnectionBuilder<E, Tokio, Tokio, Tokio>,
+    builder: ConnectionBuilder<E, Tokio>,
     bind: BindMode,
     auto_reconnect_interval: Option<Duration>,
     max_delay: Option<Duration>,
@@ -182,7 +186,7 @@ pub struct ManagedConnectionBuilder<E: EventChannel + Clone + Send + Sync + 'sta
 }
 
 impl<E: EventChannel + Clone + Send + Sync + 'static> ManagedConnectionBuilder<E> {
-    fn new(builder: ConnectionBuilder<E, Tokio, Tokio, Tokio>, bind: BindMode) -> Self {
+    fn new(builder: ConnectionBuilder<E, Tokio>, bind: BindMode) -> Self {
         Self {
             builder,
             bind,
@@ -375,8 +379,8 @@ enum Connect {
     Connector(Box<dyn Connector>),
 }
 
-struct BoundClientCreatorImpl<E: EventChannel, D: Delay, T: Timeout, R> {
-    builder: ConnectionBuilder<E, D, T, R>,
+struct BoundClientCreatorImpl<E: EventChannel, R: Delay + Timeout> {
+    builder: ConnectionBuilder<E, R>,
     connect: Connect,
     bind: BindMode,
     max_delay: Option<Duration>,
@@ -385,17 +389,15 @@ struct BoundClientCreatorImpl<E: EventChannel, D: Delay, T: Timeout, R> {
     tx: UnboundedSender<ManagedEvent<E::Event>>,
 }
 
-impl<E: EventChannel, D: Delay, T: Timeout, R> BoundClientCreatorImpl<E, D, T, R>
+impl<E: EventChannel, R: Delay + Timeout> BoundClientCreatorImpl<E, R>
 where
     E: Clone + Send + Sync + 'static,
     E::Event: Send + Sync + 'static,
-    D: Clone + Send + Sync + 'static,
-    D::Future: Send,
-    T: Clone + 'static,
-    R: Clone + 'static,
+    R: Clone + Send + Sync + 'static,
+    <R as Delay>::Future: Send,
 {
     fn new(
-        builder: ConnectionBuilder<E, D, T, R>,
+        builder: ConnectionBuilder<E, R>,
         connect: Connect,
         bind: BindMode,
         max_delay: Option<Duration>,
@@ -415,12 +417,10 @@ where
     }
 }
 
-impl<E: EventChannel, D: Delay> BoundClientCreatorImpl<E, D, Tokio, Tokio>
+impl<E: EventChannel> BoundClientCreatorImpl<E, Tokio>
 where
     E: Clone + Send + Sync + 'static,
     E::Event: Send + Sync + 'static,
-    D: Clone + Send + Sync + 'static,
-    D::Future: Send,
 {
     async fn connect_(&self) -> Result<Client<Tokio>, Error> {
         tracing::debug!(target: TARGET, "Connecting");
@@ -500,13 +500,10 @@ trait BoundClientCreator<T>: Send + Sync + 'static {
     fn connect(&self) -> Pin<Box<dyn Future<Output = Result<Client<T>, Error>> + Send + '_>>;
 }
 
-impl<E: EventChannel, D: Delay> BoundClientCreator<Tokio>
-    for BoundClientCreatorImpl<E, D, Tokio, Tokio>
+impl<E: EventChannel> BoundClientCreator<Tokio> for BoundClientCreatorImpl<E, Tokio>
 where
     E: Clone + Send + Sync + 'static,
     E::Event: Send + Sync + 'static,
-    D: Clone + Send + Sync + 'static,
-    D::Future: Send,
 {
     fn connect(&self) -> Pin<Box<dyn Future<Output = Result<Client<Tokio>, Error>> + Send + '_>> {
         Box::pin(async move { self.connect_().await })

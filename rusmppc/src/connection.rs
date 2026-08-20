@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     Action, Client, Request, Timer,
-    builder::NoSpawnConnectionBuilder,
+    builder_::NoSpawnConnectionBuilder,
     error::Error,
     event_::{EventChannel, Insight},
     request::ObligatedRequest,
@@ -673,7 +673,7 @@ where
                             let _ = self
                                 .as_mut()
                                 .events
-                                .send_error(Error::ConnectionClosedByPeer);
+                                .send_error(Error::UnexpectedEndOfStream);
 
                             return Poll::Ready(());
                         }
@@ -691,13 +691,13 @@ where
     }
 }
 
-impl<E: EventChannel, D: Delay, T: Timeout, R> NoSpawnConnectionBuilder<E, D, T, R> {
+impl<E: EventChannel, R: Delay + Timeout> NoSpawnConnectionBuilder<E, R> {
     /// Consumes the builder and creates a new [`Client`] along with the connection future and event stream (from raw parts).
     pub(crate) fn raw<F>(
         self,
         framed: F,
     ) -> (
-        Client<T>,
+        Client<R>,
         impl Stream<Item = E::Event> + Unpin + 'static,
         impl Future<Output = ()>,
     )
@@ -705,7 +705,7 @@ impl<E: EventChannel, D: Delay, T: Timeout, R> NoSpawnConnectionBuilder<E, D, T,
         F: Stream<Item = Result<Command, DecodeError>>
             + for<'a> Sink<&'a Command, Error = EncodeError>,
     {
-        let (connection, watch, actions, events) = Connection::<_, E, D>::new(
+        let (connection, watch, actions, events) = Connection::<_, E, R>::new(
             self.builder.enquire_link_interval,
             self.builder.enquire_link_response_timeout,
             self.builder.auto_enquire_link_response,

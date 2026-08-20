@@ -14,7 +14,7 @@ use rusmpp::{
 pub enum Error {
     /// Connection to `SMPP` server failed.
     ///
-    /// This error is returned by [`ConnectionBuilder::connect`](crate::builder::ConnectionBuilder::connect).
+    /// This error is returned by [`ConnectionBuilder::connect`](crate::ConnectionBuilder::connect).
     #[error("Failed to connect to the server: {0}")]
     Connect(#[source] std::io::Error),
     /// I/O error occurred.
@@ -32,26 +32,26 @@ pub enum Error {
     ///
     /// # Note
     ///
-    /// [`Error::ConnectionClosed`] is different from [`Error::ConnectionClosedByPeer`].
+    /// [`Error::ConnectionClosed`] is different from [`Error::UnexpectedEndOfStream`].
     ///
     /// - [`Error::ConnectionClosed`] means that the background connection managing the `SMPP` connection is closed (for example, the user called [`Client::close`](crate::client::Client::close) or the connection encountered a fatal error and closed itself).
-    /// - [`Error::ConnectionClosedByPeer`] means that the `SMPP` server closed the (TCP) connection unexpectedly.
+    /// - [`Error::UnexpectedEndOfStream`] means that the `SMPP` stream (TCP stream) was closed unexpectedly.
     #[error("Connection closed")]
     ConnectionClosed,
-    /// The connection to the `SMPP` server was closed by the peer.
+    /// The `SMPP` stream was closed unexpectedly.
     ///
-    /// This can happen if the server closes the connection unexpectedly.
+    /// This can happen if the connection was closed unexpectedly.
     ///
     /// This error goes through the event stream as an [`Event::Error`](crate::event::Event::Error).
     ///
     /// # Note
     ///
-    /// [`Error::ConnectionClosedByPeer`] is different from [`Error::ConnectionClosed`].
+    /// [`Error::UnexpectedEndOfStream`] is different from [`Error::ConnectionClosed`].
     ///
-    /// - [`Error::ConnectionClosedByPeer`] means that the `SMPP` server closed the (TCP) connection unexpectedly.
+    /// - [`Error::UnexpectedEndOfStream`] means that the `SMPP` stream (TCP stream) was closed unexpectedly.
     /// - [`Error::ConnectionClosed`] means that the background connection managing the `SMPP` connection is closed (for example, the user called [`Client::close`](crate::client::Client::close) or the connection encountered a fatal error and closed itself).
-    #[error("Connection closed by peer")]
-    ConnectionClosedByPeer,
+    #[error("Unexpected end of stream")]
+    UnexpectedEndOfStream,
     /// Protocol encode error.
     ///
     /// This error can be returned by various methods, such as sending commands or during background operations through the event stream as an [`Event::Error`](crate::event::Event::Error).
