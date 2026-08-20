@@ -28,7 +28,6 @@ tokio-util = { version = "0.7.17", default-features = false, features = [
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 futures = "0.3.31"
 
-
 [features]
 default = ["tokio-codec"]
 # Implements tokio's util codec Encoder/Decoder traits.

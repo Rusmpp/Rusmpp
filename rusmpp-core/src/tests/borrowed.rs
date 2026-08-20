@@ -164,3 +164,19 @@ fn print_decode_errors() {
         let _ = std::dbg!(result);
     }
 }
+
+#[cfg(feature = "serde")]
+#[test]
+fn serde() {
+    for command in test_commands() {
+        let mut buf = [0u8; 1024 * 8];
+
+        let serialized =
+            postcard::to_slice(&command, &mut buf[..]).expect("Failed to serialize command");
+
+        let deserialized: Command<'_, 16> =
+            postcard::from_bytes(serialized).expect("Failed to deserialize command");
+
+        assert_eq!(command, deserialized);
+    }
+}

@@ -16,8 +16,8 @@ use rusmpp_core::{
     command::borrowed::Command,
     decode::borrowed::DecodeWithLength,
     encode::{Encode, Length},
-    framez::CommandCodec,
 };
+use rusmppz::framez::CommandCodec;
 
 fuzz_target!(|data: &[u8]| {
     let mut codec = CommandCodec::<1024>::new();

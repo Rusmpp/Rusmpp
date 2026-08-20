@@ -92,24 +92,9 @@ dependencies = [
 
 [[package]]
 name = "embedded-io"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "edd0f118536f44f5ccd48bcb8b111bdc3de888b58c74639dfb034a357d0f206d"
-
-[[package]]
-name = "embedded-io"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9eb1aa714776b75c7e67e1da744b81a129b3ff919c8712b5e1b32252c1f07cc7"
-
-[[package]]
-name = "embedded-io-async"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ff09972d4073aa8c299395be75161d582e7629cd663171d62af73c8d50dba3f"
-dependencies = [
- "embedded-io 0.6.1",
-]
 
 [[package]]
 name = "embedded-io-async"
@@ -117,17 +102,7 @@ version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2564b9f813c544241430e147d8bc454815ef9ac998878d30cc3055449f7fd4c0"
 dependencies = [
- "embedded-io 0.7.1",
-]
-
-[[package]]
-name = "framez"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "474fb26e41fcc113f86bb8e0818c7e1150dd1d28dd9c47dfdd95f925df5f2947"
-dependencies = [
- "embedded-io-async 0.6.1",
- "futures",
+ "embedded-io",
 ]
 
 [[package]]
@@ -136,7 +111,7 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ddadef40a5b6d93abf81e40930527a71381e2cbe3fa4084425c7946735af2fdd"
 dependencies = [
- "embedded-io-async 0.7.0",
+ "embedded-io-async",
  "futures",
 ]
 
@@ -332,18 +307,41 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "74765f6d916ee2faa39bc8e68e4f3ed8949b48cccdac59983d287a7cb71ce9c5"
 
 [[package]]
+name = "rusmpp"
+version = "0.4.0"
+dependencies = [
+ "rusmpp-core",
+ "rusmpp-extra",
+ "rusmpp-tokio-codec",
+]
+
+[[package]]
 name = "rusmpp-core"
 version = "0.4.0"
 dependencies = [
  "arbitrary",
  "bytes",
- "framez 0.4.0",
  "heapless",
  "pastey",
  "rusmpp-macros",
  "serde",
  "thiserror",
- "tokio-util",
+]
+
+[[package]]
+name = "rusmpp-extra"
+version = "0.4.0"
+dependencies = [
+ "rusmpp-core",
+ "thiserror",
+]
+
+[[package]]
+name = "rusmpp-framez"
+version = "0.1.0"
+dependencies = [
+ "framez",
+ "rusmpp-core",
 ]
 
 [[package]]
@@ -352,9 +350,11 @@ version = "0.0.0"
 dependencies = [
  "arbitrary",
  "bytes",
- "framez 0.3.0",
+ "framez",
  "libfuzzer-sys",
+ "rusmpp",
  "rusmpp-core",
+ "rusmppz",
  "tokio-util",
 ]
 
@@ -365,6 +365,23 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "rusmpp-tokio-codec"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "rusmpp-core",
+ "tokio-util",
+]
+
+[[package]]
+name = "rusmppz"
+version = "0.4.0"
+dependencies = [
+ "rusmpp-core",
+ "rusmpp-framez",
 ]
 
 [[package]]

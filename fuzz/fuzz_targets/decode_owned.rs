@@ -11,11 +11,11 @@ extern crate alloc;
 use arbitrary::Unstructured;
 use bytes::BytesMut;
 use libfuzzer_sys::fuzz_target;
+use rusmpp::tokio_codec::CommandCodec;
 use rusmpp_core::{
     command::owned::Command,
     decode::owned::DecodeWithLength,
     encode::{owned::Encode, Length},
-    tokio_codec::CommandCodec,
 };
 use tokio_util::codec::Decoder;
 

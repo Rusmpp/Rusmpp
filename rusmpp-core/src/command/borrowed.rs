@@ -2,8 +2,6 @@ use rusmpp_macros::Rusmpp;
 
 use crate::{CommandId, CommandStatus, pdus::borrowed::Pdu};
 
-// TODO: serde like owned.
-
 /// `SMPP` command.
 ///
 /// The following PDU example illustrates how a `SMPP` PDU is decoded:
@@ -40,8 +38,6 @@ use crate::{CommandId, CommandStatus, pdus::borrowed::Pdu};
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = borrowed)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-#[cfg_attr(feature = "serde", serde(bound(deserialize = "'de: 'a")))]
 pub struct Command<'a, const N: usize> {
     /// See [`CommandId`]
     id: CommandId,
@@ -161,6 +157,67 @@ impl<'a, const N: usize> PduBuilder<'a, N> {
     }
 }
 
+#[cfg(feature = "serde")]
+const _: () = {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    use crate::types::borrowed::AnyOctetString;
+
+    #[derive(Serialize)]
+    struct SerCommand<'a, const N: usize> {
+        status: CommandStatus,
+        sequence_number: u32,
+        pdu: &'a Pdu<'a, N>,
+    }
+
+    impl<'a, const N: usize> Serialize for Command<'a, N> {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            let pdu = Pdu::Other {
+                command_id: self.id(),
+                body: AnyOctetString::empty(),
+            };
+
+            let pdu = self.pdu.as_ref().unwrap_or(&pdu);
+
+            let command = SerCommand {
+                status: self.status,
+                sequence_number: self.sequence_number,
+                pdu,
+            };
+
+            command.serialize(serializer)
+        }
+    }
+
+    #[derive(Deserialize)]
+    #[serde(bound(deserialize = "'de: 'a"))]
+    struct DeCommand<'a, const N: usize> {
+        status: CommandStatus,
+        sequence_number: u32,
+        pdu: Pdu<'a, N>,
+    }
+
+    impl<'a, const N: usize> From<DeCommand<'a, N>> for Command<'a, N> {
+        fn from(command: DeCommand<'a, N>) -> Self {
+            Self::new(command.status, command.sequence_number, command.pdu)
+        }
+    }
+
+    impl<'de: 'a, 'a, const N: usize> Deserialize<'de> for Command<'a, N> {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let command = DeCommand::deserialize(deserializer)?;
+
+            Ok(Self::from(command))
+        }
+    }
+};
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -168,5 +225,39 @@ mod tests {
     #[test]
     fn encode_decode() {
         crate::tests::borrowed::encode_decode_with_length_test_instances::<Command<'static, 16>>();
+    }
+
+    #[cfg(feature = "serde")]
+    mod serde {
+        use crate::{
+            pdus::borrowed::SubmitSm,
+            values::{GenericServiceType, borrowed::ServiceType},
+        };
+
+        use super::*;
+
+        #[test]
+        fn serialize_deserialize() {
+            let command = Command::<'_, 16>::builder()
+                .status(CommandStatus::EsmeRok)
+                .sequence_number(1)
+                .pdu(
+                    SubmitSm::builder()
+                        .service_type(ServiceType::new(
+                            GenericServiceType::CellularMessaging.into(),
+                        ))
+                        .build(),
+                );
+
+            let mut buf = [0u8; 1024];
+
+            let serialized =
+                postcard::to_slice(&command, &mut buf[..]).expect("Failed to serialize command");
+
+            let deserialized: Command<'_, 16> =
+                postcard::from_bytes(serialized).expect("Failed to deserialize command");
+
+            assert_eq!(command, deserialized);
+        }
     }
 }

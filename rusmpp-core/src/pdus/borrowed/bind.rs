@@ -12,7 +12,7 @@ macro_rules! bind {
         #[rusmpp(decode = borrowed, test = skip)]
         #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
         #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-#[cfg_attr(feature = "serde", serde(bound(deserialize = "'de: 'a")))]
+        #[cfg_attr(feature = "serde", serde(bound(deserialize = "'de: 'a")))]
 
         pub struct $name<'a> {
             /// Identifies the ESME system

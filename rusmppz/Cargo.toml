@@ -27,6 +27,8 @@ framez = { version = "0.4.0", default-features = false, features = ["tracing"] }
 default = ["framez"]
 # Implements framez' Encoder/Decoder traits.
 framez = ["dep:rusmpp-framez"]
+# Derives serde Serialize and Deserialize for all SMPP types.
+serde = ["rusmpp-core/serde"]
 # Enables logging via the `tracing` crate.
 tracing = ["rusmpp-framez/tracing"]
 
