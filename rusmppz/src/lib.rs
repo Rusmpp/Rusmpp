@@ -8,6 +8,7 @@
 //! ## Features
 //!
 //! - `framez`: Implements [`framez`](https://docs.rs/framez/latest/framez/index.html) [`Encoder`](https://docs.rs/framez/latest/framez/encode/trait.Encoder.html) and [`Decoder`](https://docs.rs/framez/latest/framez/decode/trait.Decoder.html) traits.
+//! - `serde`: Implements [`Serialize`](https://docs.rs/serde/latest/serde/trait.Serialize.html) and [`Deserialize`](https://docs.rs/serde/latest/serde/trait.Deserialize.html) traits for all SMPP types.
 //! - `tracing`: Enables logging using [`tracing`](https://docs.rs/tracing/latest/tracing/).
 
 #[cfg(feature = "framez")]

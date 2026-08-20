@@ -29,14 +29,10 @@ pub use message_submission_response::*;
 mod query_broadcast_response;
 pub use query_broadcast_response::*;
 
-// TODO: serde like owned.
-
 /// See module level documentation.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = borrowed, test = skip)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-#[cfg_attr(feature = "serde", serde(bound(deserialize = "'de: 'a")))]
 pub struct Tlv<'a> {
     tag: TlvTag,
     value_length: u16,
@@ -75,3 +71,56 @@ impl<'a> From<TlvValue<'a>> for Tlv<'a> {
         Self::new(value)
     }
 }
+
+#[cfg(feature = "serde")]
+const _: () = {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    use crate::types::borrowed::AnyOctetString;
+
+    #[derive(Serialize)]
+    struct SerTlv<'a> {
+        value: &'a TlvValue<'a>,
+    }
+
+    impl<'a> Serialize for Tlv<'a> {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            let value = TlvValue::Other {
+                tag: self.tag(),
+                value: AnyOctetString::empty(),
+            };
+
+            let value = self.value.as_ref().unwrap_or(&value);
+
+            let tlv = SerTlv { value };
+
+            tlv.serialize(serializer)
+        }
+    }
+
+    #[derive(Deserialize)]
+    #[serde(bound(deserialize = "'de: 'a"))]
+    struct DeTlv<'a> {
+        value: TlvValue<'a>,
+    }
+
+    impl<'a> From<DeTlv<'a>> for Tlv<'a> {
+        fn from(tlv: DeTlv<'a>) -> Self {
+            Self::new(tlv.value)
+        }
+    }
+
+    impl<'de: 'a, 'a> Deserialize<'de> for Tlv<'a> {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let tlv = DeTlv::deserialize(deserializer)?;
+
+            Ok(Self::from(tlv))
+        }
+    }
+};
