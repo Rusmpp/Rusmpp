@@ -11,8 +11,8 @@ use pyo3_stub_gen_derive::{gen_stub_pyclass_complex_enum, gen_stub_pymethods};
 pub enum Error {
     /// IO error occurred.
     Io(String),
-    /// The connection to the `SMPP` server was closed by the peer.
-    ConnectionClosedByPeer(),
+    /// The `SMPP` stream was closed unexpectedly.
+    UnexpectedEndOfStream(),
     /// Protocol encode error.
     Encode(String),
     /// Protocol decode error.
@@ -30,7 +30,7 @@ impl From<rusmppc::error::Error> for Error {
     fn from(error: rusmppc::error::Error) -> Self {
         match error {
             rusmppc::error::Error::Io(error) => Error::Io(error.to_string()),
-            rusmppc::error::Error::ConnectionClosedByPeer => Error::ConnectionClosedByPeer(),
+            rusmppc::error::Error::UnexpectedEndOfStream => Error::UnexpectedEndOfStream(),
             rusmppc::error::Error::Encode(error) => Error::Encode(error.to_string()),
             rusmppc::error::Error::Decode(error) => Error::Decode(error.to_string()),
             rusmppc::error::Error::EnquireLinkTimeout { timeout } => Error::EnquireLinkTimeout {

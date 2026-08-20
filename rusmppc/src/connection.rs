@@ -673,7 +673,7 @@ where
                             let _ = self
                                 .as_mut()
                                 .events
-                                .send_error(Error::ConnectionClosedByPeer);
+                                .send_error(Error::UnexpectedEndOfStream);
 
                             return Poll::Ready(());
                         }
