@@ -163,3 +163,16 @@ fn print_decode_errors() {
         let _ = std::dbg!(result);
     }
 }
+
+#[cfg(feature = "serde")]
+#[test]
+fn serde() {
+    for command in test_commands() {
+        let serialized = serde_json::to_vec(&command).expect("Failed to serialize command");
+
+        let deserialized: Command =
+            serde_json::from_slice(&serialized).expect("Failed to deserialize command");
+
+        assert_eq!(command, deserialized);
+    }
+}
