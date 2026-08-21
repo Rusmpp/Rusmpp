@@ -56,14 +56,14 @@ impl<'a> AnyOctetString<'a> {
 
     /// Interprets the [`AnyOctetString`] as &[`str`].
     #[inline]
-    pub const fn to_str(&self) -> Result<&str, core::str::Utf8Error> {
-        core::str::from_utf8(self.bytes)
+    pub const fn to_str(&self) -> Result<&str, ::core::str::Utf8Error> {
+        ::core::str::from_utf8(self.bytes)
     }
 }
 
-impl core::fmt::Debug for AnyOctetString<'_> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        core::fmt::Debug::fmt(&self.bytes, f)
+impl ::core::fmt::Debug for AnyOctetString<'_> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+        ::core::fmt::Debug::fmt(&self.bytes, f)
     }
 }
 
@@ -73,25 +73,25 @@ impl Default for AnyOctetString<'_> {
     }
 }
 
-impl core::fmt::Display for AnyOctetString<'_> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl ::core::fmt::Display for AnyOctetString<'_> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         f.write_str(self.to_str().unwrap_or("<invalid utf-8>"))
     }
 }
 
-impl core::convert::AsRef<[u8]> for AnyOctetString<'_> {
+impl ::core::convert::AsRef<[u8]> for AnyOctetString<'_> {
     fn as_ref(&self) -> &[u8] {
         self.bytes
     }
 }
 
-impl core::borrow::Borrow<[u8]> for AnyOctetString<'_> {
+impl ::core::borrow::Borrow<[u8]> for AnyOctetString<'_> {
     fn borrow(&self) -> &[u8] {
         self.bytes
     }
 }
 
-impl core::ops::Deref for AnyOctetString<'_> {
+impl ::core::ops::Deref for AnyOctetString<'_> {
     type Target = [u8];
 
     fn deref(&self) -> &Self::Target {

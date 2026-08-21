@@ -157,14 +157,14 @@ pub enum VecDecodeError<E> {
     ItemDecodeError(E),
 }
 
-impl core::fmt::Display for DecodeError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl ::core::fmt::Display for DecodeError {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         write!(f, "Decode error. kind: {}", self.kind)
     }
 }
 
-impl core::error::Error for DecodeError {
-    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
+impl ::core::error::Error for DecodeError {
+    fn source(&self) -> Option<&(dyn ::core::error::Error + 'static)> {
         match &self.kind {
             DecodeErrorKind::IntegerDecodeError(err) => {
                 Some(err as &(dyn ::core::error::Error + 'static))
@@ -188,13 +188,13 @@ impl core::error::Error for DecodeError {
         }
     }
 
-    fn cause(&self) -> Option<&dyn core::error::Error> {
-        core::error::Error::source(self)
+    fn cause(&self) -> Option<&dyn ::core::error::Error> {
+        ::core::error::Error::source(self)
     }
 }
 
-impl core::fmt::Display for DecodeErrorKind {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl ::core::fmt::Display for DecodeErrorKind {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         match self {
             DecodeErrorKind::IntegerDecodeError(e) => write!(f, "Integer decode error: {e}"),
             DecodeErrorKind::COctetStringDecodeError(e) => write!(f, "COctetString error: {e}"),
@@ -209,8 +209,8 @@ impl core::fmt::Display for DecodeErrorKind {
     }
 }
 
-impl core::fmt::Display for IntegerDecodeError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl ::core::fmt::Display for IntegerDecodeError {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         match self {
             IntegerDecodeError::UnexpectedEndOfBuffer => {
                 write!(f, "Unexpected end of buffer")
@@ -219,10 +219,10 @@ impl core::fmt::Display for IntegerDecodeError {
     }
 }
 
-impl core::error::Error for IntegerDecodeError {}
+impl ::core::error::Error for IntegerDecodeError {}
 
-impl core::fmt::Display for COctetStringDecodeError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl ::core::fmt::Display for COctetStringDecodeError {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         match self {
             COctetStringDecodeError::TooFewBytes { actual, min } => {
                 write!(f, "Too few bytes. actual: {actual}, min: {min}")
@@ -234,10 +234,10 @@ impl core::fmt::Display for COctetStringDecodeError {
     }
 }
 
-impl core::error::Error for COctetStringDecodeError {}
+impl ::core::error::Error for COctetStringDecodeError {}
 
-impl core::fmt::Display for OctetStringDecodeError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl ::core::fmt::Display for OctetStringDecodeError {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         match self {
             OctetStringDecodeError::TooManyBytes { actual, max } => {
                 write!(f, "Too many bytes. actual: {actual}, max: {max}")
@@ -252,10 +252,10 @@ impl core::fmt::Display for OctetStringDecodeError {
     }
 }
 
-impl core::error::Error for OctetStringDecodeError {}
+impl ::core::error::Error for OctetStringDecodeError {}
 
-impl core::fmt::Display for AnyOctetStringDecodeError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl ::core::fmt::Display for AnyOctetStringDecodeError {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         match self {
             AnyOctetStringDecodeError::UnexpectedEndOfBuffer => {
                 write!(f, "Unexpected end of buffer")
@@ -264,10 +264,10 @@ impl core::fmt::Display for AnyOctetStringDecodeError {
     }
 }
 
-impl core::error::Error for AnyOctetStringDecodeError {}
+impl ::core::error::Error for AnyOctetStringDecodeError {}
 
-impl core::fmt::Display for HeaplessVecDecodeError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl ::core::fmt::Display for HeaplessVecDecodeError {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         match self {
             HeaplessVecDecodeError::UnexpectedEndOfBuffer => {
                 write!(f, "Unexpected end of buffer")
@@ -279,10 +279,10 @@ impl core::fmt::Display for HeaplessVecDecodeError {
     }
 }
 
-impl core::error::Error for HeaplessVecDecodeError {}
+impl ::core::error::Error for HeaplessVecDecodeError {}
 
-impl core::fmt::Display for UdhDecodeError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl ::core::fmt::Display for UdhDecodeError {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         match self {
             UdhDecodeError::ConcatenatedShortMessageDecodeError(e) => {
                 write!(f, "ConcatenatedShortMessage decode error: {e}")
@@ -291,10 +291,10 @@ impl core::fmt::Display for UdhDecodeError {
     }
 }
 
-impl core::error::Error for UdhDecodeError {}
+impl ::core::error::Error for UdhDecodeError {}
 
-impl core::fmt::Display for ConcatenatedShortMessageDecodeError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl ::core::fmt::Display for ConcatenatedShortMessageDecodeError {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         match self {
             ConcatenatedShortMessageDecodeError::InvalidInformationElementLength {
                 actual,
@@ -328,10 +328,10 @@ impl core::fmt::Display for ConcatenatedShortMessageDecodeError {
     }
 }
 
-impl core::error::Error for ConcatenatedShortMessageDecodeError {}
+impl ::core::error::Error for ConcatenatedShortMessageDecodeError {}
 
-impl<E: core::fmt::Display> core::fmt::Display for VecDecodeError<E> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl<E: ::core::fmt::Display> ::core::fmt::Display for VecDecodeError<E> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         match self {
             VecDecodeError::UnexpectedEndOfBuffer => {
                 write!(f, "Unexpected end of buffer")
@@ -347,7 +347,7 @@ impl<E> From<E> for VecDecodeError<E> {
     }
 }
 
-impl<E: core::error::Error> core::error::Error for VecDecodeError<E> {}
+impl<E: ::core::error::Error> ::core::error::Error for VecDecodeError<E> {}
 
 pub(crate) trait DecodeResultExt<T, E> {
     fn map_decoded<F, U>(self, op: F) -> Result<(U, usize), E>

@@ -51,13 +51,19 @@ impl<'a> From<GenericServiceType> for ServiceType<'a> {
 ///
 /// See [`GenericServiceType`].
 #[repr(transparent)]
-#[derive(Default, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
+#[derive(Default, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = borrowed)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(bound(deserialize = "'de: 'a"), transparent))]
 pub struct ServiceType<'a> {
     pub value: COctetString<'a, 1, 6>,
+}
+
+impl ::core::fmt::Debug for ServiceType<'_> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+        ::core::fmt::Debug::fmt(&self.value, f)
+    }
 }
 
 impl<'a> ServiceType<'a> {

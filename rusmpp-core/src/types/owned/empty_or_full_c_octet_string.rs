@@ -201,7 +201,7 @@ impl<const N: usize> EmptyOrFullCOctetString<N> {
     /// Interprets the [`EmptyOrFullCOctetString`] as &[`str`] without the null terminator.
     #[inline]
     pub fn as_str(&self) -> &str {
-        core::str::from_utf8(&self.bytes[0..self.bytes.len() - 1])
+        ::core::str::from_utf8(&self.bytes[0..self.bytes.len() - 1])
             .expect("EmptyOrFullCOctetString is ascii by definition")
     }
 }
@@ -224,13 +224,13 @@ impl<const N: usize> Default for EmptyOrFullCOctetString<N> {
     }
 }
 
-impl<const N: usize> core::fmt::Debug for EmptyOrFullCOctetString<N> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        core::fmt::Debug::fmt(&self.bytes, f)
+impl<const N: usize> ::core::fmt::Debug for EmptyOrFullCOctetString<N> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+        ::core::fmt::Debug::fmt(&self.bytes, f)
     }
 }
 
-impl<const N: usize> core::str::FromStr for EmptyOrFullCOctetString<N> {
+impl<const N: usize> ::core::str::FromStr for EmptyOrFullCOctetString<N> {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -240,25 +240,25 @@ impl<const N: usize> core::str::FromStr for EmptyOrFullCOctetString<N> {
     }
 }
 
-impl<const N: usize> core::fmt::Display for EmptyOrFullCOctetString<N> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl<const N: usize> ::core::fmt::Display for EmptyOrFullCOctetString<N> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         f.write_str(self.as_str())
     }
 }
 
-impl<const N: usize> core::convert::AsRef<[u8]> for EmptyOrFullCOctetString<N> {
+impl<const N: usize> ::core::convert::AsRef<[u8]> for EmptyOrFullCOctetString<N> {
     fn as_ref(&self) -> &[u8] {
         &self.bytes
     }
 }
 
-impl<const N: usize> core::borrow::Borrow<[u8]> for EmptyOrFullCOctetString<N> {
+impl<const N: usize> ::core::borrow::Borrow<[u8]> for EmptyOrFullCOctetString<N> {
     fn borrow(&self) -> &[u8] {
         &self.bytes
     }
 }
 
-impl<const N: usize> core::ops::Deref for EmptyOrFullCOctetString<N> {
+impl<const N: usize> ::core::ops::Deref for EmptyOrFullCOctetString<N> {
     type Target = [u8];
 
     fn deref(&self) -> &Self::Target {
@@ -399,8 +399,8 @@ mod tests {
             alloc::vec![
                 Self::empty(),
                 Self::from_vec(
-                    core::iter::repeat_n(b'1', N - 1)
-                        .chain(core::iter::once(b'\0'))
+                    ::core::iter::repeat_n(b'1', N - 1)
+                        .chain(::core::iter::once(b'\0'))
                         .collect::<Vec<_>>(),
                 )
                 .unwrap(),
@@ -486,7 +486,7 @@ mod tests {
     }
 
     mod from_str {
-        use core::str::FromStr;
+        use ::core::str::FromStr;
 
         use super::*;
 

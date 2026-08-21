@@ -2,13 +2,19 @@ use rusmpp_macros::Rusmpp;
 
 /// See [`PriorityFlagType`].
 #[repr(transparent)]
-#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
+#[derive(Default, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(repr = "u8")]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct PriorityFlag {
     pub value: u8,
+}
+
+impl ::core::fmt::Debug for PriorityFlag {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+        ::core::fmt::Debug::fmt(&self.value, f)
+    }
 }
 
 impl PriorityFlag {

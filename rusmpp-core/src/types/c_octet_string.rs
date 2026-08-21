@@ -11,8 +11,8 @@ pub enum Error {
     NullByteFound,
 }
 
-impl core::fmt::Display for Error {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl ::core::fmt::Display for Error {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         match self {
             Error::TooManyBytes { actual, max } => {
                 write!(f, "Too many bytes. actual: {actual}, max: {max}")
@@ -27,4 +27,4 @@ impl core::fmt::Display for Error {
     }
 }
 
-impl core::error::Error for Error {}
+impl ::core::error::Error for Error {}

@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
         .source_addr_npi(Npi::Unknown)
         .source_addr(COctetString::from_str("12345")?)
         .destination_addr(COctetString::from_str("491701234567")?)
-        // esm_class will be updated with UDHI indicator by the multipart builder.
+        // esm_class will be updated with UDH indicator by the multipart builder.
         .esm_class(EsmClass::default())
         // data_coding will be overridden by the multipart builder to match the encoder.
         .data_coding(DataCoding::default())
