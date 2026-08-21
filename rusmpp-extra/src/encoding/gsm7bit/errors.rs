@@ -32,8 +32,8 @@ pub enum Gsm7BitConcatenateError {
         "A part would end with an escape (0x1B) septet, which is not allowed unless allow_split_extended_character=true"
     )]
     InvalidBoundary,
-    #[error("The number of parts exceeds the maximum allowed. actual: {actual}, max: {max}")]
     /// The number of parts exceeds the maximum allowed.
+    #[error("The number of parts exceeds the maximum allowed. actual: {actual}, max: {max}")]
     PartsCountExceeded {
         /// The maximum allowed number of parts.
         max: usize,
