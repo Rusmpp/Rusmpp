@@ -251,7 +251,7 @@ impl<const MIN: usize, const MAX: usize> COctetString<MIN, MAX> {
     /// Interprets the [`COctetString`] as &[`str`] without the null terminator.
     #[inline]
     pub fn as_str(&self) -> &str {
-        core::str::from_utf8(&self.bytes[..self.bytes.len() - 1])
+        ::core::str::from_utf8(&self.bytes[..self.bytes.len() - 1])
             .expect("COctetString is ascii by definition")
     }
 }
@@ -274,13 +274,13 @@ impl<const MIN: usize, const MAX: usize> Default for COctetString<MIN, MAX> {
     }
 }
 
-impl<const MIN: usize, const MAX: usize> core::fmt::Debug for COctetString<MIN, MAX> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        core::fmt::Debug::fmt(&self.bytes, f)
+impl<const MIN: usize, const MAX: usize> ::core::fmt::Debug for COctetString<MIN, MAX> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+        ::core::fmt::Debug::fmt(&self.bytes, f)
     }
 }
 
-impl<const MIN: usize, const MAX: usize> core::str::FromStr for COctetString<MIN, MAX> {
+impl<const MIN: usize, const MAX: usize> ::core::str::FromStr for COctetString<MIN, MAX> {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -290,25 +290,25 @@ impl<const MIN: usize, const MAX: usize> core::str::FromStr for COctetString<MIN
     }
 }
 
-impl<const MIN: usize, const MAX: usize> core::fmt::Display for COctetString<MIN, MAX> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl<const MIN: usize, const MAX: usize> ::core::fmt::Display for COctetString<MIN, MAX> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         f.write_str(self.as_str())
     }
 }
 
-impl<const MIN: usize, const MAX: usize> core::convert::AsRef<[u8]> for COctetString<MIN, MAX> {
+impl<const MIN: usize, const MAX: usize> ::core::convert::AsRef<[u8]> for COctetString<MIN, MAX> {
     fn as_ref(&self) -> &[u8] {
         &self.bytes
     }
 }
 
-impl<const MIN: usize, const MAX: usize> core::borrow::Borrow<[u8]> for COctetString<MIN, MAX> {
+impl<const MIN: usize, const MAX: usize> ::core::borrow::Borrow<[u8]> for COctetString<MIN, MAX> {
     fn borrow(&self) -> &[u8] {
         &self.bytes
     }
 }
 
-impl<const MIN: usize, const MAX: usize> core::ops::Deref for COctetString<MIN, MAX> {
+impl<const MIN: usize, const MAX: usize> ::core::ops::Deref for COctetString<MIN, MAX> {
     type Target = [u8];
 
     fn deref(&self) -> &Self::Target {
@@ -445,20 +445,20 @@ mod tests {
             alloc::vec![
                 Self::empty(),
                 Self::from_vec(
-                    core::iter::repeat_n(b'1', MIN - 1)
-                        .chain(core::iter::once(b'\0'))
+                    ::core::iter::repeat_n(b'1', MIN - 1)
+                        .chain(::core::iter::once(b'\0'))
                         .collect::<Vec<_>>(),
                 )
                 .unwrap(),
                 Self::from_vec(
-                    core::iter::repeat_n(b'1', ((MIN + MAX) / 2) - 1)
-                        .chain(core::iter::once(b'\0'))
+                    ::core::iter::repeat_n(b'1', ((MIN + MAX) / 2) - 1)
+                        .chain(::core::iter::once(b'\0'))
                         .collect::<Vec<_>>(),
                 )
                 .unwrap(),
                 Self::from_vec(
-                    core::iter::repeat_n(b'1', MAX - 1)
-                        .chain(core::iter::once(b'\0'))
+                    ::core::iter::repeat_n(b'1', MAX - 1)
+                        .chain(::core::iter::once(b'\0'))
                         .collect::<Vec<_>>(),
                 )
                 .unwrap(),
@@ -564,7 +564,7 @@ mod tests {
     }
 
     mod from_str {
-        use core::str::FromStr;
+        use ::core::str::FromStr;
 
         use super::*;
 

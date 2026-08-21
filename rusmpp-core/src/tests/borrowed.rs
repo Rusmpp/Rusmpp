@@ -15,7 +15,7 @@ use crate::{
 /// Encode a type to bytes and then decode it back to the original type.
 pub fn encode_decode_test_instances<T>()
 where
-    T: TestInstance + core::fmt::Debug + PartialEq + Encode + Decode<'static>,
+    T: TestInstance + ::core::fmt::Debug + PartialEq + Encode + Decode<'static>,
 {
     for original in T::instances() {
         let buf = &mut [0u8; 1024];
@@ -39,7 +39,7 @@ where
 /// Encode a type to bytes and then decode it back to the original type.
 pub fn encode_decode_with_length_test_instances<T>()
 where
-    T: TestInstance + core::fmt::Debug + PartialEq + Encode + DecodeWithLength<'static>,
+    T: TestInstance + ::core::fmt::Debug + PartialEq + Encode + DecodeWithLength<'static>,
 {
     for original in T::instances() {
         let mut buf = [0u8; 1024];
@@ -87,7 +87,7 @@ impl<I: Iterator<Item = Command<'static, 16>> + 'static> ChainExt for I {
         self,
         pdu: T,
     ) -> Box<dyn Iterator<Item = Command<'static, 16>>> {
-        Box::new(self.chain(core::iter::once(Command::new(
+        Box::new(self.chain(::core::iter::once(Command::new(
             Default::default(),
             Default::default(),
             pdu,
@@ -97,7 +97,7 @@ impl<I: Iterator<Item = Command<'static, 16>> + 'static> ChainExt for I {
 
 /// All test commands created using [`TestInstance`].
 pub fn test_commands() -> alloc::vec::Vec<Command<'static, 16>> {
-    core::iter::empty()
+    ::core::iter::empty()
         .chain_instances_as_cmds::<BindTransmitter<'static>>()
         .chain_instances_as_cmds::<BindTransmitterResp<'static>>()
         .chain_instances_as_cmds::<BindReceiver<'static>>()

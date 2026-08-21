@@ -11,8 +11,8 @@ pub enum ConcatenatedShortMessageError {
     PartNumberExceedsTotalParts { part_number: u8, total_parts: u8 },
 }
 
-impl core::fmt::Display for ConcatenatedShortMessageError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl ::core::fmt::Display for ConcatenatedShortMessageError {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         match self {
             Self::PartNumberZero => {
                 write!(f, "Part number cannot be zero")
@@ -34,7 +34,7 @@ impl core::fmt::Display for ConcatenatedShortMessageError {
     }
 }
 
-impl core::error::Error for ConcatenatedShortMessageError {}
+impl ::core::error::Error for ConcatenatedShortMessageError {}
 
 impl From<ConcatenatedShortMessageError> for crate::decode::ConcatenatedShortMessageDecodeError {
     fn from(err: ConcatenatedShortMessageError) -> Self {

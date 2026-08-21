@@ -225,7 +225,7 @@ const _: () = {
 
 #[cfg(test)]
 mod tests {
-    use core::error::Error;
+    use ::core::error::Error;
 
     use bytes::BytesMut;
 

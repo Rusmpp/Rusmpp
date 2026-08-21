@@ -121,8 +121,8 @@ impl AnyOctetString {
 
     /// Interprets the [`AnyOctetString`] as &[`str`].
     #[inline]
-    pub fn to_str(&self) -> Result<&str, core::str::Utf8Error> {
-        core::str::from_utf8(&self.bytes)
+    pub fn to_str(&self) -> Result<&str, ::core::str::Utf8Error> {
+        ::core::str::from_utf8(&self.bytes)
     }
 }
 
@@ -138,9 +138,9 @@ impl From<AnyOctetString> for Vec<u8> {
     }
 }
 
-impl core::fmt::Debug for AnyOctetString {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        core::fmt::Debug::fmt(&self.bytes, f)
+impl ::core::fmt::Debug for AnyOctetString {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+        ::core::fmt::Debug::fmt(&self.bytes, f)
     }
 }
 
@@ -150,33 +150,33 @@ impl Default for AnyOctetString {
     }
 }
 
-impl core::str::FromStr for AnyOctetString {
-    type Err = core::convert::Infallible;
+impl ::core::str::FromStr for AnyOctetString {
+    type Err = ::core::convert::Infallible;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self::from_slice(s.as_bytes()))
     }
 }
 
-impl core::fmt::Display for AnyOctetString {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl ::core::fmt::Display for AnyOctetString {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         f.write_str(&String::from_utf8_lossy(&self.bytes))
     }
 }
 
-impl core::convert::AsRef<[u8]> for AnyOctetString {
+impl ::core::convert::AsRef<[u8]> for AnyOctetString {
     fn as_ref(&self) -> &[u8] {
         &self.bytes
     }
 }
 
-impl core::borrow::Borrow<[u8]> for AnyOctetString {
+impl ::core::borrow::Borrow<[u8]> for AnyOctetString {
     fn borrow(&self) -> &[u8] {
         &self.bytes
     }
 }
 
-impl core::ops::Deref for AnyOctetString {
+impl ::core::ops::Deref for AnyOctetString {
     type Target = [u8];
 
     fn deref(&self) -> &Self::Target {

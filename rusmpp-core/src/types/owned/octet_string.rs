@@ -195,8 +195,8 @@ impl<const MIN: usize, const MAX: usize> OctetString<MIN, MAX> {
 
     /// Interprets the [`OctetString`] as &[`str`].
     #[inline]
-    pub fn to_str(&self) -> Result<&str, core::str::Utf8Error> {
-        core::str::from_utf8(&self.bytes)
+    pub fn to_str(&self) -> Result<&str, ::core::str::Utf8Error> {
+        ::core::str::from_utf8(&self.bytes)
     }
 }
 
@@ -212,9 +212,9 @@ impl<const MIN: usize, const MAX: usize> From<OctetString<MIN, MAX>> for Vec<u8>
     }
 }
 
-impl<const MIN: usize, const MAX: usize> core::fmt::Debug for OctetString<MIN, MAX> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        core::fmt::Debug::fmt(&self.bytes, f)
+impl<const MIN: usize, const MAX: usize> ::core::fmt::Debug for OctetString<MIN, MAX> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+        ::core::fmt::Debug::fmt(&self.bytes, f)
     }
 }
 
@@ -224,7 +224,7 @@ impl<const MIN: usize, const MAX: usize> Default for OctetString<MIN, MAX> {
     }
 }
 
-impl<const MIN: usize, const MAX: usize> core::str::FromStr for OctetString<MIN, MAX> {
+impl<const MIN: usize, const MAX: usize> ::core::str::FromStr for OctetString<MIN, MAX> {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -232,25 +232,25 @@ impl<const MIN: usize, const MAX: usize> core::str::FromStr for OctetString<MIN,
     }
 }
 
-impl<const MIN: usize, const MAX: usize> core::fmt::Display for OctetString<MIN, MAX> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl<const MIN: usize, const MAX: usize> ::core::fmt::Display for OctetString<MIN, MAX> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         f.write_str(&String::from_utf8_lossy(&self.bytes))
     }
 }
 
-impl<const MIN: usize, const MAX: usize> core::convert::AsRef<[u8]> for OctetString<MIN, MAX> {
+impl<const MIN: usize, const MAX: usize> ::core::convert::AsRef<[u8]> for OctetString<MIN, MAX> {
     fn as_ref(&self) -> &[u8] {
         &self.bytes
     }
 }
 
-impl<const MIN: usize, const MAX: usize> core::borrow::Borrow<[u8]> for OctetString<MIN, MAX> {
+impl<const MIN: usize, const MAX: usize> ::core::borrow::Borrow<[u8]> for OctetString<MIN, MAX> {
     fn borrow(&self) -> &[u8] {
         &self.bytes
     }
 }
 
-impl<const MIN: usize, const MAX: usize> core::ops::Deref for OctetString<MIN, MAX> {
+impl<const MIN: usize, const MAX: usize> ::core::ops::Deref for OctetString<MIN, MAX> {
     type Target = [u8];
 
     fn deref(&self) -> &Self::Target {
@@ -393,9 +393,9 @@ mod tests {
         fn instances() -> Vec<Self> {
             alloc::vec![
                 Self::empty(),
-                Self::from_vec(core::iter::repeat_n(b'1', MIN).collect::<Vec<_>>()).unwrap(),
-                Self::from_vec(core::iter::repeat_n(b'1', MAX / 2).collect::<Vec<_>>()).unwrap(),
-                Self::from_vec(core::iter::repeat_n(b'1', MAX).collect::<Vec<_>>()).unwrap(),
+                Self::from_vec(::core::iter::repeat_n(b'1', MIN).collect::<Vec<_>>()).unwrap(),
+                Self::from_vec(::core::iter::repeat_n(b'1', MAX / 2).collect::<Vec<_>>()).unwrap(),
+                Self::from_vec(::core::iter::repeat_n(b'1', MAX).collect::<Vec<_>>()).unwrap(),
             ]
         }
     }

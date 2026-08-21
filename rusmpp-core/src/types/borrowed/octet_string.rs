@@ -117,14 +117,14 @@ impl<'a, const MIN: usize, const MAX: usize> OctetString<'a, MIN, MAX> {
 
     /// Interprets the [`OctetString`] as &[`str`].
     #[inline]
-    pub const fn to_str(&self) -> Result<&str, core::str::Utf8Error> {
-        core::str::from_utf8(self.bytes)
+    pub const fn to_str(&self) -> Result<&str, ::core::str::Utf8Error> {
+        ::core::str::from_utf8(self.bytes)
     }
 }
 
-impl<const MIN: usize, const MAX: usize> core::fmt::Debug for OctetString<'_, MIN, MAX> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        core::fmt::Debug::fmt(&self.bytes, f)
+impl<const MIN: usize, const MAX: usize> ::core::fmt::Debug for OctetString<'_, MIN, MAX> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+        ::core::fmt::Debug::fmt(&self.bytes, f)
     }
 }
 
@@ -134,25 +134,29 @@ impl<const MIN: usize, const MAX: usize> Default for OctetString<'_, MIN, MAX> {
     }
 }
 
-impl<const MIN: usize, const MAX: usize> core::fmt::Display for OctetString<'_, MIN, MAX> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl<const MIN: usize, const MAX: usize> ::core::fmt::Display for OctetString<'_, MIN, MAX> {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         f.write_str(self.to_str().unwrap_or("<invalid utf-8>"))
     }
 }
 
-impl<const MIN: usize, const MAX: usize> core::convert::AsRef<[u8]> for OctetString<'_, MIN, MAX> {
+impl<const MIN: usize, const MAX: usize> ::core::convert::AsRef<[u8]>
+    for OctetString<'_, MIN, MAX>
+{
     fn as_ref(&self) -> &[u8] {
         self.bytes
     }
 }
 
-impl<const MIN: usize, const MAX: usize> core::borrow::Borrow<[u8]> for OctetString<'_, MIN, MAX> {
+impl<const MIN: usize, const MAX: usize> ::core::borrow::Borrow<[u8]>
+    for OctetString<'_, MIN, MAX>
+{
     fn borrow(&self) -> &[u8] {
         self.bytes
     }
 }
 
-impl<const MIN: usize, const MAX: usize> core::ops::Deref for OctetString<'_, MIN, MAX> {
+impl<const MIN: usize, const MAX: usize> ::core::ops::Deref for OctetString<'_, MIN, MAX> {
     type Target = [u8];
 
     fn deref(&self) -> &Self::Target {
@@ -267,19 +271,19 @@ mod tests {
             alloc::vec![
                 Self::empty(),
                 Self::new(
-                    core::iter::repeat_n(b'1', MIN)
+                    ::core::iter::repeat_n(b'1', MIN)
                         .collect::<alloc::vec::Vec<_>>()
                         .leak()
                 )
                 .unwrap(),
                 Self::new(
-                    core::iter::repeat_n(b'1', MAX / 2)
+                    ::core::iter::repeat_n(b'1', MAX / 2)
                         .collect::<alloc::vec::Vec<_>>()
                         .leak()
                 )
                 .unwrap(),
                 Self::new(
-                    core::iter::repeat_n(b'1', MAX)
+                    ::core::iter::repeat_n(b'1', MAX)
                         .collect::<alloc::vec::Vec<_>>()
                         .leak()
                 )
