@@ -85,6 +85,9 @@ mod encode {
 }
 
 mod concatenate {
+
+    use crate::concatenation::owned::Concatenation;
+
     use super::*;
 
     mod error {
@@ -298,6 +301,134 @@ mod concatenate {
                     "Test case '{}' failed: result and expected do not match",
                     case.name
                 ),
+            }
+        }
+    }
+
+    /// These cases are validated manually against:
+    ///
+    ///  - <https://www.smsdeliverer.com/online-sms-pdu-encoder.aspx> for encoding and concatenation
+    ///  - <https://www.diafaan.com/sms-tutorials/gsm-modem-tutorial/online-sms-submit-pdu-decoder/> for decoding
+    ///
+    /// Some of our encoded parts end with `1A` (the CR spare-bit fill), which is expected and correct.
+    #[test]
+    #[ignore = "This test is for manual testing"]
+    fn manual_cases() {
+        extern crate std;
+
+        use std::format;
+        use std::println;
+        use std::string::String;
+
+        use rusmpp_core::udhs::concatenation::ConcatenatedShortMessage8Bit;
+
+        struct TestCase {
+            name: &'static str,
+            message: &'static str,
+            max_message_size: usize,
+            part_header_size: usize,
+            allow_split_extended_character: bool,
+        }
+
+        /// 140 bytes.
+        fn max_short_message_size() -> usize {
+            rusmpp_core::pdus::owned::SubmitSm::default_max_short_message_size()
+        }
+
+        /// The size of the 8-bit concatenation UDH, which is 6 bytes.
+        fn udh_concatenation_size() -> usize {
+            rusmpp_core::encode::Length::length(&rusmpp_core::udhs::owned::Udh::new(
+                ConcatenatedShortMessage8Bit::new(1, 1, 1).expect("Valid"),
+            ))
+        }
+
+        let cases: &[TestCase] = &[
+            TestCase {
+                name: "simple",
+                message: "Hello how are you",
+                max_message_size: max_short_message_size(),
+                part_header_size: udh_concatenation_size(),
+                allow_split_extended_character: false,
+            },
+            TestCase {
+                name: "double",
+                message: "Hello how are you Hello how are you Hello how are you Hello how are you Hello how are you Hello how are you Hello how are you Hello how are you Hello how are you",
+                max_message_size: max_short_message_size(),
+                part_header_size: udh_concatenation_size(),
+                allow_split_extended_character: false,
+            },
+            TestCase {
+                name: "cr fill",
+                message: "1234567",
+                max_message_size: max_short_message_size(),
+                part_header_size: udh_concatenation_size(),
+                allow_split_extended_character: false,
+            },
+            TestCase {
+                name: "160 chars",
+                message: "1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111",
+                max_message_size: max_short_message_size(),
+                part_header_size: udh_concatenation_size(),
+                allow_split_extended_character: false,
+            },
+            TestCase {
+                name: "160 chars - last extended",
+                message: "111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111[",
+                max_message_size: max_short_message_size(),
+                part_header_size: udh_concatenation_size(),
+                allow_split_extended_character: false,
+            },
+            TestCase {
+                name: "161 chars",
+                message: "11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111",
+                max_message_size: max_short_message_size(),
+                part_header_size: udh_concatenation_size(),
+                allow_split_extended_character: false,
+            },
+            TestCase {
+                name: "161 chars - last extended",
+                message: "1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111[",
+                max_message_size: max_short_message_size(),
+                part_header_size: udh_concatenation_size(),
+                allow_split_extended_character: false,
+            },
+            TestCase {
+                name: "With extended char at the end",
+                message: "111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111[111111",
+                max_message_size: max_short_message_size(),
+                part_header_size: udh_concatenation_size(),
+                allow_split_extended_character: false,
+            },
+        ];
+
+        for case in cases {
+            let encoder = Gsm7BitPacked::new()
+                .with_allow_split_extended_character(case.allow_split_extended_character);
+
+            let (concatenation, _) = encoder
+                .concatenate(case.message, case.max_message_size, case.part_header_size)
+                .expect("Failed to concatenate message");
+
+            match concatenation {
+                Concatenation::Single(part) => {
+                    let part_hex_string: String =
+                        part.iter().map(|byte| format!("{:02X}", byte)).collect();
+
+                    println!(
+                        "Test case '{}': single part: {}",
+                        case.name, part_hex_string
+                    );
+                }
+                Concatenation::Concatenated(parts) => {
+                    println!("Test case '{}': {} parts", case.name, parts.len());
+
+                    for (i, part) in parts.iter().enumerate() {
+                        let part_hex_string: String =
+                            part.iter().map(|byte| format!("{:02X}", byte)).collect();
+
+                        println!("  Part {}: {}", i + 1, part_hex_string);
+                    }
+                }
             }
         }
     }
