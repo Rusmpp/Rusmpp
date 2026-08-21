@@ -32,8 +32,8 @@ pub enum Ucs2ConcatenateError {
         "A part would end with a leading surrogate, which is not allowed unless allow_split_character=true"
     )]
     InvalidBoundary,
-    #[error("The number of parts exceeds the maximum allowed. actual: {actual}, max: {max}")]
     /// The number of parts exceeds the maximum allowed.
+    #[error("The number of parts exceeds the maximum allowed. actual: {actual}, max: {max}")]
     PartsCountExceeded {
         /// The maximum allowed number of parts.
         max: usize,

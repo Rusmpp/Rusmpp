@@ -1,22 +1,22 @@
 use crate::concatenation::MAX_PARTS;
 
-/// Errors that can occur during Latin1 encoding.
+/// Errors that can occur during ASCII encoding.
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
-pub enum Latin1EncodeError {
+pub enum AsciiEncodeError {
     /// Input contains un-encodable character.
     #[error("Input contains un-encodable character")]
     UnencodableCharacter,
 }
 
-/// Errors that can occur during Latin1 concatenation.
+/// Errors that can occur during ASCII concatenation.
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
-pub enum Latin1ConcatenateError {
+pub enum AsciiConcatenateError {
     /// Encoding error.
     #[error("Encoding error: {0}")]
     Encode(
         #[from]
         #[source]
-        Latin1EncodeError,
+        AsciiEncodeError,
     ),
     /// Part cannot fit even a single character.
     ///
@@ -35,7 +35,7 @@ pub enum Latin1ConcatenateError {
     },
 }
 
-impl Latin1ConcatenateError {
+impl AsciiConcatenateError {
     pub(crate) const fn parts_count_exceeded(actual: usize) -> Self {
         Self::PartsCountExceeded {
             max: MAX_PARTS,

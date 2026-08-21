@@ -1,5 +1,6 @@
 //! Encoding and decoding support.
 
+pub mod ascii;
 pub mod gsm7bit;
 pub mod latin1;
 pub mod ucs2;
