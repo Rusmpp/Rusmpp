@@ -85,12 +85,16 @@ mod encode {
 }
 
 mod concatenate {
-
     use crate::concatenation::owned::Concatenation;
 
     use super::*;
 
     mod error {
+        extern crate std;
+
+        use std::vec;
+        use std::vec::Vec;
+
         use super::*;
 
         // We have to concatenate but the part size (after subtracting the header) was zero.
@@ -140,6 +144,33 @@ mod concatenate {
                 err,
                 Gsm7BitConcatenateError::PartsCountExceeded { .. }
             ))
+        }
+
+        mod pack {
+            use super::*;
+
+            #[test]
+            fn pack_unpack_roundtrip_no_padding() {
+                let septets: Vec<u8> = vec![0x41, 0x7F, 0x00, 0x2A, 0x63, 0x7F, 0x01, 0x55, 0x2C];
+                let padding = 0;
+
+                let packed = Gsm7BitPacked::pack(&septets, padding);
+                let unpacked = Gsm7BitPacked::unpack(&packed, padding, septets.len());
+
+                assert_eq!(unpacked, septets);
+            }
+
+            #[test]
+            fn pack_unpack_roundtrip_with_padding() {
+                for padding in 1..7 {
+                    let septets: Vec<u8> = vec![0x41, 0x7F, 0x00, 0x2A, 0x63, 0x7F, 0x01];
+
+                    let packed = Gsm7BitPacked::pack(&septets, padding);
+                    let unpacked = Gsm7BitPacked::unpack(&packed, padding, septets.len());
+
+                    assert_eq!(unpacked, septets, "roundtrip failed for padding={padding}");
+                }
+            }
         }
 
         mod no_split {
@@ -265,6 +296,7 @@ mod concatenate {
 
         for case in cases {
             let encoder = Gsm7BitPacked::new()
+                .with_cr_padding(true)
                 .with_allow_split_extended_character(case.allow_split_extended_character);
 
             let result =
@@ -311,6 +343,10 @@ mod concatenate {
     ///  - <https://www.diafaan.com/sms-tutorials/gsm-modem-tutorial/online-sms-submit-pdu-decoder/> for decoding
     ///
     /// Some of our encoded parts end with `1A` (the CR spare-bit fill), which is expected and correct.
+    /// The online encoder does not perform this fill, so you would see a `00` at the end of some parts instead.
+    ///
+    /// Some of the tests where the `max_message_size` is set to other than `140` bytes can not be validated against the online encoder,
+    /// since we can not change their maximum message size.
     #[test]
     #[ignore = "This test is for manual testing"]
     fn manual_cases() {
@@ -319,6 +355,7 @@ mod concatenate {
         use std::format;
         use std::println;
         use std::string::String;
+        use std::vec::Vec;
 
         use rusmpp_core::udhs::concatenation::ConcatenatedShortMessage8Bit;
 
@@ -328,6 +365,7 @@ mod concatenate {
             max_message_size: usize,
             part_header_size: usize,
             allow_split_extended_character: bool,
+            cr_padding: bool,
         }
 
         /// 140 bytes.
@@ -349,6 +387,7 @@ mod concatenate {
                 max_message_size: max_short_message_size(),
                 part_header_size: udh_concatenation_size(),
                 allow_split_extended_character: false,
+                cr_padding: true,
             },
             TestCase {
                 name: "double",
@@ -356,6 +395,7 @@ mod concatenate {
                 max_message_size: max_short_message_size(),
                 part_header_size: udh_concatenation_size(),
                 allow_split_extended_character: false,
+                cr_padding: true,
             },
             TestCase {
                 name: "cr fill",
@@ -363,6 +403,7 @@ mod concatenate {
                 max_message_size: max_short_message_size(),
                 part_header_size: udh_concatenation_size(),
                 allow_split_extended_character: false,
+                cr_padding: true,
             },
             TestCase {
                 name: "160 chars",
@@ -370,6 +411,7 @@ mod concatenate {
                 max_message_size: max_short_message_size(),
                 part_header_size: udh_concatenation_size(),
                 allow_split_extended_character: false,
+                cr_padding: true,
             },
             TestCase {
                 name: "160 chars - last extended",
@@ -377,6 +419,7 @@ mod concatenate {
                 max_message_size: max_short_message_size(),
                 part_header_size: udh_concatenation_size(),
                 allow_split_extended_character: false,
+                cr_padding: true,
             },
             TestCase {
                 name: "161 chars",
@@ -384,6 +427,7 @@ mod concatenate {
                 max_message_size: max_short_message_size(),
                 part_header_size: udh_concatenation_size(),
                 allow_split_extended_character: false,
+                cr_padding: true,
             },
             TestCase {
                 name: "161 chars - last extended",
@@ -391,18 +435,47 @@ mod concatenate {
                 max_message_size: max_short_message_size(),
                 part_header_size: udh_concatenation_size(),
                 allow_split_extended_character: false,
+                cr_padding: true,
             },
             TestCase {
-                name: "With extended char at the end",
+                name: "With extended char",
                 message: "111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111[111111",
                 max_message_size: max_short_message_size(),
                 part_header_size: udh_concatenation_size(),
                 allow_split_extended_character: false,
+                cr_padding: true,
+            },
+            TestCase {
+                name: "160 chars - 140 bytes",
+                message: "1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111",
+                max_message_size: max_short_message_size(),
+                part_header_size: udh_concatenation_size(),
+                allow_split_extended_character: false,
+                cr_padding: true,
+            },
+            TestCase {
+                name: "split extended",
+                message: "1[",
+                max_message_size: 2,
+                part_header_size: 0,
+                allow_split_extended_character: true,
+                cr_padding: true,
+            },
+            // The extended char from `[` would have fit in the first part but `allow_split_extended_character` is false, so it must go to the next part.
+            // See previous case, where the extended char is allowed to split and thus fits in the first part.
+            TestCase {
+                name: "do not split extended",
+                message: "1[",
+                max_message_size: 2,
+                part_header_size: 0,
+                allow_split_extended_character: false,
+                cr_padding: true,
             },
         ];
 
         for case in cases {
             let encoder = Gsm7BitPacked::new()
+                .with_cr_padding(case.cr_padding)
                 .with_allow_split_extended_character(case.allow_split_extended_character);
 
             let (concatenation, _) = encoder
@@ -414,9 +487,22 @@ mod concatenate {
                     let part_hex_string: String =
                         part.iter().map(|byte| format!("{:02X}", byte)).collect();
 
+                    // The padding here is `0` because we have no header in the single part
+                    let unpacked = Gsm7BitPacked::unpack(&part, 0, case.message.len());
+
+                    let unpacked_hex_vector = unpacked
+                        .iter()
+                        .map(|byte| format!("{:02X}", byte))
+                        .collect::<Vec<String>>();
+
+                    println!("Test case '{}': single part:", case.name);
+                    println!("Hex: {}", part_hex_string);
+                    println!("Bytes: {} byte(s): {:?}", part.len(), part);
+                    println!("Unpacked: {} byte(s): {:?}", unpacked.len(), unpacked);
                     println!(
-                        "Test case '{}': single part: {}",
-                        case.name, part_hex_string
+                        "Unpacked Hex: {} byte(s): {:?}",
+                        unpacked_hex_vector.len(),
+                        unpacked_hex_vector
                     );
                 }
                 Concatenation::Concatenated(parts) => {
@@ -426,10 +512,30 @@ mod concatenate {
                         let part_hex_string: String =
                             part.iter().map(|byte| format!("{:02X}", byte)).collect();
 
-                        println!("  Part {}: {}", i + 1, part_hex_string);
+                        // The padding is `part_header_size`, which comes from the UDH header that is prepended to each part in a concatenated message
+                        let unpacked =
+                            Gsm7BitPacked::unpack(part, case.part_header_size, case.message.len());
+
+                        let unpacked_hex_vector = unpacked
+                            .iter()
+                            .map(|byte| format!("{:02X}", byte))
+                            .collect::<Vec<String>>();
+
+                        println!("Part {}:", i + 1);
+                        println!("Hex: {}", part_hex_string);
+                        println!("Bytes: {} byte(s): {:?}", part.len(), part);
+                        println!("Unpacked: {} byte(s): {:?}", unpacked.len(), unpacked);
+                        println!(
+                            "Unpacked Hex: {} byte(s): {:?}",
+                            unpacked_hex_vector.len(),
+                            unpacked_hex_vector
+                        );
                     }
                 }
             }
+
+            println!();
+            println!("--------------------------------------------------");
         }
     }
 }

@@ -10,6 +10,16 @@ pub struct Gsm7BitPacked {
     alphabet: Gsm7BitAlphabet,
     /// Whether to allow splitting extended characters across message parts.
     allow_split_extended_character: bool,
+    /// Whether to apply the CR padding fix when packing.
+    ///
+    /// [GSM 03.38](https://en.wikipedia.org/wiki/GSM_03.38#GSM_7-bit_default_alphabet_and_extension_table_of_3GPP_TS_23.038_/_GSM_03.38):
+    ///
+    /// if packing would leave exactly 7
+    /// spare bits in the final octet, a virtual `CR` septet is appended
+    /// before packing so those bits carry `0x0D` instead of `0`.
+    ///
+    /// Since the spare space is exactly one septet wide, this never changes the resulting octet count.
+    cr_padding: bool,
 }
 
 impl Default for Gsm7BitPacked {
@@ -25,10 +35,12 @@ impl Gsm7BitPacked {
     ///
     /// - `alphabet`: [`Gsm7BitAlphabet::Default`]
     /// - `allow_split_extended_character`: `false`
+    /// - `cr_padding`: `true`
     pub const fn new() -> Self {
         Self {
             alphabet: Gsm7BitAlphabet::default(),
             allow_split_extended_character: false,
+            cr_padding: true,
         }
     }
 
@@ -58,6 +70,17 @@ impl Gsm7BitPacked {
     pub const fn data_coding(&self) -> DataCoding {
         DataCoding::McSpecific
     }
+
+    /// Returns whether the CR padding fix is applied when packing.
+    pub const fn cr_padding(&self) -> bool {
+        self.cr_padding
+    }
+
+    /// Sets whether to apply the CR padding fix when packing.
+    pub const fn with_cr_padding(mut self, cr_padding: bool) -> Self {
+        self.cr_padding = cr_padding;
+        self
+    }
 }
 
 #[cfg(any(test, feature = "alloc"))]
@@ -82,17 +105,18 @@ mod impl_owned {
     use super::*;
 
     /// The 7-bit code for the Carriage Return (CR) character.
-    ///
-    /// [GSM 03.38](https://en.wikipedia.org/wiki/GSM_03.38#GSM_7-bit_default_alphabet_and_extension_table_of_3GPP_TS_23.038_/_GSM_03.38):
-    ///
-    /// if packing would leave exactly 7
-    /// spare bits in the final octet, a virtual `CR` septet is appended
-    /// before packing so those bits carry `0x0D` instead of `0`.
-    ///
-    /// Since the spare space is exactly one septet wide, this never changes the resulting octet count.
     const CR_FILL_SEPTET: u8 = 0x0D;
 
     impl Gsm7BitPacked {
+        /// Encodes the given message into a vector of bytes and packs the septets into octets.
+        pub fn encode_to_vec(&self, input: &str) -> Result<Vec<u8>, Gsm7BitEncodeError> {
+            let encoded = self.encode_unpacked_to_vec(input)?;
+
+            let padding = Self::padding(0);
+
+            Ok(self.pack_with_cr_padding(&encoded, padding))
+        }
+
         /// Encodes the given message into a vector of bytes.
         ///
         /// # Note
@@ -104,15 +128,7 @@ mod impl_owned {
                 .map_err(Gsm7BitEncodeError::UnencodableCharacter)
         }
 
-        /// Encodes the given message into a vector of bytes and packs the septets into octets.
-        pub fn encode_to_vec(&self, input: &str) -> Result<Vec<u8>, Gsm7BitEncodeError> {
-            let encoded = self.encode_unpacked_to_vec(input)?;
-
-            let padding = Self::padding(0);
-
-            Ok(Self::pack_with_cr_padding(&encoded, padding))
-        }
-
+        /// Returns the number of padding bits needed to align the first septet after a header of `header_size` octets.
         const fn padding(header_size: usize) -> usize {
             (7 - ((header_size * 8) % 7)) % 7
         }
@@ -138,7 +154,8 @@ mod impl_owned {
             Self::packed_octets(n_septets, padding) * 8 - total_bits
         }
 
-        pub fn pack(encoded: &[u8], padding: usize) -> Vec<u8> {
+        // XXX: Do not expose
+        pub(crate) fn pack(encoded: &[u8], padding: usize) -> Vec<u8> {
             let mut packed = Vec::new();
 
             let mut chars_cur = 7;
@@ -178,12 +195,13 @@ mod impl_owned {
             packed
         }
 
-        /// Packs `encoded` with `pack`, applying the CR spare-bit fix from the
+        /// Packs `encoded` with `pack`, applying the CR spare-bit fix if [`Self::cr_padding`] is true.
         ///
-        /// See [`CR_FILL_SEPTET`] constant for details.
-        fn pack_with_cr_padding(encoded: &[u8], padding: usize) -> Vec<u8> {
-            if Self::spare_bits(encoded.len(), padding) == 7 {
+        /// See [`Self::cr_padding`] for details.
+        fn pack_with_cr_padding(&self, encoded: &[u8], padding: usize) -> Vec<u8> {
+            if self.cr_padding && Self::spare_bits(encoded.len(), padding) == 7 {
                 let mut with_cr = Vec::with_capacity(encoded.len() + 1);
+
                 with_cr.extend_from_slice(encoded);
                 with_cr.push(CR_FILL_SEPTET);
 
@@ -191,6 +209,50 @@ mod impl_owned {
             } else {
                 Self::pack(encoded, padding)
             }
+        }
+
+        // XXX: Do not expose
+        /// Unpacks `packed` octets back into septets, reversing [`Self::pack`].
+        ///
+        /// `padding` must be the same value passed to [`Self::pack`] when the data
+        /// was packed. `n_septets` is the number of septets to extract.
+        ///
+        /// # Note
+        ///
+        /// Unlike packing, the septet count can't be reliably derived from the
+        /// packed octet count alone: depending on `padding`, up to 7 bits of the
+        /// final octet may be spare padding rather than the start of another
+        /// septet (see [`Self::spare_bits`]). Callers must track and pass the
+        /// original septet count themselves.
+        ///
+        /// If `packed` runs out of bits before `n_septets` septets have been
+        /// extracted, the result is truncated to however many complete septets
+        /// were actually available.
+        pub(crate) fn unpack(packed: &[u8], padding: usize, n_septets: usize) -> Vec<u8> {
+            let mut septets = Vec::with_capacity(n_septets);
+
+            let mut bit_pos = padding;
+
+            for _ in 0..n_septets {
+                let mut septet: u8 = 0;
+
+                for bit in 0..7 {
+                    let byte_idx = bit_pos / 8;
+                    let bit_idx = bit_pos % 8;
+
+                    let Some(&byte) = packed.get(byte_idx) else {
+                        return septets;
+                    };
+
+                    septet |= ((byte >> bit_idx) & 1) << bit;
+
+                    bit_pos += 1;
+                }
+
+                septets.push(septet);
+            }
+
+            septets
         }
     }
 
@@ -220,7 +282,7 @@ mod impl_owned {
             let single_padding = Self::padding(0);
 
             if Self::packed_octets(total, single_padding) <= max_message_size {
-                let packed = Self::pack_with_cr_padding(&encoded, single_padding);
+                let packed = self.pack_with_cr_padding(&encoded, single_padding);
 
                 return Ok((Concatenation::single(packed), self.data_coding()));
             }
@@ -269,7 +331,7 @@ mod impl_owned {
                     }
                 }
 
-                let packed = Self::pack_with_cr_padding(&encoded[i..end], padding);
+                let packed = self.pack_with_cr_padding(&encoded[i..end], padding);
 
                 parts.push(packed);
 
