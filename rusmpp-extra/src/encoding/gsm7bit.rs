@@ -2,6 +2,7 @@
 
 mod alphabet;
 mod errors;
+mod packed;
 mod unpacked;
 
 pub use alphabet::{
