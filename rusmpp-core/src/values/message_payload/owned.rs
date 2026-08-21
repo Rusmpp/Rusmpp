@@ -3,7 +3,7 @@ use rusmpp_macros::Rusmpp;
 use crate::types::owned::AnyOctetString;
 
 #[repr(transparent)]
-#[derive(Default, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
+#[derive(Default, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = owned)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
@@ -11,6 +11,12 @@ use crate::types::owned::AnyOctetString;
 pub struct MessagePayload {
     #[rusmpp(length = "unchecked")]
     pub value: AnyOctetString,
+}
+
+impl ::core::fmt::Debug for MessagePayload {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+        ::core::fmt::Debug::fmt(&self.value, f)
+    }
 }
 
 impl MessagePayload {

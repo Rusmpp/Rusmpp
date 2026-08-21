@@ -8,12 +8,18 @@ use rusmpp_macros::Rusmpp;
 /// user_message_reference can be used to substitute an actual message_id or may be used in
 /// conjunction with a message_id.
 #[repr(transparent)]
-#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
+#[derive(Default, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct UserMessageReference {
     pub value: u16,
+}
+
+impl ::core::fmt::Debug for UserMessageReference {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+        ::core::fmt::Debug::fmt(&self.value, f)
+    }
 }
 
 impl UserMessageReference {
