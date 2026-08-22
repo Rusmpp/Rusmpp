@@ -9,6 +9,7 @@ pub use alphabet::{
     ESCAPE_CHARACTER, Encoded, Gsm7BitAlphabet, Gsm7BitDefaultAlphabet, Gsm7BitSpanishAlphabet,
 };
 pub use errors::{Gsm7BitConcatenateError, Gsm7BitEncodeError};
+pub use packed::Gsm7BitPacked;
 pub use unpacked::Gsm7BitUnpacked;
 
 #[cfg(test)]
