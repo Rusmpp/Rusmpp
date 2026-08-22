@@ -438,8 +438,8 @@ mod concatenate {
                 cr_padding: true,
             },
             TestCase {
-                name: "With extended char",
-                message: "111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111[111111",
+                name: "would split extended char",
+                message: "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[1234567",
                 max_message_size: max_short_message_size(),
                 part_header_size: udh_concatenation_size(),
                 allow_split_extended_character: false,
