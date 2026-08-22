@@ -228,6 +228,7 @@ mod impl_owned {
         /// If `packed` runs out of bits before `n_septets` septets have been
         /// extracted, the result is truncated to however many complete septets
         /// were actually available.
+        #[cfg(test)]
         pub(crate) fn unpack(packed: &[u8], padding: usize, n_septets: usize) -> Vec<u8> {
             let mut septets = Vec::with_capacity(n_septets);
 
