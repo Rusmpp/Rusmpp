@@ -5,6 +5,9 @@ pub use default::Gsm7BitDefaultAlphabet;
 
 pub use spanish::Gsm7BitSpanishAlphabet;
 
+#[cfg(any(test, feature = "alloc"))]
+use crate::encoding::MapChar;
+
 /// Gsm 7-bit escape character.
 pub const ESCAPE_CHARACTER: u8 = 0x1B;
 
@@ -76,7 +79,11 @@ impl Gsm7BitAlphabet {
     /// - Returns `Err(char)` if a character in the message cannot be encoded.
     #[cfg(any(test, feature = "alloc"))]
     #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    pub(crate) fn encode_to_vec(&self, message: &str) -> Result<alloc::vec::Vec<u8>, char> {
+    pub(crate) fn encode_to_vec(
+        &self,
+        message: &str,
+        map: impl MapChar,
+    ) -> Result<alloc::vec::Vec<u8>, char> {
         // We double the amount of `bytes` we have in the worst case.
         //
         // If the amount of `bytes` is equals to the amount of `chars`
@@ -89,7 +96,7 @@ impl Gsm7BitAlphabet {
         let mut encoded = alloc::vec::Vec::with_capacity(message.len() * 2);
 
         for ch in message.chars() {
-            match self.encode(ch) {
+            match self.encode(map.map(ch)) {
                 Some(Encoded::Standard(byte)) => encoded.push(byte),
                 Some(Encoded::Extended(byte)) => {
                     encoded.push(ESCAPE_CHARACTER);

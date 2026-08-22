@@ -1,11 +1,11 @@
 use rusmpp_core::values::DataCoding;
 
-use crate::encoding::gsm7bit::alphabet::Gsm7BitAlphabet;
+use crate::encoding::{IdentityMapChar, gsm7bit::alphabet::Gsm7BitAlphabet};
 
 /// GSM 7-bit packed codec.
 #[non_exhaustive]
 #[derive(Debug)]
-pub struct Gsm7BitPacked {
+pub struct Gsm7BitPacked<C = IdentityMapChar> {
     /// The GSM 7-bit alphabet to use for encoding.
     alphabet: Gsm7BitAlphabet,
     /// Whether to allow splitting extended characters across message parts.
@@ -20,6 +20,8 @@ pub struct Gsm7BitPacked {
     ///
     /// Since the spare space is exactly one septet wide, this never changes the resulting octet count.
     cr_padding: bool,
+    /// The character mapping for the codec.
+    map: C,
 }
 
 impl Default for Gsm7BitPacked {
@@ -41,9 +43,12 @@ impl Gsm7BitPacked {
             alphabet: Gsm7BitAlphabet::default(),
             allow_split_extended_character: false,
             cr_padding: true,
+            map: IdentityMapChar,
         }
     }
+}
 
+impl<C> Gsm7BitPacked<C> {
     /// Sets the alphabet for the codec.
     pub const fn with_alphabet(mut self, alphabet: Gsm7BitAlphabet) -> Self {
         self.alphabet = alphabet;
@@ -81,6 +86,16 @@ impl Gsm7BitPacked {
         self.cr_padding = cr_padding;
         self
     }
+
+    /// Sets the character mapping for the codec.
+    pub fn with_map<U>(self, map: U) -> Gsm7BitPacked<U> {
+        Gsm7BitPacked {
+            alphabet: self.alphabet,
+            allow_split_extended_character: self.allow_split_extended_character,
+            cr_padding: self.cr_padding,
+            map,
+        }
+    }
 }
 
 #[cfg(any(test, feature = "alloc"))]
@@ -94,6 +109,7 @@ mod impl_owned {
             owned::{Concatenation, Concatenator},
         },
         encoding::{
+            MapChar,
             gsm7bit::{
                 alphabet::ESCAPE_CHARACTER,
                 errors::{Gsm7BitConcatenateError, Gsm7BitEncodeError},
@@ -107,7 +123,7 @@ mod impl_owned {
     /// The 7-bit code for the Carriage Return (CR) character.
     const CR_FILL_SEPTET: u8 = 0x0D;
 
-    impl Gsm7BitPacked {
+    impl<C: MapChar> Gsm7BitPacked<C> {
         /// Encodes the given message into a vector of bytes and packs the septets into octets.
         pub fn encode_to_vec(&self, input: &str) -> Result<Vec<u8>, Gsm7BitEncodeError> {
             let encoded = self.encode_unpacked_to_vec(input)?;
@@ -124,7 +140,7 @@ mod impl_owned {
         /// This function does not pack the septets into octets.
         fn encode_unpacked_to_vec(&self, input: &str) -> Result<Vec<u8>, Gsm7BitEncodeError> {
             self.alphabet
-                .encode_to_vec(input)
+                .encode_to_vec(input, &self.map)
                 .map_err(Gsm7BitEncodeError::UnencodableCharacter)
         }
 
@@ -155,7 +171,7 @@ mod impl_owned {
         }
 
         // XXX: Do not expose
-        pub(crate) fn pack(encoded: &[u8], padding: usize) -> Vec<u8> {
+        pub(crate) fn pack(&self, encoded: &[u8], padding: usize) -> Vec<u8> {
             let mut packed = Vec::new();
 
             let mut chars_cur = 7;
@@ -205,9 +221,9 @@ mod impl_owned {
                 with_cr.extend_from_slice(encoded);
                 with_cr.push(CR_FILL_SEPTET);
 
-                Self::pack(&with_cr, padding)
+                self.pack(&with_cr, padding)
             } else {
-                Self::pack(encoded, padding)
+                self.pack(encoded, padding)
             }
         }
 
@@ -229,7 +245,7 @@ mod impl_owned {
         /// extracted, the result is truncated to however many complete septets
         /// were actually available.
         #[cfg(test)]
-        pub(crate) fn unpack(packed: &[u8], padding: usize, n_septets: usize) -> Vec<u8> {
+        pub(crate) fn unpack(&self, packed: &[u8], padding: usize, n_septets: usize) -> Vec<u8> {
             let mut septets = Vec::with_capacity(n_septets);
 
             let mut bit_pos = padding;
@@ -257,7 +273,7 @@ mod impl_owned {
         }
     }
 
-    impl Encoder for Gsm7BitPacked {
+    impl<C: MapChar> Encoder for Gsm7BitPacked<C> {
         type Error = Gsm7BitEncodeError;
 
         fn encode(&self, message: &str) -> Result<(Vec<u8>, DataCoding), Self::Error> {
@@ -266,7 +282,7 @@ mod impl_owned {
         }
     }
 
-    impl Concatenator for Gsm7BitPacked {
+    impl<C: MapChar> Concatenator for Gsm7BitPacked<C> {
         type Error = Gsm7BitConcatenateError;
 
         fn concatenate(

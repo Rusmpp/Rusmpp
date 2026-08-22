@@ -154,8 +154,10 @@ mod concatenate {
                 let septets: Vec<u8> = vec![0x41, 0x7F, 0x00, 0x2A, 0x63, 0x7F, 0x01, 0x55, 0x2C];
                 let padding = 0;
 
-                let packed = Gsm7BitPacked::pack(&septets, padding);
-                let unpacked = Gsm7BitPacked::unpack(&packed, padding, septets.len());
+                let encoder = Gsm7BitPacked::new();
+
+                let packed = encoder.pack(&septets, padding);
+                let unpacked = encoder.unpack(&packed, padding, septets.len());
 
                 assert_eq!(unpacked, septets);
             }
@@ -165,8 +167,10 @@ mod concatenate {
                 for padding in 1..7 {
                     let septets: Vec<u8> = vec![0x41, 0x7F, 0x00, 0x2A, 0x63, 0x7F, 0x01];
 
-                    let packed = Gsm7BitPacked::pack(&septets, padding);
-                    let unpacked = Gsm7BitPacked::unpack(&packed, padding, septets.len());
+                    let encoder = Gsm7BitPacked::new();
+
+                    let packed = encoder.pack(&septets, padding);
+                    let unpacked = encoder.unpack(&packed, padding, septets.len());
 
                     assert_eq!(unpacked, septets, "roundtrip failed for padding={padding}");
                 }
@@ -488,7 +492,7 @@ mod concatenate {
                         part.iter().map(|byte| format!("{:02X}", byte)).collect();
 
                     // The padding here is `0` because we have no header in the single part
-                    let unpacked = Gsm7BitPacked::unpack(&part, 0, case.message.len());
+                    let unpacked = encoder.unpack(&part, 0, case.message.len());
 
                     let unpacked_hex_vector = unpacked
                         .iter()
@@ -514,7 +518,7 @@ mod concatenate {
 
                         // The padding is `part_header_size`, which comes from the UDH header that is prepended to each part in a concatenated message
                         let unpacked =
-                            Gsm7BitPacked::unpack(part, case.part_header_size, case.message.len());
+                            encoder.unpack(part, case.part_header_size, case.message.len());
 
                         let unpacked_hex_vector = unpacked
                             .iter()
