@@ -9,7 +9,11 @@ use crate::{
         errors::MultipartError,
         owned::{Concatenation, Concatenator},
     },
-    encoding::{gsm7bit::Gsm7BitUnpacked, latin1::Latin1, ucs2::Ucs2},
+    encoding::{
+        gsm7bit::{Gsm7BitPacked, Gsm7BitUnpacked},
+        latin1::Latin1,
+        ucs2::Ucs2,
+    },
     fallback::Fallback,
 };
 
@@ -69,6 +73,11 @@ impl<'a, E> SubmitSmSarMultipartBuilder<'a, E> {
     /// Sets the [`Gsm7BitUnpacked`] encoder.
     pub fn gsm7bit_unpacked(self) -> SubmitSmSarMultipartBuilder<'a, Gsm7BitUnpacked> {
         self.encoder(Gsm7BitUnpacked::new())
+    }
+
+    /// Sets the [`Gsm7BitPacked`] encoder.
+    pub fn gsm7bit_packed(self) -> SubmitSmSarMultipartBuilder<'a, Gsm7BitPacked> {
+        self.encoder(Gsm7BitPacked::new())
     }
 
     /// Sets the [`Ucs2`] encoder.
