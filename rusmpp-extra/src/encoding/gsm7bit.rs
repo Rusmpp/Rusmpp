@@ -13,7 +13,7 @@ pub use errors::{Gsm7BitConcatenateError, Gsm7BitDecodeError, Gsm7BitEncodeError
 
 #[cfg(any(test, feature = "alloc"))]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-pub use decode::unpacked::owned::Gsm7BitUnpackedDecoder;
+pub use decode::{packed::owned::Gsm7BitPackedDecoder, unpacked::owned::Gsm7BitUnpackedDecoder};
 
 #[cfg(test)]
 mod tests;

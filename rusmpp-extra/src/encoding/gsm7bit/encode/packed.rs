@@ -129,8 +129,16 @@ mod impl_owned {
         }
 
         /// Returns the number of padding bits needed to align the first septet after a header of `header_size` octets.
-        const fn padding(header_size: usize) -> usize {
+        pub(crate) const fn padding(header_size: usize) -> usize {
             (7 - ((header_size * 8) % 7)) % 7
+        }
+
+        pub(crate) const fn n_septets(n_octets: usize, padding: usize) -> usize {
+            if n_octets == 0 {
+                return 0;
+            }
+
+            (n_octets * 8 - padding) / 7
         }
 
         /// Number of octets needed to pack `n_septets` septets, given `padding`
@@ -228,7 +236,6 @@ mod impl_owned {
         /// If `packed` runs out of bits before `n_septets` septets have been
         /// extracted, the result is truncated to however many complete septets
         /// were actually available.
-        #[cfg(test)]
         pub(crate) fn unpack(packed: &[u8], padding: usize, n_septets: usize) -> Vec<u8> {
             let mut septets = Vec::with_capacity(n_septets);
 
@@ -254,6 +261,26 @@ mod impl_owned {
             }
 
             septets
+        }
+
+        /// Unpacks `packed` octets back into septets, reversing [`Self::pack`], and pops a trailing CR if present.
+        ///
+        /// See [`Self::pack_with_cr_padding`] and [`Self::unpack`] for details.
+        pub(crate) fn unpack_pop_cr_padding(
+            packed: &[u8],
+            padding: usize,
+            n_septets: usize,
+        ) -> Vec<u8> {
+            let mut unpacked = Gsm7BitPackedEncoder::unpack(packed, padding, n_septets);
+
+            if n_septets > 0
+                && Gsm7BitPackedEncoder::spare_bits(n_septets - 1, padding) == 7
+                && unpacked.last() == Some(&0x0D)
+            {
+                unpacked.pop();
+            }
+
+            unpacked
         }
     }
 
