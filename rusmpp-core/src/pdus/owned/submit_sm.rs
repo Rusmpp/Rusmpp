@@ -244,6 +244,11 @@ impl SubmitSm {
         self
     }
 
+    /// Checks wether the UDH Indicator bit is set in the GSM Features field of the [`SubmitSm::esm_class`].
+    pub const fn is_udh_indicator_set(&self) -> bool {
+        self.esm_class.is_udh_indicator_set()
+    }
+
     /// Sets the `short_message` and `sm_length`.
     ///
     /// See [`Self::set_short_message`] for details.
