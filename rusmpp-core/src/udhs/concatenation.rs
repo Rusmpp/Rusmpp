@@ -43,6 +43,30 @@ impl ConcatenatedShortMessage {
             }
         }
     }
+
+    /// Returns the reference number of the concatenated short message.
+    pub const fn reference(&self) -> u16 {
+        match self {
+            Self::EightBit(concatenation) => concatenation.reference() as u16,
+            Self::SixteenBit(concatenation) => concatenation.reference(),
+        }
+    }
+
+    /// Returns the total number of parts of the concatenated short message.
+    pub const fn total_parts(&self) -> u8 {
+        match self {
+            Self::EightBit(concatenation) => concatenation.total_parts(),
+            Self::SixteenBit(concatenation) => concatenation.total_parts(),
+        }
+    }
+
+    /// Returns the part number of the concatenated short message.
+    pub const fn part_number(&self) -> u8 {
+        match self {
+            Self::EightBit(concatenation) => concatenation.part_number(),
+            Self::SixteenBit(concatenation) => concatenation.part_number(),
+        }
+    }
 }
 
 /// Bytes representation of [`ConcatenatedShortMessage`] as full UDH.

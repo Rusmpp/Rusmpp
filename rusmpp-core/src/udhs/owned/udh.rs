@@ -306,6 +306,7 @@ mod tests {
                 udh,
                 Udh::new(ConcatenatedShortMessage16Bit::new(0x1234, 3, 1).unwrap())
             );
+            assert_eq!(&buf[..], &[0x00, 0x00][..]);
 
             let mut buf = BytesMut::from(
                 &[
@@ -326,6 +327,7 @@ mod tests {
                 udh,
                 Udh::new(ConcatenatedShortMessage8Bit::new(0x12, 3, 1).unwrap())
             );
+            assert_eq!(&buf[..], &[0x00, 0x00][..]);
         }
     }
 }

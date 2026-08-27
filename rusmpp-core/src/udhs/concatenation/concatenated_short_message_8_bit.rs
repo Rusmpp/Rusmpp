@@ -178,6 +178,38 @@ impl crate::encode::owned::Encode for ConcatenatedShortMessage8Bit {
     }
 }
 
+impl<'a> crate::decode::borrowed::Decode<'a> for ConcatenatedShortMessage8Bit {
+    fn decode(src: &'a [u8]) -> Result<(Self, usize), crate::decode::DecodeError> {
+        if src.len() < Self::LENGTH {
+            return Err(
+                crate::decode::DecodeError::concatenated_short_message_decode_error(
+                    ConcatenatedShortMessageDecodeError::TooFewBytes {
+                        actual: src.len(),
+                        min: Self::LENGTH,
+                    },
+                ),
+            );
+        }
+
+        let length = src[0];
+
+        if length != 0x03_u8 {
+            return Err(
+                crate::decode::DecodeError::concatenated_short_message_decode_error(
+                    ConcatenatedShortMessageDecodeError::InvalidInformationElementLength {
+                        actual: length,
+                        expected: 0x03_u8,
+                    },
+                ),
+            );
+        }
+
+        let decoded = Self::new(src[1], src[2], src[3])?;
+
+        Ok((decoded, Self::LENGTH))
+    }
+}
+
 #[cfg(feature = "alloc")]
 impl crate::decode::owned::DecodeErrorType for ConcatenatedShortMessage8Bit {
     type Error = ConcatenatedShortMessageDecodeError;
@@ -186,6 +218,8 @@ impl crate::decode::owned::DecodeErrorType for ConcatenatedShortMessage8Bit {
 #[cfg(feature = "alloc")]
 impl crate::decode::owned::Decode for ConcatenatedShortMessage8Bit {
     fn decode(src: &mut bytes::BytesMut) -> Result<(Self, usize), Self::Error> {
+        use bytes::Buf;
+
         if src.len() < Self::LENGTH {
             return Err(ConcatenatedShortMessageDecodeError::TooFewBytes {
                 actual: src.len(),
@@ -205,6 +239,8 @@ impl crate::decode::owned::Decode for ConcatenatedShortMessage8Bit {
         }
 
         let decoded = Self::new(src[1], src[2], src[3])?;
+
+        src.advance(Self::LENGTH);
 
         Ok((decoded, Self::LENGTH))
     }
@@ -294,6 +330,17 @@ mod tests {
             }
 
             #[test]
+            fn ok_remaining() {
+                let mut buf = BytesMut::from(&[0x03, 0x12, 0x34, 0x02, 0x00, 0x00][..]);
+                let (udh, size) = ConcatenatedShortMessage8Bit::decode(&mut buf).unwrap();
+                assert_eq!(size, 4);
+                assert_eq!(udh.reference, 0x12);
+                assert_eq!(udh.total_parts, 0x34);
+                assert_eq!(udh.part_number, 0x02);
+                assert_eq!(&buf[..], &[0x00, 0x00][..]);
+            }
+
+            #[test]
             fn too_few_bytes() {
                 let mut buf = BytesMut::from(&[0x03, 0x12, 0x34][..]);
                 let err = ConcatenatedShortMessage8Bit::decode(&mut buf).unwrap_err();
@@ -350,7 +397,121 @@ mod tests {
             }
         }
 
-        // TODO: borrowed decode
+        mod borrowed {
+            use crate::decode::{DecodeError, DecodeErrorKind, UdhDecodeError, borrowed::Decode};
+
+            use super::super::*;
+
+            #[test]
+            fn ok() {
+                let bytes = &[0x03, 0x12, 0x34, 0x02];
+                let (udh, size) = ConcatenatedShortMessage8Bit::decode(bytes).unwrap();
+                assert_eq!(size, 4);
+                assert_eq!(udh.reference, 0x12);
+                assert_eq!(udh.total_parts, 0x34);
+                assert_eq!(udh.part_number, 0x02);
+            }
+
+            #[test]
+            fn ok_remaining() {
+                let bytes = &[0x03, 0x12, 0x34, 0x02, 0x00, 0x00];
+                let (udh, size) = ConcatenatedShortMessage8Bit::decode(bytes).unwrap();
+                assert_eq!(size, 4);
+                assert_eq!(udh.reference, 0x12);
+                assert_eq!(udh.total_parts, 0x34);
+                assert_eq!(udh.part_number, 0x02);
+                assert_eq!(&bytes[size..], &[0x00, 0x00]);
+            }
+
+            #[test]
+            fn too_few_bytes() {
+                let bytes = &[0x03, 0x12, 0x34];
+                let err = ConcatenatedShortMessage8Bit::decode(bytes).unwrap_err();
+                assert!(matches!(
+                    err,
+                    DecodeError {
+                        kind: DecodeErrorKind::UdhDecodeError(
+                            UdhDecodeError::ConcatenatedShortMessageDecodeError(
+                                ConcatenatedShortMessageDecodeError::TooFewBytes {
+                                    actual: 3,
+                                    min: 4
+                                }
+                            )
+                        )
+                    }
+                ));
+            }
+
+            #[test]
+            fn invalid_information_element_length() {
+                let bytes = &[0x04, 0x12, 0x34, 0x02];
+                let err = ConcatenatedShortMessage8Bit::decode(bytes).unwrap_err();
+                assert!(matches!(
+                    err,
+                    DecodeError {
+                        kind: DecodeErrorKind::UdhDecodeError(
+                            UdhDecodeError::ConcatenatedShortMessageDecodeError(
+                                ConcatenatedShortMessageDecodeError::InvalidInformationElementLength {
+                                    actual: 4,
+                                    expected: 3
+                                }
+                            )
+                        )
+                    }
+                ));
+            }
+
+            #[test]
+            fn part_number_exceeds_total_parts() {
+                let bytes = &[0x03, 0x12, 2, 3];
+                let err = ConcatenatedShortMessage8Bit::decode(bytes).unwrap_err();
+                assert!(matches!(
+                    err,
+                    DecodeError {
+                        kind: DecodeErrorKind::UdhDecodeError(
+                            UdhDecodeError::ConcatenatedShortMessageDecodeError(
+                                ConcatenatedShortMessageDecodeError::PartNumberExceedsTotalParts {
+                                    part_number: 3,
+                                    total_parts: 2
+                                }
+                            )
+                        )
+                    }
+                ));
+            }
+
+            #[test]
+            fn total_parts_zero() {
+                let bytes = &[0x03, 0x12, 0x00, 0x01];
+                let err = ConcatenatedShortMessage8Bit::decode(bytes).unwrap_err();
+                assert!(matches!(
+                    err,
+                    DecodeError {
+                        kind: DecodeErrorKind::UdhDecodeError(
+                            UdhDecodeError::ConcatenatedShortMessageDecodeError(
+                                ConcatenatedShortMessageDecodeError::TotalPartsZero
+                            )
+                        )
+                    }
+                ));
+            }
+
+            #[test]
+            fn part_number_zero() {
+                let bytes = &[0x03, 0x12, 0x03, 0x00];
+                let err = ConcatenatedShortMessage8Bit::decode(bytes).unwrap_err();
+                assert!(matches!(
+                    err,
+                    DecodeError {
+                        kind: DecodeErrorKind::UdhDecodeError(
+                            UdhDecodeError::ConcatenatedShortMessageDecodeError(
+                                ConcatenatedShortMessageDecodeError::PartNumberZero
+                            )
+                        )
+                    }
+                ));
+            }
+        }
     }
 
     mod encode {
