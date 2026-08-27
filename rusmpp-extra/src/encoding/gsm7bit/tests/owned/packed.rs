@@ -2,8 +2,8 @@ use crate::{
     concatenation::{MAX_PARTS, owned::Concatenator},
     encoding::{
         gsm7bit::{
+            Gsm7BitPackedEncoder,
             errors::{Gsm7BitConcatenateError, Gsm7BitEncodeError},
-            packed::Gsm7BitPackedEncoder,
         },
         owned::Encoder,
     },

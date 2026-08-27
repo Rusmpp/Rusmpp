@@ -5,8 +5,8 @@ use crate::{
     },
     encoding::{
         gsm7bit::{
+            Gsm7BitUnpackedEncoder,
             errors::{Gsm7BitConcatenateError, Gsm7BitEncodeError},
-            unpacked::Gsm7BitUnpackedEncoder,
         },
         owned::Encoder,
     },
@@ -254,7 +254,8 @@ mod concatenate {
                 let max_message_size = 9;
                 let part_header_size = 8;
 
-                let encoder = Gsm7BitUnpackedEncoder::new().with_allow_split_extended_character(true);
+                let encoder =
+                    Gsm7BitUnpackedEncoder::new().with_allow_split_extended_character(true);
 
                 let (concatenation, _) = encoder
                     .concatenate(message, max_message_size, part_header_size)
