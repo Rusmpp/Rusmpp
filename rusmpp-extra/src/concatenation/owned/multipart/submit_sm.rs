@@ -1,6 +1,9 @@
 use rusmpp_core::pdus::owned::SubmitSm;
 
-use crate::encoding::gsm7bit::Gsm7BitUnpacked;
+use crate::{
+    concatenation::{multipart::MultipartSegment, multipart::MultipartSegmentError},
+    encoding::gsm7bit::Gsm7BitUnpacked,
+};
 
 use super::{SubmitSmMultipartBuilder, SubmitSmSarMultipartBuilder};
 
@@ -21,6 +24,8 @@ pub trait SubmitSmMultipartExt {
         self,
         short_message: &'a str,
     ) -> SubmitSmSarMultipartBuilder<'a, Gsm7BitUnpacked>;
+
+    fn multi_part_segment(&self) -> Option<Result<MultipartSegment, MultipartSegmentError>>;
 }
 
 impl SubmitSmMultipartExt for SubmitSm {
@@ -36,5 +41,13 @@ impl SubmitSmMultipartExt for SubmitSm {
         short_message: &'a str,
     ) -> SubmitSmSarMultipartBuilder<'a, Gsm7BitUnpacked> {
         SubmitSmSarMultipartBuilder::new(short_message, self, Gsm7BitUnpacked::new())
+    }
+
+    fn multi_part_segment(&self) -> Option<Result<MultipartSegment, MultipartSegmentError>> {
+        if self.is_udh_indicator_set() {
+            todo!()
+        };
+
+        todo!()
     }
 }
