@@ -5,7 +5,7 @@ use rusmpp_core::values::DataCoding;
 mod errors;
 pub use errors::{Latin1ConcatenateError, Latin1EncodeError};
 
-/// Latin1 codec.
+/// Latin1 encoder.
 #[derive(Debug)]
 #[non_exhaustive]
 pub struct Latin1Encoder {}
@@ -17,7 +17,7 @@ impl Default for Latin1Encoder {
 }
 
 impl Latin1Encoder {
-    /// Creates a new [`Latin1`] codec.
+    /// Creates a new [`Latin1`] encoder.
     pub const fn new() -> Self {
         Self {}
     }

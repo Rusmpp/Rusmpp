@@ -5,7 +5,7 @@ use rusmpp_core::values::DataCoding;
 mod errors;
 pub use errors::{AsciiConcatenateError, AsciiEncodeError};
 
-/// ASCII codec.
+/// ASCII encoder.
 #[derive(Debug)]
 #[non_exhaustive]
 pub struct AsciiEncoder {
@@ -31,12 +31,12 @@ impl AsciiEncoder {
         }
     }
 
-    /// Returns the associated [`DataCoding`] of the [`Ascii`] codec.
+    /// Returns the associated [`DataCoding`] of the [`Ascii`] encoder.
     pub const fn data_coding(&self) -> DataCoding {
         self.data_coding
     }
 
-    /// Sets the associated [`DataCoding`] of the [`Ascii`] codec.
+    /// Sets the associated [`DataCoding`] of the [`Ascii`] encoder.
     pub const fn with_data_coding(mut self, data_coding: DataCoding) -> Self {
         self.data_coding = data_coding;
         self

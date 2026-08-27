@@ -2,7 +2,7 @@ use rusmpp_core::values::DataCoding;
 
 use crate::encoding::gsm7bit::alphabet::Gsm7BitAlphabet;
 
-/// GSM 7-bit packed codec.
+/// GSM 7-bit packed encoder.
 #[non_exhaustive]
 #[derive(Debug)]
 pub struct Gsm7BitPackedEncoder {
@@ -44,7 +44,7 @@ impl Gsm7BitPackedEncoder {
         }
     }
 
-    /// Sets the alphabet for the codec.
+    /// Sets the alphabet for the encoder.
     pub const fn with_alphabet(mut self, alphabet: Gsm7BitAlphabet) -> Self {
         self.alphabet = alphabet;
         self

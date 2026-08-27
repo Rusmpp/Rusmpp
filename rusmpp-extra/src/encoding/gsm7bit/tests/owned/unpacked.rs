@@ -401,3 +401,99 @@ mod concatenate {
         }
     }
 }
+
+mod decode {
+    use crate::encoding::{gsm7bit::Gsm7BitUnpackedDecoder, owned::Decoder};
+
+    use super::*;
+
+    // TODO: all fail cases
+
+    #[test]
+    fn cases() {
+        struct TestCase {
+            name: &'static str,
+            message: &'static str,
+            max_message_size: usize,
+            part_header_size: usize,
+            allow_split_extended_character: bool,
+        }
+
+        let cases: &[TestCase] = &[
+            TestCase {
+                name: "empty_message",
+                message: "",
+                max_message_size: 16,
+                part_header_size: 6,
+                allow_split_extended_character: false,
+            },
+            TestCase {
+                name: "one_part",
+                message: "123456789",
+                max_message_size: 16,
+                part_header_size: 6,
+                allow_split_extended_character: false,
+            },
+            TestCase {
+                name: "two_parts",
+                message: "123456789123456789",
+                max_message_size: 16,
+                part_header_size: 6,
+                allow_split_extended_character: false,
+            },
+            TestCase {
+                name: "concatenate_on_extended_character_once_no_split",
+                message: "123456789[3456789",
+                max_message_size: 16,
+                part_header_size: 6,
+                allow_split_extended_character: false,
+            },
+            TestCase {
+                name: "concatenate_on_extended_character_once_split",
+                message: "123456789[3456789",
+                max_message_size: 16,
+                part_header_size: 6,
+                allow_split_extended_character: true,
+            },
+            TestCase {
+                name: "concatenate_on_extended_character_three_times_no_split",
+                message: "123456789[23456789[23456789[",
+                max_message_size: 16,
+                part_header_size: 6,
+                allow_split_extended_character: false,
+            },
+            TestCase {
+                name: "concatenate_on_extended_character_three_times_split",
+                message: "123456789[23456789[23456789[",
+                max_message_size: 16,
+                part_header_size: 6,
+                allow_split_extended_character: true,
+            },
+        ];
+
+        for case in cases {
+            let mut decoder = Gsm7BitUnpackedDecoder::new();
+
+            let encoder = Gsm7BitUnpackedEncoder::new()
+                .with_allow_split_extended_character(case.allow_split_extended_character);
+
+            let (concatenation, _) = encoder
+                .concatenate(case.message, case.max_message_size, case.part_header_size)
+                .expect("Failed to encode message");
+
+            for part in concatenation.collect().into_iter() {
+                decoder
+                    .feed(part.as_slice(), case.part_header_size)
+                    .expect("Failed to decode part");
+            }
+
+            let decoded = decoder.finish().expect("Failed to finish decoding");
+
+            assert!(
+                decoded == case.message,
+                "Test case '{}' failed: decoded message does not match original",
+                case.name
+            );
+        }
+    }
+}

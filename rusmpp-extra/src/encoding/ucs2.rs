@@ -4,7 +4,7 @@ mod errors;
 pub use errors::{Ucs2ConcatenateError, Ucs2EncodeError};
 use rusmpp_core::values::DataCoding;
 
-/// UCS2 codec.
+/// UCS2 encoder.
 #[derive(Debug)]
 pub struct Ucs2Encoder {
     /// Whether to allow splitting characters across message parts.
@@ -18,7 +18,7 @@ impl Default for Ucs2Encoder {
 }
 
 impl Ucs2Encoder {
-    /// Creates a new [`Ucs2`] codec.
+    /// Creates a new [`Ucs2`] encoder.
     ///
     /// # Defaults
     ///
