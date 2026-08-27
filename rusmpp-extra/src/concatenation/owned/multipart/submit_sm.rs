@@ -29,7 +29,9 @@ pub trait SubmitSmMultipartExt {
         short_message: &'a str,
     ) -> SubmitSmSarMultipartBuilder<'a, Gsm7BitUnpacked>;
 
-    fn multipart_segment(&self) -> Option<Result<MultipartSegment, MultipartSegmentError>>;
+    /// Checks wether the [`SubmitSm`] is a multipart message and returns the [`MultipartSegment`] and the remaining short message.
+    fn multipart_segment(&self)
+    -> Option<Result<(MultipartSegment, &[u8]), MultipartSegmentError>>;
 }
 
 impl SubmitSmMultipartExt for SubmitSm {
@@ -47,34 +49,44 @@ impl SubmitSmMultipartExt for SubmitSm {
         SubmitSmSarMultipartBuilder::new(short_message, self, Gsm7BitUnpacked::new())
     }
 
-    fn multipart_segment(&self) -> Option<Result<MultipartSegment, MultipartSegmentError>> {
+    fn multipart_segment(
+        &self,
+    ) -> Option<Result<(MultipartSegment, &[u8]), MultipartSegmentError>> {
         if self.is_udh_indicator_set() {
-            match Udh::decode(self.short_message()) {
-                Ok((udh, size)) => match udh.value() {
-                    Some(UdhValue::ConcatenatedShortMessage8Bit(concatenation)) => {
-                        return Some(Ok(MultipartSegment {
-                            r#type: MultipartType::Udh { size },
-                            reference: concatenation.reference() as u16,
-                            part_number: concatenation.part_number(),
-                            total_parts: concatenation.total_parts(),
-                        }));
-                    }
-                    Some(UdhValue::ConcatenatedShortMessage16Bit(concatenation)) => {
-                        return Some(Ok(MultipartSegment {
-                            r#type: MultipartType::Udh { size },
-                            reference: concatenation.reference(),
-                            part_number: concatenation.part_number(),
-                            total_parts: concatenation.total_parts(),
-                        }));
-                    }
-                    _ => {
-                        return None;
-                    }
-                },
-                Err(err) => {
-                    // if the decode error is a concatenated short message error, map it, otherwise return a udh decode error.
-                    todo!()
+            let (udh, size) = match Udh::decode(self.short_message()) {
+                Ok(value) => value,
+                Err(err) => return Some(Err(MultipartSegmentError::from(err))),
+            };
+
+            match udh.value() {
+                Some(UdhValue::ConcatenatedShortMessage8Bit(concatenation)) => {
+                    return Some(Ok((
+                        // XXX: unchecked because `ConcatenatedShortMessage8Bit` already checks the invariants while decoding.
+                        // See: `impl crate::decode::borrowed::Decode` for `ConcatenatedShortMessage8Bit`.
+                        MultipartSegment::new_unchecked(
+                            MultipartType::Udh { size },
+                            concatenation.reference() as u16,
+                            concatenation.total_parts(),
+                            concatenation.part_number(),
+                        ),
+                        &self.short_message()[size..],
+                    )));
                 }
+                Some(UdhValue::ConcatenatedShortMessage16Bit(concatenation)) => {
+                    return Some(Ok((
+                        // XXX: unchecked because `ConcatenatedShortMessage16Bit` already checks the invariants while decoding.
+                        // See: `impl crate::decode::borrowed::Decode` for `ConcatenatedShortMessage16Bit`.
+                        MultipartSegment::new_unchecked(
+                            MultipartType::Udh { size },
+                            concatenation.reference(),
+                            concatenation.total_parts(),
+                            concatenation.part_number(),
+                        ),
+                        &self.short_message()[size..],
+                    )));
+                }
+                // The UDH is not a concatenated short message.
+                _ => return None,
             }
         };
 
@@ -84,13 +96,17 @@ impl SubmitSmMultipartExt for SubmitSm {
             self.sar_total_segments(),
         ) {
             (Some(reference), Some(part_number), Some(total_parts)) => {
-                // Validate the parts like concatenated short message does.
-                Some(Ok(MultipartSegment {
-                    r#type: MultipartType::Sar,
+                let segment = match MultipartSegment::new(
+                    MultipartType::Sar,
                     reference,
-                    part_number,
                     total_parts,
-                }))
+                    part_number,
+                ) {
+                    Ok(value) => value,
+                    Err(err) => return Some(Err(err)),
+                };
+
+                Some(Ok((segment, &self.short_message()[..])))
             }
             _ => None,
         }

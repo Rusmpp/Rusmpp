@@ -7,7 +7,7 @@ pub trait Decoder {
     fn feed(&mut self, input: &[u8], header_size: usize) -> Result<(), Self::Error>;
 
     /// Peeks at the current state of the decoder without consuming it.
-    fn peek(&self) -> Result<&str, Self::Error>;
+    fn peek(&self) -> &str;
 
     /// Finishes the decoding process and returns the final decoded string.
     fn finish(self) -> Result<alloc::string::String, Self::Error>;
