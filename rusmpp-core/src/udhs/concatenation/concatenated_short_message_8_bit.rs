@@ -1,7 +1,6 @@
-#[cfg(feature = "alloc")]
-use crate::decode::ConcatenatedShortMessageDecodeError;
 use crate::{
     Sealed,
+    decode::ConcatenatedShortMessageDecodeError,
     encode::Length,
     udhs::{concatenation::ConcatenatedShortMessage16Bit, errors::ConcatenatedShortMessageError},
 };
