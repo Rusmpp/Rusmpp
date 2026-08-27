@@ -1,4 +1,4 @@
-//! Gsm 7-bit encoding/decoding support.
+//! GSM 7-bit encoding/decoding support.
 
 mod alphabet;
 mod decode;

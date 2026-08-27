@@ -77,22 +77,22 @@ impl<'a, E> SubmitSmMultipartBuilder<'a, E> {
         }
     }
 
-    /// Sets the [`Gsm7BitUnpacked`] encoder.
+    /// Sets the [`Gsm7BitUnpackedEncoder`] encoder.
     pub fn gsm7bit_unpacked(self) -> SubmitSmMultipartBuilder<'a, Gsm7BitUnpackedEncoder> {
         self.encoder(Gsm7BitUnpackedEncoder::new())
     }
 
-    /// Sets the [`Gsm7BitPacked`] encoder.
+    /// Sets the [`Gsm7BitPackedEncoder`] encoder.
     pub fn gsm7bit_packed(self) -> SubmitSmMultipartBuilder<'a, Gsm7BitPackedEncoder> {
         self.encoder(Gsm7BitPackedEncoder::new())
     }
 
-    /// Sets the [`Ucs2`] encoder.
+    /// Sets the [`Ucs2Encoder`] encoder.
     pub fn ucs2(self) -> SubmitSmMultipartBuilder<'a, Ucs2Encoder> {
         self.encoder(Ucs2Encoder::new())
     }
 
-    /// Sets the [`Latin1`] encoder.
+    /// Sets the [`Latin1Encoder`] encoder.
     pub fn latin1(self) -> SubmitSmMultipartBuilder<'a, Latin1Encoder> {
         self.encoder(Latin1Encoder::new())
     }

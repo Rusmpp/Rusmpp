@@ -13,7 +13,7 @@ use super::{SubmitSmMultipartBuilder, SubmitSmSarMultipartBuilder};
 
 /// Extension trait for [`SubmitSm`] to create multipart messages.
 pub trait SubmitSmMultipartExt {
-    /// Creates a new [`SubmitSmMultipartBuilder`] with the default [`Gsm7BitUnpacked`] encoder.
+    /// Creates a new [`SubmitSmMultipartBuilder`] with the default [`Gsm7BitUnpackedEncoder`] encoder.
     ///
     /// # Notes
     ///
@@ -25,7 +25,7 @@ pub trait SubmitSmMultipartExt {
         short_message: &'a str,
     ) -> SubmitSmMultipartBuilder<'a, Gsm7BitUnpackedEncoder>;
 
-    /// Creates a new [`SubmitSmSarMultipartBuilder`] with the default [`Gsm7BitUnpacked`] encoder.
+    /// Creates a new [`SubmitSmSarMultipartBuilder`] with the default [`Gsm7BitUnpackedEncoder`] encoder.
     fn sar_multipart<'a>(
         self,
         short_message: &'a str,

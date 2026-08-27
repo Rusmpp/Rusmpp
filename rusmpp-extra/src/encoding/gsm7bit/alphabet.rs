@@ -5,7 +5,7 @@ pub use default::Gsm7BitDefaultAlphabet;
 
 pub use spanish::Gsm7BitSpanishAlphabet;
 
-/// Gsm 7-bit escape character.
+/// GSM 7-bit escape character.
 pub const ESCAPE_CHARACTER: u8 = 0x1B;
 
 /// GSM 7-bit alphabet.

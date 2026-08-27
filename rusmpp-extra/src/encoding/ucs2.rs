@@ -18,7 +18,7 @@ impl Default for Ucs2Encoder {
 }
 
 impl Ucs2Encoder {
-    /// Creates a new [`Ucs2`] encoder.
+    /// Creates a new [`Ucs2Encoder`] encoder.
     ///
     /// # Defaults
     ///

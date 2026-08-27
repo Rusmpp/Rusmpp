@@ -20,7 +20,7 @@ impl Default for AsciiEncoder {
 }
 
 impl AsciiEncoder {
-    /// Creates a new [`Ascii`] with [`DataCoding::McSpecific`].
+    /// Creates a new [`AsciiEncoder`] with [`DataCoding::McSpecific`].
     ///
     /// # Defaults
     ///
@@ -31,12 +31,12 @@ impl AsciiEncoder {
         }
     }
 
-    /// Returns the associated [`DataCoding`] of the [`Ascii`] encoder.
+    /// Returns the associated [`DataCoding`] of the [`AsciiEncoder`] encoder.
     pub const fn data_coding(&self) -> DataCoding {
         self.data_coding
     }
 
-    /// Sets the associated [`DataCoding`] of the [`Ascii`] encoder.
+    /// Sets the associated [`DataCoding`] of the [`AsciiEncoder`] encoder.
     pub const fn with_data_coding(mut self, data_coding: DataCoding) -> Self {
         self.data_coding = data_coding;
         self

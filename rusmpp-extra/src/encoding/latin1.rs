@@ -17,7 +17,7 @@ impl Default for Latin1Encoder {
 }
 
 impl Latin1Encoder {
-    /// Creates a new [`Latin1`] encoder.
+    /// Creates a new [`Latin1Encoder`] encoder.
     pub const fn new() -> Self {
         Self {}
     }

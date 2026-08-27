@@ -43,17 +43,17 @@ impl<'a, E> EncodedSubmitSmBuilder<'a, E> {
         }
     }
 
-    /// Sets the [`Gsm7BitUnpacked`] encoder.
+    /// Sets the [`Gsm7BitUnpackedEncoder`] encoder.
     pub fn gsm7bit_unpacked(self) -> EncodedSubmitSmBuilder<'a, Gsm7BitUnpackedEncoder> {
         self.encoder(Gsm7BitUnpackedEncoder::new())
     }
 
-    /// Sets the [`Ucs2`] encoder.
+    /// Sets the [`Ucs2Encoder`] encoder.
     pub fn ucs2(self) -> EncodedSubmitSmBuilder<'a, Ucs2Encoder> {
         self.encoder(Ucs2Encoder::new())
     }
 
-    /// Sets the [`Latin1`] encoder.
+    /// Sets the [`Latin1Encoder`] encoder.
     pub fn latin1(self) -> EncodedSubmitSmBuilder<'a, Latin1Encoder> {
         self.encoder(Latin1Encoder::new())
     }
@@ -92,7 +92,7 @@ where
 
 /// Extension trait for [`SubmitSm`] to create encoded messages.
 pub trait EncodedSubmitSmExt {
-    /// Creates a new [`EncodedSubmitSmBuilder`] with the default [`Gsm7BitUnpacked`] encoder.
+    /// Creates a new [`EncodedSubmitSmBuilder`] with the default [`Gsm7BitUnpackedEncoder`] encoder.
     ///
     /// # Notes
     ///

@@ -29,7 +29,7 @@ impl Default for Gsm7BitPackedEncoder {
 }
 
 impl Gsm7BitPackedEncoder {
-    /// Creates a new [`Gsm7BitPacked`] with [`Gsm7BitAlphabet::Default`].
+    /// Creates a new [`Gsm7BitPackedEncoder`] with [`Gsm7BitAlphabet::Default`].
     ///
     /// # Defaults
     ///
