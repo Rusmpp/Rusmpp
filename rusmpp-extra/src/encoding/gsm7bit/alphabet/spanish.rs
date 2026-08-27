@@ -35,6 +35,19 @@ impl Gsm7BitSpanishAlphabet {
         }
     }
 
+    /// Decodes the given spanish GSM 7-bit encoded byte into a character.
+    ///
+    /// # Returns
+    ///
+    /// - `Some(char)` if the byte is found in the GSM 7-bit tables.
+    /// - `None` if the byte is not found.
+    pub const fn decode(&self, encoded: Encoded) -> Option<char> {
+        match encoded {
+            Encoded::Standard(byte) => Standard::decode(byte),
+            Encoded::Extended(byte) => Extended::decode(byte),
+        }
+    }
+
     /// Returns the standard `spanish` GSM 7-bit character set.
     pub const fn standard() -> &'static [(char, u8)] {
         super::default::Gsm7BitDefaultAlphabet::standard()
@@ -54,6 +67,10 @@ impl Standard {
     const fn encode(ch: char) -> Option<u8> {
         super::default::Standard::encode(ch)
     }
+
+    const fn decode(byte: u8) -> Option<char> {
+        super::default::Standard::decode(byte)
+    }
 }
 
 impl Extended {
@@ -65,6 +82,22 @@ impl Extended {
 
             if c == ch {
                 return Some(byte);
+            }
+
+            i += 1;
+        }
+
+        None
+    }
+
+    const fn decode(byte: u8) -> Option<char> {
+        let mut i = 0;
+
+        while i < EXTENDED.len() {
+            let (c, b) = EXTENDED[i];
+
+            if b == byte {
+                return Some(c);
             }
 
             i += 1;
