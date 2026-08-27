@@ -6,18 +6,18 @@ use rusmpp_core::values::DataCoding;
 
 /// UCS2 codec.
 #[derive(Debug)]
-pub struct Ucs2 {
+pub struct Ucs2Encoder {
     /// Whether to allow splitting characters across message parts.
     allow_split_character: bool,
 }
 
-impl Default for Ucs2 {
+impl Default for Ucs2Encoder {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Ucs2 {
+impl Ucs2Encoder {
     /// Creates a new [`Ucs2`] codec.
     ///
     /// # Defaults
@@ -61,7 +61,7 @@ mod impl_owned {
 
     use super::*;
 
-    impl Ucs2 {
+    impl Ucs2Encoder {
         /// Encodes the given message into a vector of bytes.
         pub fn encode_to_vec(&self, input: &str) -> Result<Vec<u8>, Ucs2EncodeError> {
             // Maximum possible UCS-2 units = number of chars
@@ -89,7 +89,7 @@ mod impl_owned {
         }
     }
 
-    impl Encoder for Ucs2 {
+    impl Encoder for Ucs2Encoder {
         type Error = Ucs2EncodeError;
 
         fn encode(&self, message: &str) -> Result<(Vec<u8>, DataCoding), Self::Error> {
@@ -98,7 +98,7 @@ mod impl_owned {
         }
     }
 
-    impl Concatenator for Ucs2 {
+    impl Concatenator for Ucs2Encoder {
         type Error = Ucs2ConcatenateError;
 
         fn concatenate(

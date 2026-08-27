@@ -1,10 +1,10 @@
 use rusmpp::extra::encoding::{
     gsm7bit::{
         Gsm7BitAlphabet as RGsm7BitAlphabet, Gsm7BitDefaultAlphabet as RGsm7BitDefaultAlphabet,
-        Gsm7BitUnpacked as RGsm7BitUnpacked,
+        Gsm7BitUnpackedEncoder as RGsm7BitUnpacked,
     },
-    latin1::Latin1 as RLatin1,
-    ucs2::Ucs2 as RUcs2,
+    latin1::Latin1Encoder as RLatin1,
+    ucs2::Ucs2Encoder as RUcs2,
 };
 
 #[::pyo3_stub_gen_derive::gen_stub_pyclass_complex_enum]

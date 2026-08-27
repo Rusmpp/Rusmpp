@@ -13,7 +13,7 @@ use std::{str::FromStr, time::Duration};
 use futures::StreamExt;
 use rusmpp::{
     Pdu,
-    extra::{concatenation::SubmitSmMultipartExt, encoding::ucs2::Ucs2},
+    extra::{concatenation::SubmitSmMultipartExt, encoding::ucs2::Ucs2Encoder},
     pdus::{BindTransceiver, DeliverSmResp, SubmitSm},
     types::{COctetString, OctetString},
     values::{DataCoding, EsmClass, Npi, Ton},
@@ -100,7 +100,7 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
         // Use gsm7bit unpacked encoding.
         .gsm7bit_unpacked()
         // Fallback to ucs2 encoding if the message can not be encoded in gsm7bit.
-        .fallback(Ucs2::new())
+        .fallback(Ucs2Encoder::new())
         .build()?;
 
     let total = multipart.len();

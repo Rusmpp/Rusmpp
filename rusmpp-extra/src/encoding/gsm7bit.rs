@@ -9,8 +9,8 @@ pub use alphabet::{
     ESCAPE_CHARACTER, Encoded, Gsm7BitAlphabet, Gsm7BitDefaultAlphabet, Gsm7BitSpanishAlphabet,
 };
 pub use errors::{Gsm7BitConcatenateError, Gsm7BitEncodeError};
-pub use packed::Gsm7BitPacked;
-pub use unpacked::Gsm7BitUnpacked;
+pub use packed::Gsm7BitPackedEncoder;
+pub use unpacked::Gsm7BitUnpackedEncoder;
 
 #[cfg(test)]
 mod tests;

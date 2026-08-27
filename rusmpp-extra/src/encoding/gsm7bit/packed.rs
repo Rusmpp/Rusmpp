@@ -5,7 +5,7 @@ use crate::encoding::gsm7bit::alphabet::Gsm7BitAlphabet;
 /// GSM 7-bit packed codec.
 #[non_exhaustive]
 #[derive(Debug)]
-pub struct Gsm7BitPacked {
+pub struct Gsm7BitPackedEncoder {
     /// The GSM 7-bit alphabet to use for encoding.
     alphabet: Gsm7BitAlphabet,
     /// Whether to allow splitting extended characters across message parts.
@@ -22,13 +22,13 @@ pub struct Gsm7BitPacked {
     cr_padding: bool,
 }
 
-impl Default for Gsm7BitPacked {
+impl Default for Gsm7BitPackedEncoder {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Gsm7BitPacked {
+impl Gsm7BitPackedEncoder {
     /// Creates a new [`Gsm7BitPacked`] with [`Gsm7BitAlphabet::Default`].
     ///
     /// # Defaults
@@ -107,7 +107,7 @@ mod impl_owned {
     /// The 7-bit code for the Carriage Return (CR) character.
     const CR_FILL_SEPTET: u8 = 0x0D;
 
-    impl Gsm7BitPacked {
+    impl Gsm7BitPackedEncoder {
         /// Encodes the given message into a vector of bytes and packs the septets into octets.
         pub fn encode_to_vec(&self, input: &str) -> Result<Vec<u8>, Gsm7BitEncodeError> {
             let encoded = self.encode_unpacked_to_vec(input)?;
@@ -257,7 +257,7 @@ mod impl_owned {
         }
     }
 
-    impl Encoder for Gsm7BitPacked {
+    impl Encoder for Gsm7BitPackedEncoder {
         type Error = Gsm7BitEncodeError;
 
         fn encode(&self, message: &str) -> Result<(Vec<u8>, DataCoding), Self::Error> {
@@ -266,7 +266,7 @@ mod impl_owned {
         }
     }
 
-    impl Concatenator for Gsm7BitPacked {
+    impl Concatenator for Gsm7BitPackedEncoder {
         type Error = Gsm7BitConcatenateError;
 
         fn concatenate(

@@ -6,7 +6,7 @@ use crate::{
     encoding::{
         gsm7bit::{
             errors::{Gsm7BitConcatenateError, Gsm7BitEncodeError},
-            unpacked::Gsm7BitUnpacked,
+            unpacked::Gsm7BitUnpackedEncoder,
         },
         owned::Encoder,
     },
@@ -27,7 +27,7 @@ mod encode {
 ^{}\[~]|€"##;
         // c-spell: enable
 
-        let (encoded, _) = Gsm7BitUnpacked::new()
+        let (encoded, _) = Gsm7BitUnpackedEncoder::new()
             .encode(input)
             .expect("Encoding failed");
 
@@ -65,7 +65,7 @@ mod encode {
         let input = r#"ç^{}\[~]|ÁÍÓÚá€íóú"#;
         // c-spell: enable
 
-        let (encoded, _) = Gsm7BitUnpacked::new()
+        let (encoded, _) = Gsm7BitUnpackedEncoder::new()
             .with_alphabet(Gsm7BitAlphabet::spanish())
             .encode(input)
             .expect("Encoding failed");
@@ -141,7 +141,7 @@ mod encode {
         ];
         // c-spell: enable
 
-        let encoder = Gsm7BitUnpacked::new();
+        let encoder = Gsm7BitUnpackedEncoder::new();
 
         for (text, expected) in cases {
             let (encoded, _) = encoder.encode(text).expect("Encoding failed");
@@ -157,7 +157,7 @@ mod encode {
         fn unencodable_character() {
             let message = "Hi ✓";
 
-            let encoder = Gsm7BitUnpacked::new();
+            let encoder = Gsm7BitUnpackedEncoder::new();
 
             let err = encoder.encode(message).unwrap_err();
 
@@ -180,7 +180,7 @@ mod concatenate {
             let max_message_size = 6;
             let part_header_size = 6;
 
-            let encoder = Gsm7BitUnpacked::new();
+            let encoder = Gsm7BitUnpackedEncoder::new();
 
             let err = encoder
                 .concatenate(message, max_message_size, part_header_size)
@@ -195,7 +195,7 @@ mod concatenate {
             let max_message_size = 0;
             let part_header_size = 6;
 
-            let encoder = Gsm7BitUnpacked::new();
+            let encoder = Gsm7BitUnpackedEncoder::new();
 
             let err = encoder
                 .concatenate(message, max_message_size, part_header_size)
@@ -210,7 +210,7 @@ mod concatenate {
             let part_header_size = 0;
             let message = "123456".repeat(MAX_PARTS + 1);
 
-            let encoder = Gsm7BitUnpacked::new();
+            let encoder = Gsm7BitUnpackedEncoder::new();
 
             let err = encoder
                 .concatenate(&message, max_message_size, part_header_size)
@@ -233,7 +233,7 @@ mod concatenate {
                 let max_message_size = 9;
                 let part_header_size = 8;
 
-                let encoder = Gsm7BitUnpacked::new();
+                let encoder = Gsm7BitUnpackedEncoder::new();
 
                 let err = encoder
                     .concatenate(message, max_message_size, part_header_size)
@@ -254,7 +254,7 @@ mod concatenate {
                 let max_message_size = 9;
                 let part_header_size = 8;
 
-                let encoder = Gsm7BitUnpacked::new().with_allow_split_extended_character(true);
+                let encoder = Gsm7BitUnpackedEncoder::new().with_allow_split_extended_character(true);
 
                 let (concatenation, _) = encoder
                     .concatenate(message, max_message_size, part_header_size)
@@ -359,7 +359,7 @@ mod concatenate {
         ];
 
         for case in cases {
-            let encoder = Gsm7BitUnpacked::new()
+            let encoder = Gsm7BitUnpackedEncoder::new()
                 .with_allow_split_extended_character(case.allow_split_extended_character);
 
             let result =

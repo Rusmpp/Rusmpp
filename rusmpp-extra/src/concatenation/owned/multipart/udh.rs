@@ -11,9 +11,9 @@ use crate::{
         owned::{Concatenation, Concatenator},
     },
     encoding::{
-        gsm7bit::{Gsm7BitPacked, Gsm7BitUnpacked},
-        latin1::Latin1,
-        ucs2::Ucs2,
+        gsm7bit::{Gsm7BitPackedEncoder, Gsm7BitUnpackedEncoder},
+        latin1::Latin1Encoder,
+        ucs2::Ucs2Encoder,
     },
     fallback::Fallback,
 };
@@ -78,23 +78,23 @@ impl<'a, E> SubmitSmMultipartBuilder<'a, E> {
     }
 
     /// Sets the [`Gsm7BitUnpacked`] encoder.
-    pub fn gsm7bit_unpacked(self) -> SubmitSmMultipartBuilder<'a, Gsm7BitUnpacked> {
-        self.encoder(Gsm7BitUnpacked::new())
+    pub fn gsm7bit_unpacked(self) -> SubmitSmMultipartBuilder<'a, Gsm7BitUnpackedEncoder> {
+        self.encoder(Gsm7BitUnpackedEncoder::new())
     }
 
     /// Sets the [`Gsm7BitPacked`] encoder.
-    pub fn gsm7bit_packed(self) -> SubmitSmMultipartBuilder<'a, Gsm7BitPacked> {
-        self.encoder(Gsm7BitPacked::new())
+    pub fn gsm7bit_packed(self) -> SubmitSmMultipartBuilder<'a, Gsm7BitPackedEncoder> {
+        self.encoder(Gsm7BitPackedEncoder::new())
     }
 
     /// Sets the [`Ucs2`] encoder.
-    pub fn ucs2(self) -> SubmitSmMultipartBuilder<'a, Ucs2> {
-        self.encoder(Ucs2::new())
+    pub fn ucs2(self) -> SubmitSmMultipartBuilder<'a, Ucs2Encoder> {
+        self.encoder(Ucs2Encoder::new())
     }
 
     /// Sets the [`Latin1`] encoder.
-    pub fn latin1(self) -> SubmitSmMultipartBuilder<'a, Latin1> {
-        self.encoder(Latin1::new())
+    pub fn latin1(self) -> SubmitSmMultipartBuilder<'a, Latin1Encoder> {
+        self.encoder(Latin1Encoder::new())
     }
 
     /// Sets a fallback encoder.

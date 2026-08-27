@@ -3,7 +3,7 @@ use crate::{
     encoding::{
         gsm7bit::{
             errors::{Gsm7BitConcatenateError, Gsm7BitEncodeError},
-            packed::Gsm7BitPacked,
+            packed::Gsm7BitPackedEncoder,
         },
         owned::Encoder,
     },
@@ -59,7 +59,7 @@ mod encode {
         ];
         // c-spell: enable
 
-        let encoder = Gsm7BitPacked::new();
+        let encoder = Gsm7BitPackedEncoder::new();
 
         for (text, expected) in cases {
             let (encoded, _) = encoder.encode(text).expect("Encoding failed");
@@ -75,7 +75,7 @@ mod encode {
         fn unencodable_character() {
             let message = "Hi ✓";
 
-            let encoder = Gsm7BitPacked::new();
+            let encoder = Gsm7BitPackedEncoder::new();
 
             let err = encoder.encode(message).unwrap_err();
 
@@ -104,7 +104,7 @@ mod concatenate {
             let max_message_size = 6;
             let part_header_size = 6;
 
-            let encoder = Gsm7BitPacked::new();
+            let encoder = Gsm7BitPackedEncoder::new();
 
             let err = encoder
                 .concatenate(message, max_message_size, part_header_size)
@@ -119,7 +119,7 @@ mod concatenate {
             let max_message_size = 0;
             let part_header_size = 6;
 
-            let encoder = Gsm7BitPacked::new();
+            let encoder = Gsm7BitPackedEncoder::new();
 
             let err = encoder
                 .concatenate(message, max_message_size, part_header_size)
@@ -134,7 +134,7 @@ mod concatenate {
             let part_header_size = 6;
             let message = "123456".repeat(MAX_PARTS + 1);
 
-            let encoder = Gsm7BitPacked::new();
+            let encoder = Gsm7BitPackedEncoder::new();
 
             let err = encoder
                 .concatenate(&message, max_message_size, part_header_size)
@@ -154,8 +154,8 @@ mod concatenate {
                 let septets: Vec<u8> = vec![0x41, 0x7F, 0x00, 0x2A, 0x63, 0x7F, 0x01, 0x55, 0x2C];
                 let padding = 0;
 
-                let packed = Gsm7BitPacked::pack(&septets, padding);
-                let unpacked = Gsm7BitPacked::unpack(&packed, padding, septets.len());
+                let packed = Gsm7BitPackedEncoder::pack(&septets, padding);
+                let unpacked = Gsm7BitPackedEncoder::unpack(&packed, padding, septets.len());
 
                 assert_eq!(unpacked, septets);
             }
@@ -165,8 +165,8 @@ mod concatenate {
                 for padding in 1..7 {
                     let septets: Vec<u8> = vec![0x41, 0x7F, 0x00, 0x2A, 0x63, 0x7F, 0x01];
 
-                    let packed = Gsm7BitPacked::pack(&septets, padding);
-                    let unpacked = Gsm7BitPacked::unpack(&packed, padding, septets.len());
+                    let packed = Gsm7BitPackedEncoder::pack(&septets, padding);
+                    let unpacked = Gsm7BitPackedEncoder::unpack(&packed, padding, septets.len());
 
                     assert_eq!(unpacked, septets, "roundtrip failed for padding={padding}");
                 }
@@ -186,7 +186,7 @@ mod concatenate {
                 let max_message_size = 7;
                 let part_header_size = 6;
 
-                let encoder = Gsm7BitPacked::new();
+                let encoder = Gsm7BitPackedEncoder::new();
 
                 let err = encoder
                     .concatenate(message, max_message_size, part_header_size)
@@ -295,7 +295,7 @@ mod concatenate {
         ];
 
         for case in cases {
-            let encoder = Gsm7BitPacked::new()
+            let encoder = Gsm7BitPackedEncoder::new()
                 .with_cr_padding(true)
                 .with_allow_split_extended_character(case.allow_split_extended_character);
 
@@ -474,7 +474,7 @@ mod concatenate {
         ];
 
         for case in cases {
-            let encoder = Gsm7BitPacked::new()
+            let encoder = Gsm7BitPackedEncoder::new()
                 .with_cr_padding(case.cr_padding)
                 .with_allow_split_extended_character(case.allow_split_extended_character);
 
@@ -488,7 +488,7 @@ mod concatenate {
                         part.iter().map(|byte| format!("{:02X}", byte)).collect();
 
                     // The padding here is `0` because we have no header in the single part
-                    let unpacked = Gsm7BitPacked::unpack(&part, 0, case.message.len());
+                    let unpacked = Gsm7BitPackedEncoder::unpack(&part, 0, case.message.len());
 
                     let unpacked_hex_vector = unpacked
                         .iter()
@@ -513,8 +513,11 @@ mod concatenate {
                             part.iter().map(|byte| format!("{:02X}", byte)).collect();
 
                         // The padding is `part_header_size`, which comes from the UDH header that is prepended to each part in a concatenated message
-                        let unpacked =
-                            Gsm7BitPacked::unpack(part, case.part_header_size, case.message.len());
+                        let unpacked = Gsm7BitPackedEncoder::unpack(
+                            part,
+                            case.part_header_size,
+                            case.message.len(),
+                        );
 
                         let unpacked_hex_vector = unpacked
                             .iter()

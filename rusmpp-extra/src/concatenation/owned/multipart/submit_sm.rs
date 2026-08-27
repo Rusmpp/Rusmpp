@@ -6,7 +6,7 @@ use rusmpp_core::{
 
 use crate::{
     concatenation::multipart::{MultipartSegment, MultipartSegmentError, MultipartType},
-    encoding::gsm7bit::Gsm7BitUnpacked,
+    encoding::gsm7bit::Gsm7BitUnpackedEncoder,
 };
 
 use super::{SubmitSmMultipartBuilder, SubmitSmSarMultipartBuilder};
@@ -20,14 +20,16 @@ pub trait SubmitSmMultipartExt {
     /// - [`SubmitSm::esm_class`] will be updated with UDH indicator by the multipart builder.
     /// - [`SubmitSm::data_coding`] will be overridden by the multipart builder to match the encoder.
     /// - [`SubmitSm::short_message`] will be overridden by `short_message` of the multipart builder.
-    fn multipart<'a>(self, short_message: &'a str)
-    -> SubmitSmMultipartBuilder<'a, Gsm7BitUnpacked>;
+    fn multipart<'a>(
+        self,
+        short_message: &'a str,
+    ) -> SubmitSmMultipartBuilder<'a, Gsm7BitUnpackedEncoder>;
 
     /// Creates a new [`SubmitSmSarMultipartBuilder`] with the default [`Gsm7BitUnpacked`] encoder.
     fn sar_multipart<'a>(
         self,
         short_message: &'a str,
-    ) -> SubmitSmSarMultipartBuilder<'a, Gsm7BitUnpacked>;
+    ) -> SubmitSmSarMultipartBuilder<'a, Gsm7BitUnpackedEncoder>;
 
     /// Checks wether the [`SubmitSm`] is a multipart message and returns the [`MultipartSegment`] and the remaining short message.
     fn multipart_segment(&self)
@@ -38,15 +40,15 @@ impl SubmitSmMultipartExt for SubmitSm {
     fn multipart<'a>(
         self,
         short_message: &'a str,
-    ) -> SubmitSmMultipartBuilder<'a, Gsm7BitUnpacked> {
-        SubmitSmMultipartBuilder::new(short_message, self, Gsm7BitUnpacked::new())
+    ) -> SubmitSmMultipartBuilder<'a, Gsm7BitUnpackedEncoder> {
+        SubmitSmMultipartBuilder::new(short_message, self, Gsm7BitUnpackedEncoder::new())
     }
 
     fn sar_multipart<'a>(
         self,
         short_message: &'a str,
-    ) -> SubmitSmSarMultipartBuilder<'a, Gsm7BitUnpacked> {
-        SubmitSmSarMultipartBuilder::new(short_message, self, Gsm7BitUnpacked::new())
+    ) -> SubmitSmSarMultipartBuilder<'a, Gsm7BitUnpackedEncoder> {
+        SubmitSmSarMultipartBuilder::new(short_message, self, Gsm7BitUnpackedEncoder::new())
     }
 
     fn multipart_segment(

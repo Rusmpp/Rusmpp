@@ -5,7 +5,7 @@ use crate::{
     },
     encoding::{
         owned::Encoder,
-        ucs2::{Ucs2, Ucs2ConcatenateError, Ucs2EncodeError},
+        ucs2::{Ucs2ConcatenateError, Ucs2EncodeError, Ucs2Encoder},
     },
 };
 
@@ -19,7 +19,7 @@ mod encode {
         fn unencodable_character() {
             let message = "Hi 😀";
 
-            let encoder = Ucs2::new();
+            let encoder = Ucs2Encoder::new();
 
             let err = encoder.encode(message).unwrap_err();
 
@@ -41,7 +41,7 @@ mod concatenate {
             let max_message_size = 6;
             let part_header_size = 6;
 
-            let encoder = Ucs2::new();
+            let encoder = Ucs2Encoder::new();
 
             let err = encoder
                 .concatenate(message, max_message_size, part_header_size)
@@ -56,7 +56,7 @@ mod concatenate {
             let max_message_size = 0;
             let part_header_size = 6;
 
-            let encoder = Ucs2::new();
+            let encoder = Ucs2Encoder::new();
 
             let err = encoder
                 .concatenate(message, max_message_size, part_header_size)
@@ -71,7 +71,7 @@ mod concatenate {
             let part_header_size = 0;
             let message = "123".repeat(MAX_PARTS + 1);
 
-            let encoder = Ucs2::new();
+            let encoder = Ucs2Encoder::new();
 
             let err = encoder
                 .concatenate(&message, max_message_size, part_header_size)
@@ -93,7 +93,7 @@ mod concatenate {
                 let max_message_size = 9;
                 let part_header_size = 8;
 
-                let encoder = Ucs2::new();
+                let encoder = Ucs2Encoder::new();
 
                 let err = encoder
                     .concatenate(message, max_message_size, part_header_size)
@@ -113,7 +113,7 @@ mod concatenate {
                 let max_message_size = 9;
                 let part_header_size = 8;
 
-                let encoder = Ucs2::new().with_allow_split_character(true);
+                let encoder = Ucs2Encoder::new().with_allow_split_character(true);
 
                 let (concatenation, _) = encoder
                     .concatenate(message, max_message_size, part_header_size)
@@ -230,7 +230,7 @@ mod concatenate {
         ];
 
         for case in cases {
-            let encoder = Ucs2::new().with_allow_split_character(case.allow_split_character);
+            let encoder = Ucs2Encoder::new().with_allow_split_character(case.allow_split_character);
 
             let result =
                 encoder.concatenate(case.message, case.max_message_size, case.part_header_size);

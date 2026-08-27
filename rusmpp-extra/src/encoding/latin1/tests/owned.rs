@@ -1,7 +1,7 @@
 use crate::{
     concatenation::{MAX_PARTS, owned::Concatenator},
     encoding::{
-        latin1::{Latin1, Latin1ConcatenateError, Latin1EncodeError},
+        latin1::{Latin1ConcatenateError, Latin1EncodeError, Latin1Encoder},
         owned::Encoder,
     },
 };
@@ -16,7 +16,7 @@ mod encode {
         fn unencodable_character() {
             let message = "Hi 😀";
 
-            let encoder = Latin1::new();
+            let encoder = Latin1Encoder::new();
 
             let err = encoder.encode(message).unwrap_err();
 
@@ -38,7 +38,7 @@ mod concatenate {
             let max_message_size = 6;
             let part_header_size = 6;
 
-            let encoder = Latin1::new();
+            let encoder = Latin1Encoder::new();
 
             let err = encoder
                 .concatenate(message, max_message_size, part_header_size)
@@ -53,7 +53,7 @@ mod concatenate {
             let max_message_size = 0;
             let part_header_size = 6;
 
-            let encoder = Latin1::new();
+            let encoder = Latin1Encoder::new();
 
             let err = encoder
                 .concatenate(message, max_message_size, part_header_size)
@@ -68,7 +68,7 @@ mod concatenate {
             let part_header_size = 0;
             let message = "123456".repeat(MAX_PARTS + 1);
 
-            let encoder = Latin1::new();
+            let encoder = Latin1Encoder::new();
 
             let err = encoder
                 .concatenate(&message, max_message_size, part_header_size)
@@ -123,7 +123,7 @@ mod concatenate {
         ];
 
         for case in cases {
-            let encoder = Latin1::new();
+            let encoder = Latin1Encoder::new();
 
             let result =
                 encoder.concatenate(case.message, case.max_message_size, case.part_header_size);

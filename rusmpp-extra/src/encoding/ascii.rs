@@ -8,18 +8,18 @@ pub use errors::{AsciiConcatenateError, AsciiEncodeError};
 /// ASCII codec.
 #[derive(Debug)]
 #[non_exhaustive]
-pub struct Ascii {
+pub struct AsciiEncoder {
     /// The associated [`DataCoding`] for ASCII encoding.
     data_coding: DataCoding,
 }
 
-impl Default for Ascii {
+impl Default for AsciiEncoder {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Ascii {
+impl AsciiEncoder {
     /// Creates a new [`Ascii`] with [`DataCoding::McSpecific`].
     ///
     /// # Defaults
@@ -58,7 +58,7 @@ mod impl_owned {
 
     use super::*;
 
-    impl Ascii {
+    impl AsciiEncoder {
         /// Encodes the given message into a vector of bytes.
         pub fn encode_to_vec(&self, input: &str) -> Result<Vec<u8>, AsciiEncodeError> {
             input
@@ -70,7 +70,7 @@ mod impl_owned {
         }
     }
 
-    impl Encoder for Ascii {
+    impl Encoder for AsciiEncoder {
         type Error = AsciiEncodeError;
 
         fn encode(&self, message: &str) -> Result<(Vec<u8>, DataCoding), Self::Error> {
@@ -79,7 +79,7 @@ mod impl_owned {
         }
     }
 
-    impl Concatenator for Ascii {
+    impl Concatenator for AsciiEncoder {
         type Error = AsciiConcatenateError;
 
         fn concatenate(

@@ -8,15 +8,15 @@ pub use errors::{Latin1ConcatenateError, Latin1EncodeError};
 /// Latin1 codec.
 #[derive(Debug)]
 #[non_exhaustive]
-pub struct Latin1 {}
+pub struct Latin1Encoder {}
 
-impl Default for Latin1 {
+impl Default for Latin1Encoder {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Latin1 {
+impl Latin1Encoder {
     /// Creates a new [`Latin1`] codec.
     pub const fn new() -> Self {
         Self {}
@@ -43,7 +43,7 @@ mod impl_owned {
 
     use super::*;
 
-    impl Latin1 {
+    impl Latin1Encoder {
         /// Encodes the given message into a vector of bytes.
         pub fn encode_to_vec(&self, input: &str) -> Result<Vec<u8>, Latin1EncodeError> {
             encoding_rs::mem::is_utf8_latin1(input.as_bytes())
@@ -66,7 +66,7 @@ mod impl_owned {
         }
     }
 
-    impl Encoder for Latin1 {
+    impl Encoder for Latin1Encoder {
         type Error = Latin1EncodeError;
 
         fn encode(&self, message: &str) -> Result<(Vec<u8>, DataCoding), Self::Error> {
@@ -75,7 +75,7 @@ mod impl_owned {
         }
     }
 
-    impl Concatenator for Latin1 {
+    impl Concatenator for Latin1Encoder {
         type Error = Latin1ConcatenateError;
 
         fn concatenate(
