@@ -26,7 +26,7 @@ use crate::{
 ///
 /// The first 3 bytes `(05 00 03)` are part of the UDH header and are not stored in the struct.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct ConcatenatedShortMessage8Bit {
     /// Reference number for the concatenated message.
     reference: u8,
@@ -35,6 +35,39 @@ pub struct ConcatenatedShortMessage8Bit {
     /// Part number of this message.
     part_number: u8,
 }
+
+#[cfg(feature = "serde")]
+const _: () = {
+    use serde::{Deserialize, Deserializer};
+
+    #[derive(Deserialize)]
+    struct De {
+        reference: u8,
+        total_parts: u8,
+        part_number: u8,
+    }
+
+    impl From<De> for ConcatenatedShortMessage8Bit {
+        fn from(de: De) -> Self {
+            Self {
+                reference: de.reference,
+                total_parts: de.total_parts,
+                part_number: de.part_number,
+            }
+        }
+    }
+
+    impl<'de> Deserialize<'de> for ConcatenatedShortMessage8Bit {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let de = De::deserialize(deserializer)?;
+
+            Self::from(de).assert().map_err(serde::de::Error::custom)
+        }
+    }
+};
 
 /// Parts of a [`ConcatenatedShortMessage8Bit`].
 #[derive(Debug, Clone)]
