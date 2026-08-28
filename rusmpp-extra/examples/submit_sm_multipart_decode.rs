@@ -95,13 +95,26 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
     let mut state: HashMap<u16, SupportedDecoder> = HashMap::new();
 
     for sm in messages {
+        let Some(mut decoder) = decoder(sm.data_coding) else {
+            println!("Unsupported data coding: {:?}", sm.data_coding);
+
+            println!();
+            println!("--------------------------------");
+            println!();
+
+            continue;
+        };
+
         match sm.multipart_segment().transpose()? {
             Some((segment, message)) => {
-                let Some(decoder) = decoder(sm.data_coding) else {
-                    println!("Unsupported data coding: {:?}", sm.data_coding);
-
-                    continue;
-                };
+                println!(
+                    "Received multipart segment: reference = {}, total_parts = {}, part_number = {}, header_size = {}, message_len = {}",
+                    segment.reference,
+                    segment.total_parts,
+                    segment.part_number,
+                    segment.header_size(),
+                    message.len()
+                );
 
                 if segment.is_first() {
                     state.insert(segment.reference, decoder);
@@ -109,30 +122,44 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
 
                 if let Some(decoder) = state.get_mut(&segment.reference) {
                     decoder.feed(message, segment.header_size())?;
+
+                    println!(
+                        "Decoded so far: reference = {}, total_parts = {}, part_number = {}:",
+                        segment.reference, segment.total_parts, segment.part_number,
+                    );
+                    println!("{}", decoder.peek());
                 }
 
                 if segment.is_last() {
                     if let Some(decoder) = state.remove(&segment.reference) {
                         let decoded = decoder.finish()?;
 
-                        println!("Decoded message: {decoded}");
+                        println!(
+                            "Decoded multipart message: reference = {}, total_parts = {}, part_number = {}:",
+                            segment.reference, segment.total_parts, segment.part_number
+                        );
+                        println!("{decoded}");
                     }
                 }
             }
             None => {
-                let Some(mut decoder) = decoder(sm.data_coding) else {
-                    println!("Unsupported data coding: {:?}", sm.data_coding);
-
-                    continue;
-                };
+                println!(
+                    "Received single part message: short_message_len = {}",
+                    sm.short_message().len()
+                );
 
                 decoder.feed(sm.short_message(), 0)?;
 
                 let decoded = decoder.finish()?;
 
-                println!("Decoded message: {decoded}");
+                println!("Decoded single part message:");
+                println!("{decoded}");
             }
         }
+
+        println!();
+        println!("--------------------------------");
+        println!();
     }
 
     Ok(())
