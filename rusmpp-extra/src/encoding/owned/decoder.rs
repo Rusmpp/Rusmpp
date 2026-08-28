@@ -18,20 +18,27 @@ pub trait Decoder {
     fn finish(self) -> Result<alloc::string::String, Self::Error>;
 }
 
+/// A decoder that can handle multiple encoding types.
 #[derive(Debug)]
 pub enum SupportedDecoder {
+    /// A decoder for GSM 7-bit unpacked encoding.
     Gsm7BitUnpacked(Gsm7BitUnpackedDecoder),
+    /// A decoder for GSM 7-bit packed encoding.
     Gsm7BitPacked(Gsm7BitPackedDecoder),
+    /// A decoder for UCS2 encoding.
     Ucs2(Ucs2Decoder),
 }
 
 /// Errors that can occur when decoding messages using a [`SupportedDecoder`].
 #[derive(Debug, thiserror::Error)]
 pub enum SupportedDecodeError {
+    /// GSM 7-bit unpacked decoding error.
     #[error(transparent)]
     Gsm7BitUnpacked(Gsm7BitDecodeError),
+    /// GSM 7-bit packed decoding error.
     #[error(transparent)]
     Gsm7BitPacked(Gsm7BitDecodeError),
+    /// UCS2 decoding error.
     #[error(transparent)]
     Ucs2(Ucs2DecodeError),
 }
