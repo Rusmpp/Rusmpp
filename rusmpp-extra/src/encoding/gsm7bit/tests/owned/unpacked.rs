@@ -407,7 +407,55 @@ mod decode {
 
     use super::*;
 
-    // TODO: all fail cases
+    mod error {
+        use crate::encoding::gsm7bit::{ESCAPE_CHARACTER, errors::Gsm7BitDecodeError};
+
+        use super::*;
+
+        #[test]
+        fn invalid_byte() {
+            let mut decoder = Gsm7BitUnpackedDecoder::new();
+
+            let err = decoder.feed(&[0xFF], 0).unwrap_err();
+
+            assert!(matches!(err, Gsm7BitDecodeError::InvalidByte(0xFF)));
+        }
+
+        #[test]
+        fn invalid_extended_byte() {
+            let mut decoder = Gsm7BitUnpackedDecoder::new();
+
+            let err = decoder.feed(&[ESCAPE_CHARACTER, 0x00], 0).unwrap_err();
+
+            assert!(matches!(err, Gsm7BitDecodeError::InvalidExtendedByte(0x00)));
+        }
+
+        #[test]
+        fn invalid_extended_byte_across_feeds() {
+            let mut decoder = Gsm7BitUnpackedDecoder::new();
+
+            decoder
+                .feed(&[ESCAPE_CHARACTER], 0)
+                .expect("feeding a lone escape character should not fail");
+
+            let err = decoder.feed(&[0x00], 0).unwrap_err();
+
+            assert!(matches!(err, Gsm7BitDecodeError::InvalidExtendedByte(0x00)));
+        }
+
+        #[test]
+        fn trailing_escape() {
+            let mut decoder = Gsm7BitUnpackedDecoder::new();
+
+            decoder
+                .feed(&[ESCAPE_CHARACTER], 0)
+                .expect("feeding a lone escape character should not fail");
+
+            let err = decoder.finish().unwrap_err();
+
+            assert!(matches!(err, Gsm7BitDecodeError::TrailingEscape));
+        }
+    }
 
     #[test]
     fn cases() {
