@@ -23,7 +23,7 @@ mod encode {
 
             let err = encoder.encode(message).unwrap_err();
 
-            assert!(matches!(err, Ucs2EncodeError::UnencodableCharacter))
+            assert!(matches!(err, Ucs2EncodeError::UnencodableCharacter('😀')))
         }
     }
 }

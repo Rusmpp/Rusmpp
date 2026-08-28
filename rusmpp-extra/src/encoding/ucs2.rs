@@ -73,26 +73,20 @@ mod impl_owned {
         pub fn encode_to_vec(&self, input: &str) -> Result<Vec<u8>, Ucs2EncodeError> {
             // Maximum possible UCS-2 units = number of chars
             let char_count = input.chars().count();
-            let mut buffer = alloc::vec![0u16; char_count];
+            let mut encoded = Vec::with_capacity(char_count * 2);
 
-            match ucs2::encode(input, &mut buffer) {
-                Ok(len) => {
-                    let mut encoded = Vec::with_capacity(len * 2);
+            for ch in input.chars() {
+                // UCS-2 can only represent the Basic Multilingual Plane
+                // (U+0000..=U+FFFF). `char` already guarantees the value
+                // isn't a surrogate, so a range check is all that's needed.
+                let code_unit = u16::try_from(u32::from(ch))
+                    .map_err(|_| Ucs2EncodeError::UnencodableCharacter(ch))?;
 
-                    for &code_unit in &buffer[..len] {
-                        encoded.push((code_unit >> 8) as u8);
-                        encoded.push((code_unit & 0xFF) as u8);
-                    }
-
-                    Ok(encoded)
-                }
-                Err(err) => match err {
-                    ucs2::Error::BufferOverflow => {
-                        unreachable!("We allocated more than enough space")
-                    }
-                    ucs2::Error::MultiByte => Err(Ucs2EncodeError::UnencodableCharacter),
-                },
+                encoded.push((code_unit >> 8) as u8);
+                encoded.push((code_unit & 0xFF) as u8);
             }
+
+            Ok(encoded)
         }
     }
 

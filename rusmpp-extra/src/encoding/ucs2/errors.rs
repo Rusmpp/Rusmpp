@@ -4,8 +4,8 @@ use crate::concatenation::MAX_PARTS;
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum Ucs2EncodeError {
     /// Input contains un-encodable character.
-    #[error("Input contains un-encodable character")]
-    UnencodableCharacter,
+    #[error("Input contains un-encodable character: {0}")]
+    UnencodableCharacter(char),
 }
 
 /// Errors that can occur during decoding UCS2 bytes.
