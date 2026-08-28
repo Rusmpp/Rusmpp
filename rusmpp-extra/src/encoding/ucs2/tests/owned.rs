@@ -270,3 +270,138 @@ mod concatenate {
         }
     }
 }
+
+mod decode {
+    use crate::encoding::{owned::Decoder, ucs2::Ucs2Decoder};
+
+    use super::*;
+
+    mod error {
+        use crate::encoding::{
+            owned::Decoder,
+            ucs2::{Ucs2DecodeError, Ucs2Decoder},
+        };
+
+        #[test]
+        fn invalid_code_unit() {
+            let mut decoder = Ucs2Decoder::new();
+
+            let err = decoder.feed(&[0xD8, 0x00], 0).unwrap_err();
+
+            assert!(matches!(err, Ucs2DecodeError::InvalidCodeUnit(0xD800)));
+        }
+
+        #[test]
+        fn invalid_code_unit_across_feeds() {
+            let mut decoder = Ucs2Decoder::new();
+
+            decoder
+                .feed(&[0xD8], 0)
+                .expect("feeding just a high byte should not fail");
+
+            let err = decoder.feed(&[0x00], 0).unwrap_err();
+
+            assert!(matches!(err, Ucs2DecodeError::InvalidCodeUnit(0xD800)));
+        }
+
+        #[test]
+        fn trailing_byte() {
+            let mut decoder = Ucs2Decoder::new();
+
+            decoder
+                .feed(&[0x00], 0)
+                .expect("feeding just a high byte should not fail");
+
+            let err = decoder.finish().unwrap_err();
+
+            assert!(matches!(err, Ucs2DecodeError::TrailingByte));
+        }
+    }
+
+    #[test]
+    fn cases() {
+        struct TestCase {
+            name: &'static str,
+            message: &'static str,
+            max_message_size: usize,
+            part_header_size: usize,
+            allow_split_character: bool,
+        }
+
+        let cases: &[TestCase] = &[
+            TestCase {
+                name: "empty_message",
+                message: "",
+                max_message_size: 16,
+                part_header_size: 6,
+                allow_split_character: false,
+            },
+            TestCase {
+                name: "one_part",
+                message: "12345",
+                max_message_size: 16,
+                part_header_size: 6,
+                allow_split_character: false,
+            },
+            TestCase {
+                name: "two_parts",
+                message: "1234512345",
+                max_message_size: 16,
+                part_header_size: 6,
+                allow_split_character: false,
+            },
+            TestCase {
+                name: "concatenate_on_leading_surrogate_once_no_split",
+                message: "1234512345",
+                max_message_size: 16,
+                part_header_size: 7,
+                allow_split_character: false,
+            },
+            TestCase {
+                name: "concatenate_on_leading_surrogate_once_split",
+                message: "1234512345",
+                max_message_size: 16,
+                part_header_size: 7,
+                allow_split_character: true,
+            },
+            TestCase {
+                name: "concatenate_on_leading_surrogate_three_times_no_split",
+                message: "123123123",
+                max_message_size: 4,
+                part_header_size: 1,
+                allow_split_character: false,
+            },
+            TestCase {
+                name: "concatenate_on_leading_surrogate_three_times_split",
+                message: "123123123",
+                max_message_size: 4,
+                part_header_size: 1,
+                allow_split_character: true,
+            },
+        ];
+
+        for case in cases {
+            let mut decoder = Ucs2Decoder::new();
+
+            let encoder = Ucs2Encoder::new().with_allow_split_character(case.allow_split_character);
+
+            let (concatenation, _) = encoder
+                .concatenate(case.message, case.max_message_size, case.part_header_size)
+                .expect("Failed to encode message");
+
+            for part in concatenation.collect().into_iter() {
+                decoder
+                    .feed(part.as_slice(), case.part_header_size)
+                    .expect("Failed to decode part");
+            }
+
+            let decoded = decoder.finish().expect("Failed to finish decoding");
+
+            assert!(
+                decoded == case.message,
+                "Test case '{}' failed: decoded message does not match original",
+                case.name
+            );
+        }
+    }
+}

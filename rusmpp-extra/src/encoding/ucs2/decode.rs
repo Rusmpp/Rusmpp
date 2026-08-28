@@ -1,7 +1,5 @@
 #[cfg(any(test, feature = "alloc"))]
 pub mod owned {
-    // TODO: tests
-
     use alloc::string::String;
 
     use crate::encoding::{owned::Decoder, ucs2::Ucs2DecodeError};
