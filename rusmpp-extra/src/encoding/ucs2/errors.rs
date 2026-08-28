@@ -8,6 +8,22 @@ pub enum Ucs2EncodeError {
     UnencodableCharacter,
 }
 
+/// Errors that can occur during decoding UCS2 bytes.
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum Ucs2DecodeError {
+    /// A decoded 16-bit code unit does not correspond to a valid Unicode scalar value.
+    #[error(
+        "A decoded 16-bit code unit does not correspond to a valid Unicode scalar value: {0:#06X}"
+    )]
+    InvalidCodeUnit(u16),
+    /// Input ended with a dangling high byte.
+    ///
+    /// An odd total number of bytes were fed without a matching low byte.
+    #[error("Input ended with a dangling high byte")]
+    TrailingByte,
+}
+
 /// Errors that can occur during UCS2 concatenation.
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum Ucs2ConcatenateError {

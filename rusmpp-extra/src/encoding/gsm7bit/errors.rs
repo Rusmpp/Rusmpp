@@ -11,7 +11,7 @@ pub enum Gsm7BitEncodeError {
 }
 
 /// Errors that can occur during GSM 7-bit decoding.
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum Gsm7BitDecodeError {
     /// A standard-table byte had no mapping to a character.
     #[error("A standard byte had no mapping to a character: {0:#04X}")]

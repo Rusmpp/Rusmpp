@@ -1,8 +1,15 @@
 //! Ucs2 encoding/decoding support.
 
-mod errors;
-pub use errors::{Ucs2ConcatenateError, Ucs2EncodeError};
 use rusmpp_core::values::DataCoding;
+
+mod decode;
+
+#[cfg(any(test, feature = "alloc"))]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+pub use decode::owned::Ucs2Decoder;
+
+mod errors;
+pub use errors::{Ucs2ConcatenateError, Ucs2DecodeError, Ucs2EncodeError};
 
 /// UCS2 encoder.
 #[derive(Debug)]

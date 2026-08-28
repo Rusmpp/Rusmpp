@@ -13,12 +13,13 @@ use rusmpp_extra::{
     encoding::{
         gsm7bit::{Gsm7BitPackedDecoder, Gsm7BitUnpackedDecoder},
         owned::{Decoder, SupportedDecoder},
+        ucs2::Ucs2Decoder,
     },
 };
 
 fn main() -> Result<(), Box<dyn core::error::Error>> {
     // c-spell: disable
-    let message = r##"GSM 3 parts : Hello world!
+    let gsm7bit_message = r##"Hello world!
 
 @£$¥èéùìòÇØøÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà
 
@@ -27,6 +28,11 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
 @£$¥èéùìòÇØøÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà
 
 ^{}\[~]|€"##;
+
+    let ucs2_message = "Hello world! Hello world! Hello world! Hello world! Hello world! Hello world! Hello world! Hello world! Hello world! Hello world! Hello world!";
+
+    let unsupported_data_coding_message =
+        "Hello world! This message has an unsupported data coding";
     // c-spell: enable
 
     // Normally we do not have to set the data coding manually, the multipart builder will set it for us,
@@ -36,10 +42,11 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
     let gsm7bit_unpacked_data_coding = DataCoding::McSpecific;
     let gsm7bit_packed_data_coding = DataCoding::Other(0b1111111);
     let ucs2_data_coding = DataCoding::Ucs2;
+    let unsupported_data_coding = DataCoding::Cyrillic;
 
     let gsm7bit_unpacked_udh_multipart = SubmitSm::builder()
         .build()
-        .multipart(message)
+        .multipart(gsm7bit_message)
         .reference_u8(1)
         .gsm7bit_unpacked()
         .build()?
@@ -57,7 +64,7 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
 
     let gsm7bit_packed_udh_multipart = SubmitSm::builder()
         .build()
-        .multipart(message)
+        .multipart(gsm7bit_message)
         .reference_u8(3)
         .gsm7bit_packed()
         .build()?
@@ -66,19 +73,29 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
 
     let ucs2_sar_multipart = SubmitSm::builder()
         .build()
-        .sar_multipart(message)
+        .sar_multipart(ucs2_message)
         .reference(4)
         .ucs2()
         .build()?
         .into_iter()
         .map(|sm| sm.with_data_coding(ucs2_data_coding));
 
+    let unsupported_data_coding_message = SubmitSm::builder()
+        .build()
+        .multipart(unsupported_data_coding_message)
+        .reference_u8(5)
+        .gsm7bit_unpacked()
+        .build()?
+        .into_iter()
+        .map(|sm| sm.with_data_coding(unsupported_data_coding));
+
     // Shuffle the messages to simulate receiving them in a random order.
     let messages = gsm7bit_unpacked_udh_multipart
         .into_iter()
         .interleave(gsm7bit_packed_udh_multipart)
         .interleave(gsm7bit_unpacked_single)
-        .interleave(ucs2_sar_multipart);
+        .interleave(ucs2_sar_multipart)
+        .interleave(unsupported_data_coding_message);
 
     fn decoder(data_coding: DataCoding) -> Option<SupportedDecoder> {
         match data_coding {
@@ -88,6 +105,7 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
             DataCoding::Other(0b1111111) => {
                 Some(SupportedDecoder::Gsm7BitPacked(Gsm7BitPackedDecoder::new()))
             }
+            DataCoding::Ucs2 => Some(SupportedDecoder::Ucs2(Ucs2Decoder::new())),
             _ => None,
         }
     }
@@ -108,7 +126,8 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
         match sm.multipart_segment().transpose()? {
             Some((segment, message)) => {
                 println!(
-                    "Received multipart segment: reference = {}, total_parts = {}, part_number = {}, header_size = {}, message_len = {}",
+                    "Received multipart segment: data coding = {:?}, reference = {}, total_parts = {}, part_number = {}, header_size = {}, message_len = {}",
+                    sm.data_coding,
                     segment.reference,
                     segment.total_parts,
                     segment.part_number,
@@ -124,8 +143,8 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
                     decoder.feed(message, segment.header_size())?;
 
                     println!(
-                        "Decoded so far: reference = {}, total_parts = {}, part_number = {}:",
-                        segment.reference, segment.total_parts, segment.part_number,
+                        "Decoded so far: data coding = {:?}, reference = {}, total_parts = {}, part_number = {}:",
+                        sm.data_coding, segment.reference, segment.total_parts, segment.part_number,
                     );
                     println!("{}", decoder.peek());
                 }
@@ -135,8 +154,11 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
                         let decoded = decoder.finish()?;
 
                         println!(
-                            "Decoded multipart message: reference = {}, total_parts = {}, part_number = {}:",
-                            segment.reference, segment.total_parts, segment.part_number
+                            "Decoded multipart message: data coding = {:?}, reference = {}, total_parts = {}, part_number = {}:",
+                            sm.data_coding,
+                            segment.reference,
+                            segment.total_parts,
+                            segment.part_number
                         );
                         println!("{decoded}");
                     }
@@ -144,7 +166,8 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
             }
             None => {
                 println!(
-                    "Received single part message: short_message_len = {}",
+                    "Received single part message: data coding = {:?}, short_message_len = {}",
+                    sm.data_coding,
                     sm.short_message().len()
                 );
 
@@ -152,7 +175,11 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
 
                 let decoded = decoder.finish()?;
 
-                println!("Decoded single part message:");
+                println!(
+                    "Decoded single part message: data coding = {:?}, short_message_len = {}:",
+                    sm.data_coding,
+                    sm.short_message().len()
+                );
                 println!("{decoded}");
             }
         }

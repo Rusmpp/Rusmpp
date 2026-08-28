@@ -1,4 +1,7 @@
-use crate::encoding::gsm7bit::{Gsm7BitDecodeError, Gsm7BitPackedDecoder, Gsm7BitUnpackedDecoder};
+use crate::encoding::{
+    gsm7bit::{Gsm7BitDecodeError, Gsm7BitPackedDecoder, Gsm7BitUnpackedDecoder},
+    ucs2::{Ucs2DecodeError, Ucs2Decoder},
+};
 
 /// A trait for decoding messages from byte vectors.
 pub trait Decoder {
@@ -19,6 +22,7 @@ pub trait Decoder {
 pub enum SupportedDecoder {
     Gsm7BitUnpacked(Gsm7BitUnpackedDecoder),
     Gsm7BitPacked(Gsm7BitPackedDecoder),
+    Ucs2(Ucs2Decoder),
 }
 
 /// Errors that can occur when decoding messages using a [`SupportedDecoder`].
@@ -28,6 +32,8 @@ pub enum SupportedDecodeError {
     Gsm7BitUnpacked(Gsm7BitDecodeError),
     #[error(transparent)]
     Gsm7BitPacked(Gsm7BitDecodeError),
+    #[error(transparent)]
+    Ucs2(Ucs2DecodeError),
 }
 
 impl Decoder for SupportedDecoder {
@@ -41,6 +47,9 @@ impl Decoder for SupportedDecoder {
             SupportedDecoder::Gsm7BitPacked(decoder) => decoder
                 .feed(input, header_size)
                 .map_err(SupportedDecodeError::Gsm7BitPacked),
+            SupportedDecoder::Ucs2(decoder) => decoder
+                .feed(input, header_size)
+                .map_err(SupportedDecodeError::Ucs2),
         }
     }
 
@@ -48,6 +57,7 @@ impl Decoder for SupportedDecoder {
         match self {
             SupportedDecoder::Gsm7BitUnpacked(decoder) => decoder.peek(),
             SupportedDecoder::Gsm7BitPacked(decoder) => decoder.peek(),
+            SupportedDecoder::Ucs2(decoder) => decoder.peek(),
         }
     }
 
@@ -59,6 +69,7 @@ impl Decoder for SupportedDecoder {
             SupportedDecoder::Gsm7BitPacked(decoder) => decoder
                 .finish()
                 .map_err(SupportedDecodeError::Gsm7BitPacked),
+            SupportedDecoder::Ucs2(decoder) => decoder.finish().map_err(SupportedDecodeError::Ucs2),
         }
     }
 }
