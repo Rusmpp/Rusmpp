@@ -1,5 +1,6 @@
 use std::{
     collections::{BTreeMap, VecDeque},
+    num::NonZeroU32,
     pin::Pin,
     task::{Context, Poll},
     time::Duration,
@@ -14,6 +15,7 @@ use crate::{
     runtime_::{Delay, Timeout},
 };
 use futures::{FutureExt, Sink, SinkExt, Stream};
+use governor::{DefaultDirectRateLimiter, Quota, clock::Clock as _, clock::DefaultClock};
 use pin_project_lite::pin_project;
 use rusmpp::{
     Command, CommandId, CommandStatus, Pdu,
@@ -57,6 +59,7 @@ pin_project! {
         last_enquire_link_sequence_number: Option<u32>,
         enquire_link_response_timeout: Duration,
         auto_enquire_link_response: bool,
+        rate_limiter: Option<DefaultDirectRateLimiter>,
         events: E,
         // Used to let the client wait for the connection to be closed
         _watch: watch::Receiver<()>,
@@ -64,6 +67,8 @@ pin_project! {
         enquire_link_timer: Timer<D>,
         #[pin]
         enquire_link_response_timer: Timer<D>,
+        #[pin]
+        rate_limit_timer: Timer<D>,
         #[pin]
         framed: F,
         #[pin]
@@ -82,6 +87,8 @@ impl<E: EventChannel, D: Delay> Connection<(), E, D> {
         UnboundedSender<Action>,
         UnboundedReceiverStream<E::Event>,
     ) {
+        let rate_limit = Some(Quota::per_second(NonZeroU32::new(10).unwrap()));
+
         let (events_tx, events_rx) = mpsc::unbounded_channel::<E::Event>();
         let events = E::new(events_tx);
 
@@ -99,10 +106,12 @@ impl<E: EventChannel, D: Delay> Connection<(), E, D> {
                 last_enquire_link_sequence_number: None,
                 enquire_link_response_timeout,
                 auto_enquire_link_response,
+                rate_limiter: rate_limit.map(DefaultDirectRateLimiter::direct),
                 enquire_link_timer: enquire_link_interval
                     .map(|duration| Timer::active(duration))
                     .unwrap_or(Timer::inactive()),
                 enquire_link_response_timer: Timer::inactive(),
+                rate_limit_timer: Timer::inactive(),
                 _watch: watch_rx,
                 events,
                 framed: (),
@@ -125,6 +134,8 @@ impl<E: EventChannel, D: Delay> Connection<(), E, D> {
             last_enquire_link_sequence_number: self.last_enquire_link_sequence_number,
             enquire_link_response_timeout: self.enquire_link_response_timeout,
             auto_enquire_link_response: self.auto_enquire_link_response,
+            rate_limiter: self.rate_limiter,
+            rate_limit_timer: self.rate_limit_timer,
             events: self.events,
             _watch: self._watch,
             enquire_link_timer: self.enquire_link_timer,
@@ -466,6 +477,27 @@ where
 
                     match self.as_mut().requests_pop_front() {
                         Some(request) => {
+                            // Rate limiting: obligated (internal keep-alive) requests bypass the limiter
+                            // so a tight client rate limit can't starve EnquireLink and trip the timeout.
+                            if !matches!(request, Request::Obligated(_)) {
+                                if let Some(limiter) = self.rate_limiter.as_ref() {
+                                    if let Err(not_until) = limiter.check() {
+                                        let wait =
+                                            not_until.wait_time_from(DefaultClock::default().now());
+
+                                        tracing::trace!(target: CONN, ?wait, "Rate limit reached, waiting");
+
+                                        self.as_mut().requests_push_front(request);
+                                        self.as_mut().project().rate_limit_timer.activate(wait);
+
+                                        // Poll once to register the waker for when the wait elapses
+                                        let _ = self.as_mut().project().rate_limit_timer.poll(cx);
+
+                                        break 'sink;
+                                    }
+                                }
+                            }
+
                             match Sink::<&Command>::poll_ready(self.as_mut().project().framed, cx) {
                                 Poll::Ready(Ok(())) => {
                                     let sequence_number = request.command().sequence_number();
