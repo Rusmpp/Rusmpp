@@ -14,8 +14,6 @@ use crate::{
     },
 };
 
-// TODO: impl serde
-
 /// User Data Header (UDH).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
 #[rusmpp(decode = borrowed, test = skip)]
@@ -66,6 +64,59 @@ impl<'a> From<UdhValue<'a>> for Udh<'a> {
         Self::new(value)
     }
 }
+
+#[cfg(feature = "serde")]
+const _: () = {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    use crate::types::borrowed::AnyOctetString;
+
+    #[derive(Serialize)]
+    struct SerUdh<'a> {
+        value: &'a UdhValue<'a>,
+    }
+
+    impl<'a> Serialize for Udh<'a> {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            let value = UdhValue::Other {
+                udh_id: self.id(),
+                value: AnyOctetString::empty(),
+            };
+
+            let value = self.value.as_ref().unwrap_or(&value);
+
+            let tlv = SerUdh { value };
+
+            tlv.serialize(serializer)
+        }
+    }
+
+    #[derive(Deserialize)]
+    #[serde(bound(deserialize = "'de: 'a"))]
+    struct DeUdh<'a> {
+        value: UdhValue<'a>,
+    }
+
+    impl<'a> From<DeUdh<'a>> for Udh<'a> {
+        fn from(tlv: DeUdh<'a>) -> Self {
+            Self::new(tlv.value)
+        }
+    }
+
+    impl<'de: 'a, 'a> Deserialize<'de> for Udh<'a> {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let tlv = DeUdh::deserialize(deserializer)?;
+
+            Ok(Self::from(tlv))
+        }
+    }
+};
 
 /// User Data Header (UDH) value.
 #[non_exhaustive]
