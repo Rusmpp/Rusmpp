@@ -11,7 +11,7 @@ use rusmpp_core::{
     types::owned::{COctetString, OctetString},
     values::{Npi, Ton},
 };
-use rusmpp_extra::concatenation::owned::SubmitSmMultipartExt;
+use rusmpp_extra::concatenation::owned::Multipart;
 
 fn main() -> Result<(), Box<dyn core::error::Error>> {
     // c-spell: disable

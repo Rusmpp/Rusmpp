@@ -185,6 +185,88 @@ impl DeliverSm {
             }
         })
     }
+
+    /// Returns the first value of [`TlvValue::SarMsgRefNum`] if present.
+    pub fn sar_msg_ref_num(&self) -> Option<u16> {
+        self.tlvs.iter().find_map(|tlv| {
+            if let Some(TlvValue::SarMsgRefNum(value)) = tlv.value() {
+                Some(*value)
+            } else {
+                None
+            }
+        })
+    }
+
+    /// Returns the first value of [`TlvValue::SarSegmentSeqnum`] if present.
+    pub fn sar_segment_seqnum(&self) -> Option<u8> {
+        self.tlvs.iter().find_map(|tlv| {
+            if let Some(TlvValue::SarSegmentSeqnum(value)) = tlv.value() {
+                Some(*value)
+            } else {
+                None
+            }
+        })
+    }
+
+    /// Returns the first value of [`TlvValue::SarTotalSegments`] if present.
+    pub fn sar_total_segments(&self) -> Option<u8> {
+        self.tlvs.iter().find_map(|tlv| {
+            if let Some(TlvValue::SarTotalSegments(value)) = tlv.value() {
+                Some(*value)
+            } else {
+                None
+            }
+        })
+    }
+
+    /// Sets the [`TlvValue::SarMsgRefNum`] value, not replacing any existing value.
+    pub fn with_sar_msg_ref_num(mut self, sar_msg_ref_num: u16) -> Self {
+        self.push_tlv(MessageDeliveryRequestTlvValue::SarMsgRefNum(
+            sar_msg_ref_num,
+        ));
+        self
+    }
+
+    /// Sets the [`TlvValue::SarSegmentSeqnum`] value, not replacing any existing value.
+    pub fn with_sar_segment_seqnum(mut self, sar_segment_seqnum: u8) -> Self {
+        self.push_tlv(MessageDeliveryRequestTlvValue::SarSegmentSeqnum(
+            sar_segment_seqnum,
+        ));
+        self
+    }
+
+    /// Sets the [`TlvValue::SarTotalSegments`] value, not replacing any existing value.
+    pub fn with_sar_total_segments(mut self, sar_total_segments: u8) -> Self {
+        self.push_tlv(MessageDeliveryRequestTlvValue::SarTotalSegments(
+            sar_total_segments,
+        ));
+        self
+    }
+
+    /// Sets the [`DeliverSm::data_coding`].
+    pub const fn with_data_coding(mut self, data_coding: DataCoding) -> Self {
+        self.data_coding = data_coding;
+        self
+    }
+
+    /// Sets the UDH Indicator bit in the GSM Features field of the [`DeliverSm::esm_class`].
+    pub const fn with_udh_indicator(mut self) -> Self {
+        self.esm_class = self.esm_class.with_udh_indicator();
+        self
+    }
+
+    /// Checks wether the UDH Indicator bit is set in the GSM Features field of the [`DeliverSm::esm_class`].
+    pub const fn is_udh_indicator_set(&self) -> bool {
+        self.esm_class.is_udh_indicator_set()
+    }
+
+    /// Sets the `short_message` and `sm_length`.
+    ///
+    /// See [`Self::set_short_message`] for details.
+    pub fn with_short_message(mut self, short_message: OctetString<0, 255>) -> Self {
+        self.set_short_message(short_message);
+        self
+    }
 }
 
 impl From<DeliverSm> for Pdu {

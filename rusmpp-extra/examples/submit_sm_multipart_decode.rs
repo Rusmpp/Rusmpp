@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use rusmpp_core::{pdus::owned::SubmitSm, values::DataCoding};
 use rusmpp_extra::{
-    concatenation::owned::SubmitSmMultipartExt,
+    concatenation::owned::Multipart,
     encoding::{
         gsm7bit::{Gsm7BitPackedDecoder, Gsm7BitUnpackedDecoder},
         owned::{Decoder, SupportedDecoder},
@@ -46,7 +46,7 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
 
     let gsm7bit_unpacked_udh_multipart = SubmitSm::builder()
         .build()
-        .multipart(gsm7bit_message)
+        .udh_multipart(gsm7bit_message)
         .reference_u8(1)
         .gsm7bit_unpacked()
         .build()?
@@ -55,7 +55,7 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
 
     let gsm7bit_unpacked_single = SubmitSm::builder()
         .build()
-        .multipart("Hi, I am single")
+        .udh_multipart("Hi, I am single")
         .reference_u8(2)
         .gsm7bit_unpacked()
         .build()?
@@ -64,8 +64,8 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
 
     let gsm7bit_packed_udh_multipart = SubmitSm::builder()
         .build()
-        .multipart(gsm7bit_message)
-        .reference_u8(3)
+        .udh_multipart(gsm7bit_message)
+        .reference_u16(3)
         .gsm7bit_packed()
         .build()?
         .into_iter()
@@ -80,9 +80,9 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
         .into_iter()
         .map(|sm| sm.with_data_coding(ucs2_data_coding));
 
-    let unsupported_data_coding_message = SubmitSm::builder()
+    let unsupported_data_coding_single = SubmitSm::builder()
         .build()
-        .multipart(unsupported_data_coding_message)
+        .udh_multipart(unsupported_data_coding_message)
         .reference_u8(5)
         .gsm7bit_unpacked()
         .build()?
@@ -95,7 +95,7 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
         .interleave(gsm7bit_packed_udh_multipart)
         .interleave(gsm7bit_unpacked_single)
         .interleave(ucs2_sar_multipart)
-        .interleave(unsupported_data_coding_message);
+        .interleave(unsupported_data_coding_single);
 
     fn decoder(data_coding: DataCoding) -> Option<SupportedDecoder> {
         match data_coding {

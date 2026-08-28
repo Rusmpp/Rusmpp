@@ -1,19 +1,34 @@
+//! Multipart associated types and structs.
+
 use rusmpp_core::decode::{
     ConcatenatedShortMessageDecodeError, DecodeError, DecodeErrorKind, UdhDecodeError,
 };
 
+/// The type of multipart message.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum MultipartType {
-    Udh { size: usize },
+    /// UDH (User Data Header) multipart message.
+    Udh {
+        /// The size of the UDH in bytes.
+        size: usize,
+    },
+    /// SAR (Segmentation and Reassembly) multipart message.
     Sar,
 }
 
+/// A segment of a multipart message.
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct MultipartSegment {
+    /// The type of multipart message.
     pub r#type: MultipartType,
+    /// The reference number for the whole segmented message.
+    ///
+    /// The reference number is used to identify the whole segmented message and is the same for all segments of the same message.
     pub reference: u16,
+    /// The part number of this segment.
     pub part_number: u8,
+    /// The total number of parts in the whole segmented message.
     pub total_parts: u8,
 }
 
@@ -102,6 +117,9 @@ impl MultipartSegment {
     }
 }
 
+/// Error type for [`MultipartSegment`].
+///
+/// Returned by [`MultipartSegment::new`] when the invariants are violated.
 #[derive(Debug, thiserror::Error)]
 pub enum MultipartSegmentError {
     /// The underlying decode error.

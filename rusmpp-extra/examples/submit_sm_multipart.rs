@@ -11,7 +11,7 @@ use rusmpp_core::{
     types::owned::{COctetString, OctetString},
     values::{DataCoding, EsmClass, Npi, Ton},
 };
-use rusmpp_extra::concatenation::owned::SubmitSmMultipartExt;
+use rusmpp_extra::concatenation::owned::Multipart;
 
 fn main() -> Result<(), Box<dyn core::error::Error>> {
     // c-spell: disable
@@ -26,6 +26,7 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
 ^{}\[~]|€"##;
     // c-spell: enable
 
+    // `DeliverSm` also supports multipart messages :D
     let multipart = SubmitSm::builder()
         .source_addr_ton(Ton::Unknown)
         .source_addr_npi(Npi::Unknown)
@@ -38,7 +39,7 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
         // short_message will be overridden by `short_message` of the multipart builder.
         .short_message(OctetString::from_str("Hi, I am a short message.")?)
         .build()
-        .multipart(message)
+        .udh_multipart(message)
         .reference_u16(1)
         .gsm7bit_unpacked()
         .build()?;

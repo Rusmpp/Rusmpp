@@ -12,7 +12,7 @@ use rusmpp_core::{
     values::{Npi, Ton},
 };
 use rusmpp_extra::{
-    concatenation::owned::SubmitSmMultipartExt,
+    concatenation::owned::Multipart,
     encoding::{
         gsm7bit::{Gsm7BitAlphabet, Gsm7BitUnpackedEncoder},
         ucs2::Ucs2Encoder,
@@ -26,7 +26,7 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
         .source_addr(COctetString::from_str("12345")?)
         .destination_addr(COctetString::from_str("491701234567")?)
         .build()
-        .multipart("Hi This message can not be encoded in gsm 7-bit default alphabet so it will fallback to ucs2: 你好")
+        .udh_multipart("Hi This message can not be encoded in gsm 7-bit default alphabet so it will fallback to ucs2: 你好")
         .encoder(Gsm7BitUnpackedEncoder::new().with_alphabet(Gsm7BitAlphabet::default()))
         .fallback(Ucs2Encoder::new())
         .build()?;

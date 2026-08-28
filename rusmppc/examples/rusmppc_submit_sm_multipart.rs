@@ -13,7 +13,7 @@ use std::{str::FromStr, time::Duration};
 use futures::StreamExt;
 use rusmpp::{
     Pdu,
-    extra::{concatenation::SubmitSmMultipartExt, encoding::ucs2::Ucs2Encoder},
+    extra::{concatenation::Multipart, encoding::ucs2::Ucs2Encoder},
     pdus::{BindTransceiver, DeliverSmResp, SubmitSm},
     types::{COctetString, OctetString},
     values::{DataCoding, EsmClass, Npi, Ton},
@@ -94,7 +94,7 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
         // short_message will be overridden by `short_message` of the multipart builder.
         .short_message(OctetString::from_str("Hi, I am a short message.")?)
         .build()
-        .multipart(message)
+        .udh_multipart(message)
         // Use 16-bit reference number.
         .reference_u16(1)
         // Use gsm7bit unpacked encoding.

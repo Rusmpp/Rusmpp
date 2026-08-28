@@ -232,6 +232,30 @@ impl SubmitSm {
         })
     }
 
+    /// Sets the [`TlvValue::SarMsgRefNum`] value, not replacing any existing value.
+    pub fn with_sar_msg_ref_num(mut self, sar_msg_ref_num: u16) -> Self {
+        self.push_tlv(MessageSubmissionRequestTlvValue::SarMsgRefNum(
+            sar_msg_ref_num,
+        ));
+        self
+    }
+
+    /// Sets the [`TlvValue::SarSegmentSeqnum`] value, not replacing any existing value.
+    pub fn with_sar_segment_seqnum(mut self, sar_segment_seqnum: u8) -> Self {
+        self.push_tlv(MessageSubmissionRequestTlvValue::SarSegmentSeqnum(
+            sar_segment_seqnum,
+        ));
+        self
+    }
+
+    /// Sets the [`TlvValue::SarTotalSegments`] value, not replacing any existing value.
+    pub fn with_sar_total_segments(mut self, sar_total_segments: u8) -> Self {
+        self.push_tlv(MessageSubmissionRequestTlvValue::SarTotalSegments(
+            sar_total_segments,
+        ));
+        self
+    }
+
     /// Sets the [`SubmitSm::data_coding`].
     pub const fn with_data_coding(mut self, data_coding: DataCoding) -> Self {
         self.data_coding = data_coding;
