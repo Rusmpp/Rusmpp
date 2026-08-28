@@ -4,7 +4,7 @@ mod encoder;
 pub use encoder::Encoder;
 
 mod decoder;
-pub use decoder::Decoder;
+pub use decoder::{Decoder, SupportedDecodeError, SupportedDecoder};
 
 mod submit_sm;
 pub use submit_sm::{EncodedSubmitSmBuilder, EncodedSubmitSmExt};

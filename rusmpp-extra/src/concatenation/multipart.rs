@@ -73,6 +73,16 @@ impl MultipartSegment {
         Ok(self)
     }
 
+    /// Returns `true` if the [`MultipartSegment`] is the first part of the multipart message.
+    pub const fn is_first(&self) -> bool {
+        self.part_number == 1
+    }
+
+    /// Returns `true` if the [`MultipartSegment`] is the last part of the multipart message.
+    pub const fn is_last(&self) -> bool {
+        self.part_number == self.total_parts
+    }
+
     /// Returns the UDH size if the [`MultipartSegment`] is of type [`MultipartType::Udh`].
     pub const fn udh_size(&self) -> Option<usize> {
         match self.r#type {
