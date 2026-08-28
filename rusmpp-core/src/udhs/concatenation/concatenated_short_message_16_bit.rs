@@ -257,6 +257,12 @@ impl crate::decode::owned::Decode for ConcatenatedShortMessage16Bit {
     }
 }
 
+impl From<ConcatenatedShortMessage16Bit> for crate::udhs::borrowed::UdhValue<'_> {
+    fn from(udh: ConcatenatedShortMessage16Bit) -> Self {
+        crate::udhs::borrowed::UdhValue::ConcatenatedShortMessage16Bit(udh)
+    }
+}
+
 #[cfg(feature = "alloc")]
 impl From<ConcatenatedShortMessage16Bit> for crate::udhs::owned::UdhValue {
     fn from(udh: ConcatenatedShortMessage16Bit) -> Self {

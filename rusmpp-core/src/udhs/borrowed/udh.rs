@@ -14,8 +14,7 @@ use crate::{
     },
 };
 
-// TODO: impl serde,
-// TODO: tests for Udh like the owned version.
+// TODO: impl serde
 
 /// User Data Header (UDH).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
@@ -149,5 +148,158 @@ impl<'a> DecodeWithKey<'a> for UdhValue<'a> {
         };
 
         Ok((value, size))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod encode {
+        use super::*;
+
+        mod borrowed {
+            use super::*;
+
+            #[test]
+            fn ok() {
+                use crate::encode::Encode;
+
+                let udh = Udh::new(ConcatenatedShortMessage16Bit::new(0x1234, 3, 1).unwrap());
+
+                let expected = [
+                    0x06, // UDH length (following bytes = 6)
+                    0x08, // UDH ID: Concatenated Short Messages, 16-bit reference number
+                    0x04, // IE Data Length = 4 bytes
+                    0x12, // Ref high
+                    0x34, // Ref low
+                    0x03, // Total parts
+                    0x01, // Part number
+                ];
+
+                let mut buf = [0u8; 24];
+                let size = udh.encode(&mut buf);
+
+                assert_eq!(size, 7);
+                assert_eq!(&buf[..size], &expected);
+
+                let udh = Udh::new(ConcatenatedShortMessage8Bit::new(0x12, 3, 1).unwrap());
+                let expected = [
+                    0x05, // UDH length (following bytes = 5)
+                    0x00, // UDH ID: Concatenated Short Messages, 8-bit reference number
+                    0x03, // IE Data Length = 3 bytes
+                    0x12, // Ref
+                    0x03, // Total parts
+                    0x01, // Part number
+                ];
+
+                let mut buf = [0u8; 24];
+                let size = udh.encode(&mut buf);
+
+                assert_eq!(size, 6);
+                assert_eq!(&buf[..size], &expected);
+            }
+        }
+
+        #[cfg(feature = "alloc")]
+        mod owned {
+            use super::*;
+
+            #[test]
+            fn ok() {
+                use bytes::BytesMut;
+
+                use crate::encode::{Length, owned::Encode};
+
+                let udh = Udh::new(ConcatenatedShortMessage16Bit::new(0x1234, 3, 1).unwrap());
+
+                let expected = [
+                    0x06, // UDH length (following bytes = 6)
+                    0x08, // UDH ID: Concatenated Short Messages, 16-bit reference number
+                    0x04, // IE Data Length = 4 bytes
+                    0x12, // Ref high
+                    0x34, // Ref low
+                    0x03, // Total parts
+                    0x01, // Part number
+                ];
+
+                let mut buf = BytesMut::with_capacity(Length::length(&udh));
+
+                udh.encode(&mut buf);
+
+                let encoded = buf.split_to(Length::length(&udh));
+
+                assert_eq!(encoded.len(), 7);
+                assert_eq!(&encoded[..], &expected);
+
+                let udh = Udh::new(ConcatenatedShortMessage8Bit::new(0x12, 3, 1).unwrap());
+                let expected = [
+                    0x05, // UDH length (following bytes = 5)
+                    0x00, // UDH ID: Concatenated Short Messages, 8-bit reference number
+                    0x03, // IE Data Length = 3 bytes
+                    0x12, // Ref
+                    0x03, // Total parts
+                    0x01, // Part number
+                ];
+
+                let mut buf = BytesMut::with_capacity(Length::length(&udh));
+
+                udh.encode(&mut buf);
+
+                let encoded = buf.split_to(Length::length(&udh));
+
+                assert_eq!(encoded.len(), 6);
+                assert_eq!(&encoded[..], &expected);
+            }
+        }
+    }
+
+    mod decode {
+        use crate::decode::borrowed::Decode;
+
+        use super::*;
+
+        #[test]
+        fn ok() {
+            let bytes = &[
+                0x06, // UDH length (following bytes = 6)
+                0x08, // UDH ID: Concatenated Short Messages, 16-bit reference number
+                0x04, // IE Data Length = 4 bytes
+                0x12, // Ref high
+                0x34, // Ref low
+                0x03, // Total parts
+                0x01, // Part number
+                0x00, // Extra bytes
+                0x00,
+            ];
+
+            let (udh, size) = <Udh as Decode>::decode(bytes).unwrap();
+
+            assert_eq!(size, 7);
+            assert_eq!(
+                udh,
+                Udh::new(ConcatenatedShortMessage16Bit::new(0x1234, 3, 1).unwrap())
+            );
+            assert_eq!(&bytes[size..], &[0x00, 0x00][..]);
+
+            let bytes = &[
+                0x05, // UDH length (following bytes = 5)
+                0x00, // UDH ID: Concatenated Short Messages, 8-bit reference number
+                0x03, // IE Data Length = 3 bytes
+                0x12, // Ref
+                0x03, // Total parts
+                0x01, // Part number
+                0x00, // Extra bytes
+                0x00,
+            ];
+
+            let (udh, size) = <Udh as Decode>::decode(bytes).unwrap();
+            assert_eq!(size, 6);
+            assert_eq!(
+                udh,
+                Udh::new(ConcatenatedShortMessage8Bit::new(0x12, 3, 1).unwrap())
+            );
+            assert_eq!(&bytes[size..], &[0x00, 0x00][..]);
+        }
     }
 }
