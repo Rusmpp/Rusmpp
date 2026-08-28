@@ -40,31 +40,16 @@ pub struct ConcatenatedShortMessage8Bit {
 const _: () = {
     use serde::{Deserialize, Deserializer};
 
-    #[derive(Deserialize)]
-    struct De {
-        reference: u8,
-        total_parts: u8,
-        part_number: u8,
-    }
-
-    impl From<De> for ConcatenatedShortMessage8Bit {
-        fn from(de: De) -> Self {
-            Self {
-                reference: de.reference,
-                total_parts: de.total_parts,
-                part_number: de.part_number,
-            }
-        }
-    }
-
     impl<'de> Deserialize<'de> for ConcatenatedShortMessage8Bit {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
             D: Deserializer<'de>,
         {
-            let de = De::deserialize(deserializer)?;
+            let de = ConcatenatedShortMessage8BitParts::deserialize(deserializer)?;
 
-            Self::from(de).assert().map_err(serde::de::Error::custom)
+            Self::from_parts(de)
+                .assert()
+                .map_err(serde::de::Error::custom)
         }
     }
 };
@@ -177,6 +162,20 @@ impl ConcatenatedShortMessage8Bit {
             reference: self.reference,
             total_parts: self.total_parts,
             part_number: self.part_number,
+        }
+    }
+
+    /// Creates a new [`ConcatenatedShortMessage8Bit`] from its parts.
+    ///
+    /// # Note
+    ///
+    /// This function does not check the invariants of the UDH.
+    /// Use [`Self::new`] to create a new instance with invariant checks.
+    pub const fn from_parts(parts: ConcatenatedShortMessage8BitParts) -> Self {
+        Self {
+            reference: parts.reference,
+            total_parts: parts.total_parts,
+            part_number: parts.part_number,
         }
     }
 }
