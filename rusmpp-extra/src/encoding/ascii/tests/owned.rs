@@ -20,7 +20,7 @@ mod encode {
 
             let err = encoder.encode(message).unwrap_err();
 
-            assert!(matches!(err, AsciiEncodeError::UnencodableCharacter))
+            assert!(matches!(err, AsciiEncodeError::UnencodableCharacter('😀')))
         }
     }
 }
@@ -160,6 +160,98 @@ mod concatenate {
                     case.name
                 ),
             }
+        }
+    }
+}
+
+mod decode {
+    use crate::encoding::{ascii::AsciiDecoder, owned::Decoder};
+
+    use super::*;
+
+    mod error {
+        use crate::encoding::{
+            ascii::{AsciiDecodeError, AsciiDecoder},
+            owned::Decoder,
+        };
+
+        #[test]
+        fn invalid_byte() {
+            let mut decoder = AsciiDecoder::new();
+
+            let err = decoder.feed(&[0x80], 0).unwrap_err();
+
+            assert!(matches!(err, AsciiDecodeError::InvalidByte(0x80)));
+        }
+
+        #[test]
+        fn invalid_byte_after_valid() {
+            let mut decoder = AsciiDecoder::new();
+
+            decoder
+                .feed(b"Hi", 0)
+                .expect("feeding valid ASCII should not fail");
+
+            let err = decoder.feed(&[0xFF], 0).unwrap_err();
+
+            assert!(matches!(err, AsciiDecodeError::InvalidByte(0xFF)));
+        }
+    }
+
+    #[test]
+    fn cases() {
+        struct TestCase {
+            name: &'static str,
+            message: &'static str,
+            max_message_size: usize,
+            part_header_size: usize,
+        }
+
+        let cases: &[TestCase] = &[
+            TestCase {
+                name: "empty_message",
+                message: "",
+                max_message_size: 16,
+                part_header_size: 6,
+            },
+            TestCase {
+                name: "one_part",
+                // cspell: disable-next-line
+                message: "agjwklgjkwPO",
+                max_message_size: 16,
+                part_header_size: 4,
+            },
+            TestCase {
+                name: "two_parts",
+                // cspell: disable-next-line
+                message: "agjwklgjkwPO",
+                max_message_size: 10,
+                part_header_size: 2,
+            },
+        ];
+
+        for case in cases {
+            let mut decoder = AsciiDecoder::new();
+
+            let encoder = AsciiEncoder::new();
+
+            let (concatenation, _) = encoder
+                .concatenate(case.message, case.max_message_size, case.part_header_size)
+                .expect("Failed to encode message");
+
+            for part in concatenation.collect().into_iter() {
+                decoder
+                    .feed(part.as_slice(), case.part_header_size)
+                    .expect("Failed to decode part");
+            }
+
+            let decoded = decoder.finish().expect("Failed to finish decoding");
+
+            assert!(
+                decoded == case.message,
+                "Test case '{}' failed: decoded message does not match original",
+                case.name
+            );
         }
     }
 }

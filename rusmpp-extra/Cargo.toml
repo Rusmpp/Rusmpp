@@ -13,7 +13,6 @@ keywords = ["smpp", "smsc", "messaging", "networking", "protocol"]
 [dependencies]
 rusmpp-core = { path = "../rusmpp-core", version = "0.4.0", default-features = false }
 thiserror = { version = "2", default-features = false }
-encoding_rs = { version = "0.8.35", default-features = false, optional = true }
 
 [dev-dependencies]
 bytes = { version = "1", default-features = false }
@@ -29,7 +28,7 @@ alloc = ["rusmpp-core/alloc"]
 concatenation = ["encoding"]
 
 # Enables encoding/decoding support.
-encoding = ["dep:encoding_rs"]
+encoding = []
 
 [package.metadata.docs.rs]
 all-features = true

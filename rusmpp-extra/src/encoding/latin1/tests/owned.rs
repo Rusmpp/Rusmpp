@@ -20,7 +20,7 @@ mod encode {
 
             let err = encoder.encode(message).unwrap_err();
 
-            assert!(matches!(err, Latin1EncodeError::UnencodableCharacter))
+            assert!(matches!(err, Latin1EncodeError::UnencodableCharacter('😀')))
         }
     }
 }
@@ -160,6 +160,69 @@ mod concatenate {
                     case.name
                 ),
             }
+        }
+    }
+}
+
+mod decode {
+    use crate::encoding::{latin1::Latin1Decoder, owned::Decoder};
+
+    use super::*;
+
+    #[test]
+    fn cases() {
+        struct TestCase {
+            name: &'static str,
+            message: &'static str,
+            max_message_size: usize,
+            part_header_size: usize,
+        }
+
+        let cases: &[TestCase] = &[
+            TestCase {
+                name: "empty_message",
+                message: "",
+                max_message_size: 16,
+                part_header_size: 6,
+            },
+            TestCase {
+                name: "one_part",
+                // cspell: disable-next-line
+                message: "agjwklgjkwPÓ",
+                max_message_size: 16,
+                part_header_size: 4,
+            },
+            TestCase {
+                name: "two_parts",
+                // cspell: disable-next-line
+                message: "agjwklgjkwPÓ",
+                max_message_size: 10,
+                part_header_size: 2,
+            },
+        ];
+
+        for case in cases {
+            let mut decoder = Latin1Decoder::new();
+
+            let encoder = Latin1Encoder::new();
+
+            let (concatenation, _) = encoder
+                .concatenate(case.message, case.max_message_size, case.part_header_size)
+                .expect("Failed to encode message");
+
+            for part in concatenation.collect().into_iter() {
+                decoder
+                    .feed(part.as_slice(), case.part_header_size)
+                    .expect("Failed to decode part");
+            }
+
+            let decoded = decoder.finish().expect("Failed to finish decoding");
+
+            assert!(
+                decoded == case.message,
+                "Test case '{}' failed: decoded message does not match original",
+                case.name
+            );
         }
     }
 }

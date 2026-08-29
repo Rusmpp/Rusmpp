@@ -4,8 +4,17 @@ use crate::concatenation::MAX_PARTS;
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum AsciiEncodeError {
     /// Input contains un-encodable character.
-    #[error("Input contains un-encodable character")]
-    UnencodableCharacter,
+    #[error("Input contains un-encodable character: {0}")]
+    UnencodableCharacter(char),
+}
+
+/// Errors that can occur during decoding ASCII bytes.
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum AsciiDecodeError {
+    /// A decoded byte is outside the ASCII range.
+    #[error("A decoded byte is outside the ASCII range: {0:#04X}")]
+    InvalidByte(u8),
 }
 
 /// Errors that can occur during ASCII concatenation.

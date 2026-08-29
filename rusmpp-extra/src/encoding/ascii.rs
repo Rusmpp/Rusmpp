@@ -2,8 +2,14 @@
 
 use rusmpp_core::values::DataCoding;
 
+mod decode;
+
+#[cfg(any(test, feature = "alloc"))]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+pub use decode::owned::AsciiDecoder;
+
 mod errors;
-pub use errors::{AsciiConcatenateError, AsciiEncodeError};
+pub use errors::{AsciiConcatenateError, AsciiDecodeError, AsciiEncodeError};
 
 /// ASCII encoder.
 #[derive(Debug)]
@@ -61,10 +67,9 @@ mod impl_owned {
     impl AsciiEncoder {
         /// Encodes the given message into a vector of bytes.
         pub fn encode_to_vec(&self, input: &str) -> Result<Vec<u8>, AsciiEncodeError> {
-            input
-                .is_ascii()
-                .then_some(())
-                .ok_or(AsciiEncodeError::UnencodableCharacter)?;
+            if let Some(ch) = input.chars().find(|c| !c.is_ascii()) {
+                return Err(AsciiEncodeError::UnencodableCharacter(ch));
+            }
 
             Ok(input.as_bytes().to_vec())
         }

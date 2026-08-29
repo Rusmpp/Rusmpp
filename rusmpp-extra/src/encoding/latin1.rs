@@ -2,8 +2,14 @@
 
 use rusmpp_core::values::DataCoding;
 
+mod decode;
+
+#[cfg(any(test, feature = "alloc"))]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+pub use decode::owned::Latin1Decoder;
+
 mod errors;
-pub use errors::{Latin1ConcatenateError, Latin1EncodeError};
+pub use errors::{Latin1ConcatenateError, Latin1DecodeError, Latin1EncodeError};
 
 /// Latin1 encoder.
 #[derive(Debug)]
@@ -46,21 +52,18 @@ mod impl_owned {
     impl Latin1Encoder {
         /// Encodes the given message into a vector of bytes.
         pub fn encode_to_vec(&self, input: &str) -> Result<Vec<u8>, Latin1EncodeError> {
-            encoding_rs::mem::is_utf8_latin1(input.as_bytes())
-                .then_some(())
-                .ok_or(Latin1EncodeError::UnencodableCharacter)?;
+            let mut buffer = Vec::with_capacity(input.len());
 
-            let mut buffer = alloc::vec![0u8; input.len()];
-            /*
-            Correctness:
+            for ch in input.chars() {
+                let code_point = ch as u32;
 
-            - The input is UTF-8 Latin1.
-            - The size of the buffer is at least as large as the encoded output.
-            */
-            let size =
-                encoding_rs::mem::convert_utf8_to_latin1_lossy(input.as_bytes(), &mut buffer);
+                // Latin1 only covers the Unicode range U+0000..=U+00FF.
+                if code_point > 0xFF {
+                    return Err(Latin1EncodeError::UnencodableCharacter(ch));
+                }
 
-            buffer.truncate(size);
+                buffer.push(code_point as u8);
+            }
 
             Ok(buffer)
         }
