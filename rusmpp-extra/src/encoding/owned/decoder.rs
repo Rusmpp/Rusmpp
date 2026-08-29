@@ -1,5 +1,4 @@
 use crate::encoding::{
-    ascii::{AsciiDecodeError, AsciiDecoder},
     gsm7bit::{Gsm7BitDecodeError, Gsm7BitPackedDecoder, Gsm7BitUnpackedDecoder},
     latin1::{Latin1DecodeError, Latin1Decoder},
     ucs2::{Ucs2DecodeError, Ucs2Decoder},
@@ -29,8 +28,6 @@ pub enum SupportedDecoder {
     Gsm7BitPacked(Gsm7BitPackedDecoder),
     /// A decoder for UCS2 encoding.
     Ucs2(Ucs2Decoder),
-    /// A decoder for ASCII encoding.
-    Ascii(AsciiDecoder),
     /// A decoder for Latin1 encoding.
     Latin1(Latin1Decoder),
 }
@@ -47,9 +44,6 @@ pub enum SupportedDecodeError {
     /// UCS2 decoding error.
     #[error(transparent)]
     Ucs2(Ucs2DecodeError),
-    /// ASCII decoding error.
-    #[error(transparent)]
-    Ascii(AsciiDecodeError),
     /// Latin1 decoding error.
     #[error(transparent)]
     Latin1(Latin1DecodeError),
@@ -69,9 +63,6 @@ impl Decoder for SupportedDecoder {
             SupportedDecoder::Ucs2(decoder) => decoder
                 .feed(input, header_size)
                 .map_err(SupportedDecodeError::Ucs2),
-            SupportedDecoder::Ascii(decoder) => decoder
-                .feed(input, header_size)
-                .map_err(SupportedDecodeError::Ascii),
             SupportedDecoder::Latin1(decoder) => decoder
                 .feed(input, header_size)
                 .map_err(SupportedDecodeError::Latin1),
@@ -83,7 +74,6 @@ impl Decoder for SupportedDecoder {
             SupportedDecoder::Gsm7BitUnpacked(decoder) => decoder.peek(),
             SupportedDecoder::Gsm7BitPacked(decoder) => decoder.peek(),
             SupportedDecoder::Ucs2(decoder) => decoder.peek(),
-            SupportedDecoder::Ascii(decoder) => decoder.peek(),
             SupportedDecoder::Latin1(decoder) => decoder.peek(),
         }
     }
@@ -97,9 +87,6 @@ impl Decoder for SupportedDecoder {
                 .finish()
                 .map_err(SupportedDecodeError::Gsm7BitPacked),
             SupportedDecoder::Ucs2(decoder) => decoder.finish().map_err(SupportedDecodeError::Ucs2),
-            SupportedDecoder::Ascii(decoder) => {
-                decoder.finish().map_err(SupportedDecodeError::Ascii)
-            }
             SupportedDecoder::Latin1(decoder) => {
                 decoder.finish().map_err(SupportedDecodeError::Latin1)
             }
