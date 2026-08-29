@@ -11,7 +11,7 @@ use rusmpp_core::{
     types::owned::{COctetString, OctetString},
     values::{DataCoding, Npi, Ton},
 };
-use rusmpp_extra::encoding::{owned::EncodedSubmitSmExt, ucs2::Ucs2Encoder};
+use rusmpp_extra::encoding::{owned::Encoded, ucs2::Ucs2Encoder};
 
 fn main() -> Result<(), Box<dyn core::error::Error>> {
     // c-spell: disable
@@ -32,7 +32,7 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
         // short_message will be overridden by `short_message` of the encoding builder.
         .short_message(OctetString::from_str("Hi, I am a short message.")?)
         .build()
-        .encode(message)
+        .encoded(message)
         .gsm7bit_unpacked()
         .fallback(Ucs2Encoder::new())
         .build()?;
