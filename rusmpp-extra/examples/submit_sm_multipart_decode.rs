@@ -12,6 +12,7 @@ use rusmpp_extra::{
     concatenation::owned::Multipart,
     encoding::{
         gsm7bit::{Gsm7BitPackedDecoder, Gsm7BitUnpackedDecoder},
+        latin1::Latin1Decoder,
         owned::{Decoder, SupportedDecoder},
         ucs2::Ucs2Decoder,
     },
@@ -31,6 +32,8 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
 
     let ucs2_message = "Hello world! Hello world! Hello world! Hello world! Hello world! Hello world! Hello world! Hello world! Hello world! Hello world! Hello world!";
 
+    let latin1_message = "Hello Latin1!";
+
     let unsupported_data_coding_message =
         "Hello world! This message has an unsupported data coding";
     // c-spell: enable
@@ -41,6 +44,7 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
     // `DataCoding::Other(0b1111111)` is just a made up value for `GSM 7 bit packed`.
     let gsm7bit_unpacked_data_coding = DataCoding::McSpecific;
     let gsm7bit_packed_data_coding = DataCoding::Other(0b1111111);
+    let latin1_data_coding = DataCoding::Latin1;
     let ucs2_data_coding = DataCoding::Ucs2;
     let unsupported_data_coding = DataCoding::Cyrillic;
 
@@ -80,6 +84,15 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
         .into_iter()
         .map(|sm| sm.with_data_coding(ucs2_data_coding));
 
+    let latin1_single = SubmitSm::builder()
+        .build()
+        .sar_multipart(latin1_message)
+        .reference(5)
+        .latin1()
+        .build()?
+        .into_iter()
+        .map(|sm| sm.with_data_coding(latin1_data_coding));
+
     let unsupported_data_coding_single = SubmitSm::builder()
         .build()
         .udh_multipart(unsupported_data_coding_message)
@@ -95,6 +108,7 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
         .interleave(gsm7bit_packed_udh_multipart)
         .interleave(gsm7bit_unpacked_single)
         .interleave(ucs2_sar_multipart)
+        .interleave(latin1_single)
         .interleave(unsupported_data_coding_single);
 
     fn decoder(data_coding: DataCoding) -> Option<SupportedDecoder> {
@@ -106,6 +120,7 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
                 Some(SupportedDecoder::Gsm7BitPacked(Gsm7BitPackedDecoder::new()))
             }
             DataCoding::Ucs2 => Some(SupportedDecoder::Ucs2(Ucs2Decoder::new())),
+            DataCoding::Latin1 => Some(SupportedDecoder::Latin1(Latin1Decoder::new())),
             _ => None,
         }
     }
