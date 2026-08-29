@@ -26,22 +26,29 @@ impl ConcatenatedShortMessage {
     ///
     /// See [`ConcatenatedShortMessageType::udh_length`].
     pub const fn udh_length(&self) -> usize {
-        match self {
-            Self::EightBit(_) => ConcatenatedShortMessage8Bit::UDH_LENGTH,
-            Self::SixteenBit(_) => ConcatenatedShortMessage16Bit::UDH_LENGTH,
-        }
+        // TODO: this must be removed!
+        // match self {
+        //     Self::EightBit(_) => ConcatenatedShortMessage8Bit::UDH_LENGTH,
+        //     Self::SixteenBit(_) => ConcatenatedShortMessage16Bit::UDH_LENGTH,
+        // }
+
+        todo!()
     }
 
     /// Converts [`ConcatenatedShortMessage`] to its UDH bytes representation.
     pub const fn udh_bytes(&self) -> ConcatenatedShortMessageUdhBytes {
-        match self {
-            Self::EightBit(concatenation) => {
-                ConcatenatedShortMessageUdhBytes::EightBit(concatenation.udh_bytes())
-            }
-            Self::SixteenBit(concatenation) => {
-                ConcatenatedShortMessageUdhBytes::SixteenBit(concatenation.udh_bytes())
-            }
-        }
+        // TODO: this must be removed!
+
+        // match self {
+        //     Self::EightBit(concatenation) => {
+        //         ConcatenatedShortMessageUdhBytes::EightBit(concatenation.udh_bytes())
+        //     }
+        //     Self::SixteenBit(concatenation) => {
+        //         ConcatenatedShortMessageUdhBytes::SixteenBit(concatenation.udh_bytes())
+        //     }
+        // }
+
+        todo!()
     }
 }
 
@@ -88,10 +95,13 @@ impl ConcatenatedShortMessageType {
 
     /// Returns the length of the UDH type in bytes.
     pub const fn udh_length(self) -> usize {
-        match self {
-            Self::EightBit { .. } => ConcatenatedShortMessage8Bit::UDH_LENGTH,
-            Self::SixteenBit { .. } => ConcatenatedShortMessage16Bit::UDH_LENGTH,
-        }
+        // TODO: This must be removed!
+        // match self {
+        //     Self::EightBit { .. } => ConcatenatedShortMessage8Bit::UDH_LENGTH,
+        //     Self::SixteenBit { .. } => ConcatenatedShortMessage16Bit::UDH_LENGTH,
+        // }
+
+        todo!()
     }
 
     /// Creates a new [`ConcatenatedShortMessage`]without checking invariants.

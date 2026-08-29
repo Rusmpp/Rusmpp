@@ -128,11 +128,6 @@ pub enum UdhDecodeError {
 #[derive(Debug, Copy, Clone)]
 #[non_exhaustive]
 pub enum ConcatenatedShortMessageDecodeError {
-    /// The length of the information element is invalid.
-    InvalidInformationElementLength {
-        actual: u8,
-        expected: u8,
-    },
     /// The total number of parts is zero.
     TotalPartsZero,
     /// The part number is zero.
@@ -296,15 +291,6 @@ impl ::core::error::Error for UdhDecodeError {}
 impl ::core::fmt::Display for ConcatenatedShortMessageDecodeError {
     fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         match self {
-            ConcatenatedShortMessageDecodeError::InvalidInformationElementLength {
-                actual,
-                expected,
-            } => {
-                write!(
-                    f,
-                    "Invalid information element length. actual: {actual}, expected: {expected}"
-                )
-            }
             ConcatenatedShortMessageDecodeError::PartNumberZero => {
                 write!(f, "Part number cannot be zero")
             }
