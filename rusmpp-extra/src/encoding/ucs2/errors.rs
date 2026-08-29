@@ -3,9 +3,9 @@ use crate::concatenation::MAX_PARTS;
 /// Errors that can occur during UCS2 encoding.
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum Ucs2EncodeError {
-    /// Input contains un-encodable character.
-    #[error("Input contains un-encodable character: {0}")]
-    UnencodableCharacter(char),
+    /// Input contains invalid character.
+    #[error("Input contains invalid character: {0}")]
+    InvalidCharacter(char),
 }
 
 /// Errors that can occur during decoding UCS2 bytes.

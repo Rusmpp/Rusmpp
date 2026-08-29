@@ -59,7 +59,7 @@ mod impl_owned {
 
                 // Latin1 only covers the Unicode range U+0000..=U+00FF.
                 if code_point > 0xFF {
-                    return Err(Latin1EncodeError::UnencodableCharacter(ch));
+                    return Err(Latin1EncodeError::InvalidCharacter(ch));
                 }
 
                 buffer.push(code_point as u8);

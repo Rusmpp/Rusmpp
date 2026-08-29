@@ -1,13 +1,11 @@
 use crate::concatenation::MAX_PARTS;
 
-// TODO: rename all `UnencodableCharacter` errors to `InvalidCharacter`.
-
 /// Errors that can occur during GSM 7-bit encoding.
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum Gsm7BitEncodeError {
-    /// Input contains un-encodable character.
-    #[error("Input contains un-encodable character: '{0}'")]
-    UnencodableCharacter(char),
+    /// Input contains an invalid character.
+    #[error("Input contains invalid character: '{0}'")]
+    InvalidCharacter(char),
 }
 
 /// Errors that can occur during GSM 7-bit decoding.

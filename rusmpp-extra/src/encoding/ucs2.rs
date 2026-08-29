@@ -80,7 +80,7 @@ mod impl_owned {
                 // (U+0000..=U+FFFF). `char` already guarantees the value
                 // isn't a surrogate, so a range check is all that's needed.
                 let code_unit = u16::try_from(u32::from(ch))
-                    .map_err(|_| Ucs2EncodeError::UnencodableCharacter(ch))?;
+                    .map_err(|_| Ucs2EncodeError::InvalidCharacter(ch))?;
 
                 encoded.push((code_unit >> 8) as u8);
                 encoded.push((code_unit & 0xFF) as u8);

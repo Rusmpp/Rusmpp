@@ -86,7 +86,7 @@ mod impl_owned {
         pub fn encode_to_vec(&self, input: &str) -> Result<Vec<u8>, Gsm7BitEncodeError> {
             self.alphabet
                 .encode_to_vec(input)
-                .map_err(Gsm7BitEncodeError::UnencodableCharacter)
+                .map_err(Gsm7BitEncodeError::InvalidCharacter)
         }
     }
 

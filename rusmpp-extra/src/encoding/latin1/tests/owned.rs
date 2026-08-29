@@ -20,7 +20,7 @@ mod encode {
 
             let err = encoder.encode(message).unwrap_err();
 
-            assert!(matches!(err, Latin1EncodeError::UnencodableCharacter('😀')))
+            assert!(matches!(err, Latin1EncodeError::InvalidCharacter('😀')))
         }
     }
 }

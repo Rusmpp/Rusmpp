@@ -125,7 +125,7 @@ mod impl_owned {
         fn encode_unpacked_to_vec(&self, input: &str) -> Result<Vec<u8>, Gsm7BitEncodeError> {
             self.alphabet
                 .encode_to_vec(input)
-                .map_err(Gsm7BitEncodeError::UnencodableCharacter)
+                .map_err(Gsm7BitEncodeError::InvalidCharacter)
         }
 
         /// Returns the number of padding bits needed to align the first septet after a header of `header_size` octets.

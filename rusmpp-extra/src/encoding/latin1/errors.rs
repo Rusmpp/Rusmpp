@@ -3,9 +3,9 @@ use crate::concatenation::MAX_PARTS;
 /// Errors that can occur during Latin1 encoding.
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum Latin1EncodeError {
-    /// Input contains un-encodable character.
-    #[error("Input contains un-encodable character: {0}")]
-    UnencodableCharacter(char),
+    /// Input contains invalid character.
+    #[error("Input contains invalid character: {0}")]
+    InvalidCharacter(char),
 }
 
 /// Errors that can occur during decoding Latin1 bytes.

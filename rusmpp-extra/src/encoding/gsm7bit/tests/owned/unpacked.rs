@@ -161,7 +161,7 @@ mod encode {
 
             let err = encoder.encode(message).unwrap_err();
 
-            assert!(matches!(err, Gsm7BitEncodeError::UnencodableCharacter('✓')))
+            assert!(matches!(err, Gsm7BitEncodeError::InvalidCharacter('✓')))
         }
     }
 }
