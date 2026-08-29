@@ -11,32 +11,33 @@ use crate::{
         owned::{Concatenation, Concatenator},
     },
     encoding::{
-        gsm7bit::{Gsm7BitPacked, Gsm7BitUnpacked},
-        latin1::Latin1,
-        ucs2::Ucs2,
+        gsm7bit::{Gsm7BitPackedEncoder, Gsm7BitUnpackedEncoder},
+        latin1::Latin1Encoder,
+        ucs2::Ucs2Encoder,
     },
     fallback::Fallback,
+    traits::owned::UdhMultipart,
 };
 
-/// Builder for creating multipart [`SubmitSm`] messages.
+/// Builder for creating multipart [`SubmitSm`](rusmpp_core::pdus::owned::SubmitSm), [`DeliverSm`](rusmpp_core::pdus::owned::DeliverSm) and [`SubmitMulti`](rusmpp_core::pdus::owned::SubmitMulti) messages.
 ///
-/// Created using [`SubmitSmMultipartExt::multipart`](super::SubmitSmMultipartExt::multipart).
+/// Created using [`Multipart::udh_multipart`](super::Multipart::udh_multipart).
 #[derive(Debug)]
-pub struct SubmitSmMultipartBuilder<'a, E> {
+pub struct UdhMultipartBuilder<'a, Sm, E> {
     short_message: &'a str,
     max_short_message_size: usize,
-    sm: SubmitSm,
+    sm: Sm,
     encoder: E,
     concatenation_type: ConcatenatedShortMessageType,
 }
 
-impl<'a, E> SubmitSmMultipartBuilder<'a, E> {
-    /// Creates a new [`SubmitSmMultipartBuilder`].
+impl<'a, Sm, E> UdhMultipartBuilder<'a, Sm, E> {
+    /// Creates a new [`UdhMultipartBuilder`].
     pub(super) const fn new(
         short_message: &'a str,
-        sm: SubmitSm,
+        sm: Sm,
         encoder: E,
-    ) -> SubmitSmMultipartBuilder<'a, E> {
+    ) -> UdhMultipartBuilder<'a, Sm, E> {
         Self {
             short_message,
             max_short_message_size: SubmitSm::default_max_short_message_size(),
@@ -67,8 +68,8 @@ impl<'a, E> SubmitSmMultipartBuilder<'a, E> {
     }
 
     /// Sets a custom encoder.
-    pub fn encoder<U>(self, encoder: U) -> SubmitSmMultipartBuilder<'a, U> {
-        SubmitSmMultipartBuilder {
+    pub fn encoder<U>(self, encoder: U) -> UdhMultipartBuilder<'a, Sm, U> {
+        UdhMultipartBuilder {
             short_message: self.short_message,
             max_short_message_size: self.max_short_message_size,
             sm: self.sm,
@@ -77,29 +78,29 @@ impl<'a, E> SubmitSmMultipartBuilder<'a, E> {
         }
     }
 
-    /// Sets the [`Gsm7BitUnpacked`] encoder.
-    pub fn gsm7bit_unpacked(self) -> SubmitSmMultipartBuilder<'a, Gsm7BitUnpacked> {
-        self.encoder(Gsm7BitUnpacked::new())
+    /// Sets the [`Gsm7BitUnpackedEncoder`] encoder.
+    pub fn gsm7bit_unpacked(self) -> UdhMultipartBuilder<'a, Sm, Gsm7BitUnpackedEncoder> {
+        self.encoder(Gsm7BitUnpackedEncoder::new())
     }
 
-    /// Sets the [`Gsm7BitPacked`] encoder.
-    pub fn gsm7bit_packed(self) -> SubmitSmMultipartBuilder<'a, Gsm7BitPacked> {
-        self.encoder(Gsm7BitPacked::new())
+    /// Sets the [`Gsm7BitPackedEncoder`] encoder.
+    pub fn gsm7bit_packed(self) -> UdhMultipartBuilder<'a, Sm, Gsm7BitPackedEncoder> {
+        self.encoder(Gsm7BitPackedEncoder::new())
     }
 
-    /// Sets the [`Ucs2`] encoder.
-    pub fn ucs2(self) -> SubmitSmMultipartBuilder<'a, Ucs2> {
-        self.encoder(Ucs2::new())
+    /// Sets the [`Ucs2Encoder`] encoder.
+    pub fn ucs2(self) -> UdhMultipartBuilder<'a, Sm, Ucs2Encoder> {
+        self.encoder(Ucs2Encoder::new())
     }
 
-    /// Sets the [`Latin1`] encoder.
-    pub fn latin1(self) -> SubmitSmMultipartBuilder<'a, Latin1> {
-        self.encoder(Latin1::new())
+    /// Sets the [`Latin1Encoder`] encoder.
+    pub fn latin1(self) -> UdhMultipartBuilder<'a, Sm, Latin1Encoder> {
+        self.encoder(Latin1Encoder::new())
     }
 
     /// Sets a fallback encoder.
-    pub fn fallback<U>(self, encoder: U) -> SubmitSmMultipartBuilder<'a, Fallback<E, U>> {
-        SubmitSmMultipartBuilder {
+    pub fn fallback<U>(self, encoder: U) -> UdhMultipartBuilder<'a, Sm, Fallback<E, U>> {
+        UdhMultipartBuilder {
             short_message: self.short_message,
             max_short_message_size: self.max_short_message_size,
             sm: self.sm,
@@ -109,12 +110,13 @@ impl<'a, E> SubmitSmMultipartBuilder<'a, E> {
     }
 }
 
-impl<'a, E> SubmitSmMultipartBuilder<'a, E>
+impl<'a, Sm, E> UdhMultipartBuilder<'a, Sm, E>
 where
+    Sm: UdhMultipart + Clone,
     E: Concatenator + 'a,
 {
-    /// Builds the multipart [`SubmitSm`] messages.
-    pub fn build(self) -> Result<Vec<SubmitSm>, MultipartError<E::Error>> {
+    /// Builds the multipart messages.
+    pub fn build(self) -> Result<Vec<Sm>, MultipartError<E::Error>> {
         let (concatenation, data_coding) = self
             .encoder
             .concatenate(
@@ -194,13 +196,13 @@ mod tests {
     };
 
     use crate::concatenation::owned::{
-        SubmitSmMultipartExt, multipart::tests::GSM_7_BIT_UNPACKED_3_PARTS_MESSAGE,
+        Multipart, multipart::tests::GSM_7_BIT_UNPACKED_3_PARTS_MESSAGE,
     };
 
     #[test]
     fn gsm7bit_unpacked_3_parts() {
         let multipart = SubmitSm::default()
-            .multipart(GSM_7_BIT_UNPACKED_3_PARTS_MESSAGE)
+            .udh_multipart(GSM_7_BIT_UNPACKED_3_PARTS_MESSAGE)
             .reference_u16(1)
             .gsm7bit_unpacked()
             .build()

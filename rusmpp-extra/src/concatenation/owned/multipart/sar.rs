@@ -1,7 +1,5 @@
 use alloc::vec::Vec;
-use rusmpp_core::{
-    pdus::owned::SubmitSm, tlvs::owned::MessageSubmissionRequestTlvValue, types::owned::OctetString,
-};
+use rusmpp_core::{pdus::owned::SubmitSm, types::owned::OctetString};
 
 use crate::{
     concatenation::{
@@ -10,32 +8,33 @@ use crate::{
         owned::{Concatenation, Concatenator},
     },
     encoding::{
-        gsm7bit::{Gsm7BitPacked, Gsm7BitUnpacked},
-        latin1::Latin1,
-        ucs2::Ucs2,
+        gsm7bit::{Gsm7BitPackedEncoder, Gsm7BitUnpackedEncoder},
+        latin1::Latin1Encoder,
+        ucs2::Ucs2Encoder,
     },
     fallback::Fallback,
+    traits::owned::SarMultipart,
 };
 
-/// Builder for creating multipart [`SubmitSm`] messages using SAR TLVs.
+/// Builder for creating multipart [`SubmitSm`](rusmpp_core::pdus::owned::SubmitSm), [`DeliverSm`](rusmpp_core::pdus::owned::DeliverSm) and [`SubmitMulti`](rusmpp_core::pdus::owned::SubmitMulti) messages using SAR TLVs.
 ///
-/// Created using [`SubmitSmMultipartExt::sar_multipart`](super::SubmitSmMultipartExt::sar_multipart).
+/// Created using [`Multipart::sar_multipart`](super::Multipart::sar_multipart).
 #[derive(Debug)]
-pub struct SubmitSmSarMultipartBuilder<'a, E> {
+pub struct SarMultipartBuilder<'a, Sm, E> {
     short_message: &'a str,
     max_short_message_size: usize,
-    sm: SubmitSm,
+    sm: Sm,
     encoder: E,
     reference: u16,
 }
 
-impl<'a, E> SubmitSmSarMultipartBuilder<'a, E> {
-    /// Creates a new [`SubmitSmSarMultipartBuilder`].
+impl<'a, Sm, E> SarMultipartBuilder<'a, Sm, E> {
+    /// Creates a new [`SarMultipartBuilder`].
     pub(super) const fn new(
         short_message: &'a str,
-        sm: SubmitSm,
+        sm: Sm,
         encoder: E,
-    ) -> SubmitSmSarMultipartBuilder<'a, E> {
+    ) -> SarMultipartBuilder<'a, Sm, E> {
         Self {
             short_message,
             max_short_message_size: SubmitSm::default_max_short_message_size(),
@@ -60,8 +59,8 @@ impl<'a, E> SubmitSmSarMultipartBuilder<'a, E> {
     }
 
     /// Sets a custom encoder.
-    pub fn encoder<U>(self, encoder: U) -> SubmitSmSarMultipartBuilder<'a, U> {
-        SubmitSmSarMultipartBuilder {
+    pub fn encoder<U>(self, encoder: U) -> SarMultipartBuilder<'a, Sm, U> {
+        SarMultipartBuilder {
             short_message: self.short_message,
             max_short_message_size: self.max_short_message_size,
             sm: self.sm,
@@ -70,29 +69,29 @@ impl<'a, E> SubmitSmSarMultipartBuilder<'a, E> {
         }
     }
 
-    /// Sets the [`Gsm7BitUnpacked`] encoder.
-    pub fn gsm7bit_unpacked(self) -> SubmitSmSarMultipartBuilder<'a, Gsm7BitUnpacked> {
-        self.encoder(Gsm7BitUnpacked::new())
+    /// Sets the [`Gsm7BitUnpackedEncoder`] encoder.
+    pub fn gsm7bit_unpacked(self) -> SarMultipartBuilder<'a, Sm, Gsm7BitUnpackedEncoder> {
+        self.encoder(Gsm7BitUnpackedEncoder::new())
     }
 
-    /// Sets the [`Gsm7BitPacked`] encoder.
-    pub fn gsm7bit_packed(self) -> SubmitSmSarMultipartBuilder<'a, Gsm7BitPacked> {
-        self.encoder(Gsm7BitPacked::new())
+    /// Sets the [`Gsm7BitPackedEncoder`] encoder.
+    pub fn gsm7bit_packed(self) -> SarMultipartBuilder<'a, Sm, Gsm7BitPackedEncoder> {
+        self.encoder(Gsm7BitPackedEncoder::new())
     }
 
-    /// Sets the [`Ucs2`] encoder.
-    pub fn ucs2(self) -> SubmitSmSarMultipartBuilder<'a, Ucs2> {
-        self.encoder(Ucs2::new())
+    /// Sets the [`Ucs2Encoder`] encoder.
+    pub fn ucs2(self) -> SarMultipartBuilder<'a, Sm, Ucs2Encoder> {
+        self.encoder(Ucs2Encoder::new())
     }
 
-    /// Sets the [`Latin1`] encoder.
-    pub fn latin1(self) -> SubmitSmSarMultipartBuilder<'a, Latin1> {
-        self.encoder(Latin1::new())
+    /// Sets the [`Latin1Encoder`] encoder.
+    pub fn latin1(self) -> SarMultipartBuilder<'a, Sm, Latin1Encoder> {
+        self.encoder(Latin1Encoder::new())
     }
 
     /// Sets a fallback encoder.
-    pub fn fallback<U>(self, encoder: U) -> SubmitSmSarMultipartBuilder<'a, Fallback<E, U>> {
-        SubmitSmSarMultipartBuilder {
+    pub fn fallback<U>(self, encoder: U) -> SarMultipartBuilder<'a, Sm, Fallback<E, U>> {
+        SarMultipartBuilder {
             short_message: self.short_message,
             max_short_message_size: self.max_short_message_size,
             sm: self.sm,
@@ -102,12 +101,13 @@ impl<'a, E> SubmitSmSarMultipartBuilder<'a, E> {
     }
 }
 
-impl<'a, E> SubmitSmSarMultipartBuilder<'a, E>
+impl<'a, Sm, E> SarMultipartBuilder<'a, Sm, E>
 where
+    Sm: SarMultipart + Clone,
     E: Concatenator + 'a,
 {
-    /// Builds the multipart [`SubmitSm`] messages.
-    pub fn build(self) -> Result<Vec<SubmitSm>, MultipartError<E::Error>> {
+    /// Builds the multipart messages.
+    pub fn build(self) -> Result<Vec<Sm>, MultipartError<E::Error>> {
         let (concatenation, data_coding) = self
             .encoder
             .concatenate(self.short_message, self.max_short_message_size, 0)
@@ -139,25 +139,18 @@ where
                     .into_iter()
                     .enumerate()
                     .map(|(index, part)| {
-                        let sar_segment_seq_num = index as u8 + 1;
+                        let sar_segment_seqnum = index as u8 + 1;
 
                         let short_message = OctetString::from_vec(part)?;
 
-                        let mut sm = self
+                        let sm = self
                             .sm
                             .clone()
                             .with_short_message(short_message)
-                            .with_data_coding(data_coding);
-
-                        sm.push_tlv(MessageSubmissionRequestTlvValue::SarMsgRefNum(
-                            self.reference,
-                        ));
-                        sm.push_tlv(MessageSubmissionRequestTlvValue::SarTotalSegments(
-                            sar_total_segments,
-                        ));
-                        sm.push_tlv(MessageSubmissionRequestTlvValue::SarSegmentSeqnum(
-                            sar_segment_seq_num,
-                        ));
+                            .with_data_coding(data_coding)
+                            .with_sar_msg_ref_num(self.reference)
+                            .with_sar_total_segments(sar_total_segments)
+                            .with_sar_segment_seqnum(sar_segment_seqnum);
 
                         Ok(sm)
                     })
@@ -172,7 +165,7 @@ mod tests {
     use rusmpp_core::{pdus::owned::SubmitSm, values::DataCoding};
 
     use crate::concatenation::owned::{
-        SubmitSmMultipartExt, multipart::tests::GSM_7_BIT_UNPACKED_3_PARTS_MESSAGE,
+        Multipart, multipart::tests::GSM_7_BIT_UNPACKED_3_PARTS_MESSAGE,
     };
 
     #[test]

@@ -5,7 +5,7 @@ pub use default::Gsm7BitDefaultAlphabet;
 
 pub use spanish::Gsm7BitSpanishAlphabet;
 
-/// Gsm 7-bit escape character.
+/// GSM 7-bit escape character.
 pub const ESCAPE_CHARACTER: u8 = 0x1B;
 
 /// GSM 7-bit alphabet.
@@ -66,6 +66,19 @@ impl Gsm7BitAlphabet {
         match self {
             Self::Default(alphabet) => alphabet.encode(ch),
             Self::Spanish(alphabet) => alphabet.encode(ch),
+        }
+    }
+
+    /// Decodes the given GSM 7-bit encoded byte into a character.
+    ///
+    /// # Returns
+    ///
+    /// - `Some(char)` if the byte is found in the GSM 7-bit tables.
+    /// - `None` if the byte is not found.
+    pub const fn decode(&self, encoded: Encoded) -> Option<char> {
+        match self {
+            Self::Default(alphabet) => alphabet.decode(encoded),
+            Self::Spanish(alphabet) => alphabet.decode(encoded),
         }
     }
 

@@ -13,7 +13,7 @@ use futures::StreamExt;
 use pyo3::{pyclass, pymethods, types::PyType, Bound, Py, PyAny, PyResult, Python};
 use pyo3_async_runtimes::tokio::future_into_py;
 use rusmpp::{
-    extra::{concatenation::SubmitSmMultipartExt, encoding::EncodedSubmitSmExt},
+    extra::{concatenation::Multipart, encoding::Encoded},
     pdus::{BindReceiver, BindTransceiver, BindTransmitter, DeliverSmResp, SubmitSm},
     tlvs::MessageSubmissionRequestTlvValue,
     types::{COctetString, EmptyOrFullCOctetString, OctetString},
@@ -565,7 +565,7 @@ impl Client {
         tracing::debug!(?pdu, "Built Pdu");
 
         let multipart = pdu
-            .multipart(&short_message)
+            .udh_multipart(&short_message)
             .max_short_message_size(max_short_message_size)
             .reference_u8(reference)
             .encoder(encoder)
@@ -657,7 +657,7 @@ impl Client {
         tracing::debug!(?pdu, "Built Pdu");
 
         let encoded = pdu
-            .encode(&short_message)
+            .encoded(&short_message)
             .encoder(encoder)
             .build()
             .map(From::from)

@@ -5,7 +5,7 @@ use crate::{
     },
     encoding::{
         owned::Encoder,
-        ucs2::{Ucs2, Ucs2ConcatenateError, Ucs2EncodeError},
+        ucs2::{Ucs2ConcatenateError, Ucs2EncodeError, Ucs2Encoder},
     },
 };
 
@@ -16,14 +16,14 @@ mod encode {
         use super::*;
 
         #[test]
-        fn unencodable_character() {
+        fn invalid_character() {
             let message = "Hi 😀";
 
-            let encoder = Ucs2::new();
+            let encoder = Ucs2Encoder::new();
 
             let err = encoder.encode(message).unwrap_err();
 
-            assert!(matches!(err, Ucs2EncodeError::UnencodableCharacter))
+            assert!(matches!(err, Ucs2EncodeError::InvalidCharacter('😀')))
         }
     }
 }
@@ -41,7 +41,7 @@ mod concatenate {
             let max_message_size = 6;
             let part_header_size = 6;
 
-            let encoder = Ucs2::new();
+            let encoder = Ucs2Encoder::new();
 
             let err = encoder
                 .concatenate(message, max_message_size, part_header_size)
@@ -56,7 +56,7 @@ mod concatenate {
             let max_message_size = 0;
             let part_header_size = 6;
 
-            let encoder = Ucs2::new();
+            let encoder = Ucs2Encoder::new();
 
             let err = encoder
                 .concatenate(message, max_message_size, part_header_size)
@@ -71,7 +71,7 @@ mod concatenate {
             let part_header_size = 0;
             let message = "123".repeat(MAX_PARTS + 1);
 
-            let encoder = Ucs2::new();
+            let encoder = Ucs2Encoder::new();
 
             let err = encoder
                 .concatenate(&message, max_message_size, part_header_size)
@@ -93,7 +93,7 @@ mod concatenate {
                 let max_message_size = 9;
                 let part_header_size = 8;
 
-                let encoder = Ucs2::new();
+                let encoder = Ucs2Encoder::new();
 
                 let err = encoder
                     .concatenate(message, max_message_size, part_header_size)
@@ -113,7 +113,7 @@ mod concatenate {
                 let max_message_size = 9;
                 let part_header_size = 8;
 
-                let encoder = Ucs2::new().with_allow_split_character(true);
+                let encoder = Ucs2Encoder::new().with_allow_split_character(true);
 
                 let (concatenation, _) = encoder
                     .concatenate(message, max_message_size, part_header_size)
@@ -230,7 +230,7 @@ mod concatenate {
         ];
 
         for case in cases {
-            let encoder = Ucs2::new().with_allow_split_character(case.allow_split_character);
+            let encoder = Ucs2Encoder::new().with_allow_split_character(case.allow_split_character);
 
             let result =
                 encoder.concatenate(case.message, case.max_message_size, case.part_header_size);
@@ -267,6 +267,141 @@ mod concatenate {
                     case.name
                 ),
             }
+        }
+    }
+}
+
+mod decode {
+    use crate::encoding::{owned::Decoder, ucs2::Ucs2Decoder};
+
+    use super::*;
+
+    mod error {
+        use crate::encoding::{
+            owned::Decoder,
+            ucs2::{Ucs2DecodeError, Ucs2Decoder},
+        };
+
+        #[test]
+        fn invalid_code_unit() {
+            let mut decoder = Ucs2Decoder::new();
+
+            let err = decoder.feed(&[0xD8, 0x00], 0).unwrap_err();
+
+            assert!(matches!(err, Ucs2DecodeError::InvalidCodeUnit(0xD800)));
+        }
+
+        #[test]
+        fn invalid_code_unit_across_feeds() {
+            let mut decoder = Ucs2Decoder::new();
+
+            decoder
+                .feed(&[0xD8], 0)
+                .expect("feeding just a high byte should not fail");
+
+            let err = decoder.feed(&[0x00], 0).unwrap_err();
+
+            assert!(matches!(err, Ucs2DecodeError::InvalidCodeUnit(0xD800)));
+        }
+
+        #[test]
+        fn trailing_byte() {
+            let mut decoder = Ucs2Decoder::new();
+
+            decoder
+                .feed(&[0x00], 0)
+                .expect("feeding just a high byte should not fail");
+
+            let err = decoder.finish().unwrap_err();
+
+            assert!(matches!(err, Ucs2DecodeError::TrailingByte));
+        }
+    }
+
+    #[test]
+    fn cases() {
+        struct TestCase {
+            name: &'static str,
+            message: &'static str,
+            max_message_size: usize,
+            part_header_size: usize,
+            allow_split_character: bool,
+        }
+
+        let cases: &[TestCase] = &[
+            TestCase {
+                name: "empty_message",
+                message: "",
+                max_message_size: 16,
+                part_header_size: 6,
+                allow_split_character: false,
+            },
+            TestCase {
+                name: "one_part",
+                message: "12345",
+                max_message_size: 16,
+                part_header_size: 6,
+                allow_split_character: false,
+            },
+            TestCase {
+                name: "two_parts",
+                message: "1234512345",
+                max_message_size: 16,
+                part_header_size: 6,
+                allow_split_character: false,
+            },
+            TestCase {
+                name: "concatenate_on_leading_surrogate_once_no_split",
+                message: "1234512345",
+                max_message_size: 16,
+                part_header_size: 7,
+                allow_split_character: false,
+            },
+            TestCase {
+                name: "concatenate_on_leading_surrogate_once_split",
+                message: "1234512345",
+                max_message_size: 16,
+                part_header_size: 7,
+                allow_split_character: true,
+            },
+            TestCase {
+                name: "concatenate_on_leading_surrogate_three_times_no_split",
+                message: "123123123",
+                max_message_size: 4,
+                part_header_size: 1,
+                allow_split_character: false,
+            },
+            TestCase {
+                name: "concatenate_on_leading_surrogate_three_times_split",
+                message: "123123123",
+                max_message_size: 4,
+                part_header_size: 1,
+                allow_split_character: true,
+            },
+        ];
+
+        for case in cases {
+            let mut decoder = Ucs2Decoder::new();
+
+            let encoder = Ucs2Encoder::new().with_allow_split_character(case.allow_split_character);
+
+            let (concatenation, _) = encoder
+                .concatenate(case.message, case.max_message_size, case.part_header_size)
+                .expect("Failed to encode message");
+
+            for part in concatenation.collect().into_iter() {
+                decoder
+                    .feed(part.as_slice(), case.part_header_size)
+                    .expect("Failed to decode part");
+            }
+
+            let decoded = decoder.finish().expect("Failed to finish decoding");
+
+            assert!(
+                decoded == case.message,
+                "Test case '{}' failed: decoded message does not match original",
+                case.name
+            );
         }
     }
 }

@@ -7,7 +7,7 @@
 [![Crates.io (Downloads)](https://img.shields.io/crates/d/rusmpp-extra)](https://crates.io/crates/rusmpp-extra)
 [![Crates.io (License)](https://img.shields.io/crates/l/rusmpp-extra)](https://crates.io/crates/rusmpp-extra)
 
-Extra components for [Rusmpp-Core](https://crates.io/crates/rusmpp-core).
+Extra components for [rusmpp-core](https://crates.io/crates/rusmpp-core).
 
 ## Features
 

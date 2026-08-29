@@ -11,11 +11,7 @@ pub mod encoding {
 
     pub use rusmpp_extra::encoding::owned::*;
 
-    pub mod errors {
-        //! Errors related to encoded message creation.
-
-        pub use rusmpp_extra::encoding::errors::*;
-    }
+    pub use rusmpp_extra::encoding::EncodeError;
 
     pub mod gsm7bit {
         //! GSM 7-bit encoding/decoding support.
@@ -39,11 +35,7 @@ pub mod encoding {
 pub mod concatenation {
     //! Concatenation support.
 
-    pub use rusmpp_extra::concatenation::{MAX_PARTS, MIN_PARTS, owned::*};
-
-    pub mod errors {
-        //! Errors related to concatenated message creation.
-
-        pub use rusmpp_extra::concatenation::errors::*;
-    }
+    pub use rusmpp_extra::concatenation::{
+        MAX_PARTS, MIN_PARTS, MultipartError, multipart::*, owned::*,
+    };
 }

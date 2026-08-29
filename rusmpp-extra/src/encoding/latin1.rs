@@ -2,22 +2,28 @@
 
 use rusmpp_core::values::DataCoding;
 
-mod errors;
-pub use errors::{Latin1ConcatenateError, Latin1EncodeError};
+mod decode;
 
-/// Latin1 codec.
+#[cfg(any(test, feature = "alloc"))]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+pub use decode::owned::Latin1Decoder;
+
+mod errors;
+pub use errors::{Latin1ConcatenateError, Latin1DecodeError, Latin1EncodeError};
+
+/// Latin1 encoder.
 #[derive(Debug)]
 #[non_exhaustive]
-pub struct Latin1 {}
+pub struct Latin1Encoder {}
 
-impl Default for Latin1 {
+impl Default for Latin1Encoder {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Latin1 {
-    /// Creates a new [`Latin1`] codec.
+impl Latin1Encoder {
+    /// Creates a new [`Latin1Encoder`] encoder.
     pub const fn new() -> Self {
         Self {}
     }
@@ -43,30 +49,27 @@ mod impl_owned {
 
     use super::*;
 
-    impl Latin1 {
+    impl Latin1Encoder {
         /// Encodes the given message into a vector of bytes.
         pub fn encode_to_vec(&self, input: &str) -> Result<Vec<u8>, Latin1EncodeError> {
-            encoding_rs::mem::is_utf8_latin1(input.as_bytes())
-                .then_some(())
-                .ok_or(Latin1EncodeError::UnencodableCharacter)?;
+            let mut buffer = Vec::with_capacity(input.len());
 
-            let mut buffer = alloc::vec![0u8; input.len()];
-            /*
-            Correctness:
+            for ch in input.chars() {
+                let code_point = ch as u32;
 
-            - The input is UTF-8 Latin1.
-            - The size of the buffer is at least as large as the encoded output.
-            */
-            let size =
-                encoding_rs::mem::convert_utf8_to_latin1_lossy(input.as_bytes(), &mut buffer);
+                // Latin1 only covers the Unicode range U+0000..=U+00FF.
+                if code_point > 0xFF {
+                    return Err(Latin1EncodeError::InvalidCharacter(ch));
+                }
 
-            buffer.truncate(size);
+                buffer.push(code_point as u8);
+            }
 
             Ok(buffer)
         }
     }
 
-    impl Encoder for Latin1 {
+    impl Encoder for Latin1Encoder {
         type Error = Latin1EncodeError;
 
         fn encode(&self, message: &str) -> Result<(Vec<u8>, DataCoding), Self::Error> {
@@ -75,7 +78,7 @@ mod impl_owned {
         }
     }
 
-    impl Concatenator for Latin1 {
+    impl Concatenator for Latin1Encoder {
         type Error = Latin1ConcatenateError;
 
         fn concatenate(

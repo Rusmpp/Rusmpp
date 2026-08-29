@@ -2,10 +2,10 @@ use rusmpp_core::values::DataCoding;
 
 use crate::encoding::gsm7bit::alphabet::Gsm7BitAlphabet;
 
-/// GSM 7-bit packed codec.
+/// GSM 7-bit packed encoder.
 #[non_exhaustive]
 #[derive(Debug)]
-pub struct Gsm7BitPacked {
+pub struct Gsm7BitPackedEncoder {
     /// The GSM 7-bit alphabet to use for encoding.
     alphabet: Gsm7BitAlphabet,
     /// Whether to allow splitting extended characters across message parts.
@@ -22,14 +22,14 @@ pub struct Gsm7BitPacked {
     cr_padding: bool,
 }
 
-impl Default for Gsm7BitPacked {
+impl Default for Gsm7BitPackedEncoder {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Gsm7BitPacked {
-    /// Creates a new [`Gsm7BitPacked`] with [`Gsm7BitAlphabet::Default`].
+impl Gsm7BitPackedEncoder {
+    /// Creates a new [`Gsm7BitPackedEncoder`] with [`Gsm7BitAlphabet::Default`].
     ///
     /// # Defaults
     ///
@@ -44,7 +44,7 @@ impl Gsm7BitPacked {
         }
     }
 
-    /// Sets the alphabet for the codec.
+    /// Sets the alphabet for the encoder.
     pub const fn with_alphabet(mut self, alphabet: Gsm7BitAlphabet) -> Self {
         self.alphabet = alphabet;
         self
@@ -107,7 +107,7 @@ mod impl_owned {
     /// The 7-bit code for the Carriage Return (CR) character.
     const CR_FILL_SEPTET: u8 = 0x0D;
 
-    impl Gsm7BitPacked {
+    impl Gsm7BitPackedEncoder {
         /// Encodes the given message into a vector of bytes and packs the septets into octets.
         pub fn encode_to_vec(&self, input: &str) -> Result<Vec<u8>, Gsm7BitEncodeError> {
             let encoded = self.encode_unpacked_to_vec(input)?;
@@ -125,12 +125,20 @@ mod impl_owned {
         fn encode_unpacked_to_vec(&self, input: &str) -> Result<Vec<u8>, Gsm7BitEncodeError> {
             self.alphabet
                 .encode_to_vec(input)
-                .map_err(Gsm7BitEncodeError::UnencodableCharacter)
+                .map_err(Gsm7BitEncodeError::InvalidCharacter)
         }
 
         /// Returns the number of padding bits needed to align the first septet after a header of `header_size` octets.
-        const fn padding(header_size: usize) -> usize {
+        pub(crate) const fn padding(header_size: usize) -> usize {
             (7 - ((header_size * 8) % 7)) % 7
+        }
+
+        pub(crate) const fn n_septets(n_octets: usize, padding: usize) -> usize {
+            if n_octets == 0 {
+                return 0;
+            }
+
+            (n_octets * 8 - padding) / 7
         }
 
         /// Number of octets needed to pack `n_septets` septets, given `padding`
@@ -228,7 +236,6 @@ mod impl_owned {
         /// If `packed` runs out of bits before `n_septets` septets have been
         /// extracted, the result is truncated to however many complete septets
         /// were actually available.
-        #[cfg(test)]
         pub(crate) fn unpack(packed: &[u8], padding: usize, n_septets: usize) -> Vec<u8> {
             let mut septets = Vec::with_capacity(n_septets);
 
@@ -255,9 +262,29 @@ mod impl_owned {
 
             septets
         }
+
+        /// Unpacks `packed` octets back into septets, reversing [`Self::pack`], and pops a trailing CR if present.
+        ///
+        /// See [`Self::pack_with_cr_padding`] and [`Self::unpack`] for details.
+        pub(crate) fn unpack_pop_cr_padding(
+            packed: &[u8],
+            padding: usize,
+            n_septets: usize,
+        ) -> Vec<u8> {
+            let mut unpacked = Gsm7BitPackedEncoder::unpack(packed, padding, n_septets);
+
+            if n_septets > 0
+                && Gsm7BitPackedEncoder::spare_bits(n_septets - 1, padding) == 7
+                && unpacked.last() == Some(&0x0D)
+            {
+                unpacked.pop();
+            }
+
+            unpacked
+        }
     }
 
-    impl Encoder for Gsm7BitPacked {
+    impl Encoder for Gsm7BitPackedEncoder {
         type Error = Gsm7BitEncodeError;
 
         fn encode(&self, message: &str) -> Result<(Vec<u8>, DataCoding), Self::Error> {
@@ -266,7 +293,7 @@ mod impl_owned {
         }
     }
 
-    impl Concatenator for Gsm7BitPacked {
+    impl Concatenator for Gsm7BitPackedEncoder {
         type Error = Gsm7BitConcatenateError;
 
         fn concatenate(

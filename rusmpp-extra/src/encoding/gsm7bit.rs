@@ -1,16 +1,19 @@
-//! Gsm 7-bit encoding/decoding support.
+//! GSM 7-bit encoding/decoding support.
 
 mod alphabet;
+mod decode;
+mod encode;
 mod errors;
-mod packed;
-mod unpacked;
 
 pub use alphabet::{
     ESCAPE_CHARACTER, Encoded, Gsm7BitAlphabet, Gsm7BitDefaultAlphabet, Gsm7BitSpanishAlphabet,
 };
-pub use errors::{Gsm7BitConcatenateError, Gsm7BitEncodeError};
-pub use packed::Gsm7BitPacked;
-pub use unpacked::Gsm7BitUnpacked;
+pub use encode::{packed::Gsm7BitPackedEncoder, unpacked::Gsm7BitUnpackedEncoder};
+pub use errors::{Gsm7BitConcatenateError, Gsm7BitDecodeError, Gsm7BitEncodeError};
+
+#[cfg(any(test, feature = "alloc"))]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+pub use decode::{packed::owned::Gsm7BitPackedDecoder, unpacked::owned::Gsm7BitUnpackedDecoder};
 
 #[cfg(test)]
 mod tests;

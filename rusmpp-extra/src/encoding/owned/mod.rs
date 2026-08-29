@@ -3,7 +3,10 @@
 mod encoder;
 pub use encoder::Encoder;
 
-mod submit_sm;
-pub use submit_sm::{EncodedSubmitSmBuilder, EncodedSubmitSmExt};
+mod decoder;
+pub use decoder::{Decoder, SupportedDecodeError, SupportedDecoder};
+
+mod traits;
+pub use traits::{Encoded, EncodedBuilder};
 
 mod fallback;

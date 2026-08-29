@@ -5,8 +5,8 @@ use crate::{
     },
     encoding::{
         gsm7bit::{
+            Gsm7BitUnpackedEncoder,
             errors::{Gsm7BitConcatenateError, Gsm7BitEncodeError},
-            unpacked::Gsm7BitUnpacked,
         },
         owned::Encoder,
     },
@@ -27,7 +27,7 @@ mod encode {
 ^{}\[~]|€"##;
         // c-spell: enable
 
-        let (encoded, _) = Gsm7BitUnpacked::new()
+        let (encoded, _) = Gsm7BitUnpackedEncoder::new()
             .encode(input)
             .expect("Encoding failed");
 
@@ -65,7 +65,7 @@ mod encode {
         let input = r#"ç^{}\[~]|ÁÍÓÚá€íóú"#;
         // c-spell: enable
 
-        let (encoded, _) = Gsm7BitUnpacked::new()
+        let (encoded, _) = Gsm7BitUnpackedEncoder::new()
             .with_alphabet(Gsm7BitAlphabet::spanish())
             .encode(input)
             .expect("Encoding failed");
@@ -141,7 +141,7 @@ mod encode {
         ];
         // c-spell: enable
 
-        let encoder = Gsm7BitUnpacked::new();
+        let encoder = Gsm7BitUnpackedEncoder::new();
 
         for (text, expected) in cases {
             let (encoded, _) = encoder.encode(text).expect("Encoding failed");
@@ -154,14 +154,14 @@ mod encode {
         use super::*;
 
         #[test]
-        fn unencodable_character() {
+        fn invalid_character() {
             let message = "Hi ✓";
 
-            let encoder = Gsm7BitUnpacked::new();
+            let encoder = Gsm7BitUnpackedEncoder::new();
 
             let err = encoder.encode(message).unwrap_err();
 
-            assert!(matches!(err, Gsm7BitEncodeError::UnencodableCharacter('✓')))
+            assert!(matches!(err, Gsm7BitEncodeError::InvalidCharacter('✓')))
         }
     }
 }
@@ -180,7 +180,7 @@ mod concatenate {
             let max_message_size = 6;
             let part_header_size = 6;
 
-            let encoder = Gsm7BitUnpacked::new();
+            let encoder = Gsm7BitUnpackedEncoder::new();
 
             let err = encoder
                 .concatenate(message, max_message_size, part_header_size)
@@ -195,7 +195,7 @@ mod concatenate {
             let max_message_size = 0;
             let part_header_size = 6;
 
-            let encoder = Gsm7BitUnpacked::new();
+            let encoder = Gsm7BitUnpackedEncoder::new();
 
             let err = encoder
                 .concatenate(message, max_message_size, part_header_size)
@@ -210,7 +210,7 @@ mod concatenate {
             let part_header_size = 0;
             let message = "123456".repeat(MAX_PARTS + 1);
 
-            let encoder = Gsm7BitUnpacked::new();
+            let encoder = Gsm7BitUnpackedEncoder::new();
 
             let err = encoder
                 .concatenate(&message, max_message_size, part_header_size)
@@ -233,7 +233,7 @@ mod concatenate {
                 let max_message_size = 9;
                 let part_header_size = 8;
 
-                let encoder = Gsm7BitUnpacked::new();
+                let encoder = Gsm7BitUnpackedEncoder::new();
 
                 let err = encoder
                     .concatenate(message, max_message_size, part_header_size)
@@ -254,7 +254,8 @@ mod concatenate {
                 let max_message_size = 9;
                 let part_header_size = 8;
 
-                let encoder = Gsm7BitUnpacked::new().with_allow_split_extended_character(true);
+                let encoder =
+                    Gsm7BitUnpackedEncoder::new().with_allow_split_extended_character(true);
 
                 let (concatenation, _) = encoder
                     .concatenate(message, max_message_size, part_header_size)
@@ -359,7 +360,7 @@ mod concatenate {
         ];
 
         for case in cases {
-            let encoder = Gsm7BitUnpacked::new()
+            let encoder = Gsm7BitUnpackedEncoder::new()
                 .with_allow_split_extended_character(case.allow_split_extended_character);
 
             let result =
@@ -397,6 +398,150 @@ mod concatenate {
                     case.name
                 ),
             }
+        }
+    }
+}
+
+mod decode {
+    use crate::encoding::{gsm7bit::Gsm7BitUnpackedDecoder, owned::Decoder};
+
+    use super::*;
+
+    mod error {
+        use crate::encoding::gsm7bit::{ESCAPE_CHARACTER, errors::Gsm7BitDecodeError};
+
+        use super::*;
+
+        #[test]
+        fn invalid_byte() {
+            let mut decoder = Gsm7BitUnpackedDecoder::new();
+
+            let err = decoder.feed(&[0xFF], 0).unwrap_err();
+
+            assert!(matches!(err, Gsm7BitDecodeError::InvalidByte(0xFF)));
+        }
+
+        #[test]
+        fn invalid_extended_byte() {
+            let mut decoder = Gsm7BitUnpackedDecoder::new();
+
+            let err = decoder.feed(&[ESCAPE_CHARACTER, 0x00], 0).unwrap_err();
+
+            assert!(matches!(err, Gsm7BitDecodeError::InvalidExtendedByte(0x00)));
+        }
+
+        #[test]
+        fn invalid_extended_byte_across_feeds() {
+            let mut decoder = Gsm7BitUnpackedDecoder::new();
+
+            decoder
+                .feed(&[ESCAPE_CHARACTER], 0)
+                .expect("feeding a lone escape character should not fail");
+
+            let err = decoder.feed(&[0x00], 0).unwrap_err();
+
+            assert!(matches!(err, Gsm7BitDecodeError::InvalidExtendedByte(0x00)));
+        }
+
+        #[test]
+        fn trailing_escape() {
+            let mut decoder = Gsm7BitUnpackedDecoder::new();
+
+            decoder
+                .feed(&[ESCAPE_CHARACTER], 0)
+                .expect("feeding a lone escape character should not fail");
+
+            let err = decoder.finish().unwrap_err();
+
+            assert!(matches!(err, Gsm7BitDecodeError::TrailingEscape));
+        }
+    }
+
+    #[test]
+    fn cases() {
+        struct TestCase {
+            name: &'static str,
+            message: &'static str,
+            max_message_size: usize,
+            part_header_size: usize,
+            allow_split_extended_character: bool,
+        }
+
+        let cases: &[TestCase] = &[
+            TestCase {
+                name: "empty_message",
+                message: "",
+                max_message_size: 16,
+                part_header_size: 6,
+                allow_split_extended_character: false,
+            },
+            TestCase {
+                name: "one_part",
+                message: "123456789",
+                max_message_size: 16,
+                part_header_size: 6,
+                allow_split_extended_character: false,
+            },
+            TestCase {
+                name: "two_parts",
+                message: "123456789123456789",
+                max_message_size: 16,
+                part_header_size: 6,
+                allow_split_extended_character: false,
+            },
+            TestCase {
+                name: "concatenate_on_extended_character_once_no_split",
+                message: "123456789[3456789",
+                max_message_size: 16,
+                part_header_size: 6,
+                allow_split_extended_character: false,
+            },
+            TestCase {
+                name: "concatenate_on_extended_character_once_split",
+                message: "123456789[3456789",
+                max_message_size: 16,
+                part_header_size: 6,
+                allow_split_extended_character: true,
+            },
+            TestCase {
+                name: "concatenate_on_extended_character_three_times_no_split",
+                message: "123456789[23456789[23456789[",
+                max_message_size: 16,
+                part_header_size: 6,
+                allow_split_extended_character: false,
+            },
+            TestCase {
+                name: "concatenate_on_extended_character_three_times_split",
+                message: "123456789[23456789[23456789[",
+                max_message_size: 16,
+                part_header_size: 6,
+                allow_split_extended_character: true,
+            },
+        ];
+
+        for case in cases {
+            let mut decoder = Gsm7BitUnpackedDecoder::new();
+
+            let encoder = Gsm7BitUnpackedEncoder::new()
+                .with_allow_split_extended_character(case.allow_split_extended_character);
+
+            let (concatenation, _) = encoder
+                .concatenate(case.message, case.max_message_size, case.part_header_size)
+                .expect("Failed to encode message");
+
+            for part in concatenation.collect().into_iter() {
+                decoder
+                    .feed(part.as_slice(), case.part_header_size)
+                    .expect("Failed to decode part");
+            }
+
+            let decoded = decoder.finish().expect("Failed to finish decoding");
+
+            assert!(
+                decoded == case.message,
+                "Test case '{}' failed: decoded message does not match original",
+                case.name
+            );
         }
     }
 }

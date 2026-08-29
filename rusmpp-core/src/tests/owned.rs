@@ -21,11 +21,7 @@ where
     <T as DecodeErrorType>::Error: ::core::fmt::Debug,
 {
     for original in T::instances() {
-        let mut buf = BytesMut::with_capacity(1024);
-
-        if original.length() > buf.capacity() {
-            panic!("Buffer capacity is too small to hold the encoded data");
-        }
+        let mut buf = BytesMut::with_capacity(original.length());
 
         original.encode(&mut buf);
 
@@ -46,11 +42,7 @@ where
     <T as DecodeErrorType>::Error: ::core::fmt::Debug,
 {
     for original in T::instances() {
-        let mut buf = BytesMut::with_capacity(1024);
-
-        if original.length() > buf.capacity() {
-            panic!("Buffer capacity is too small to hold the encoded data");
-        }
+        let mut buf = BytesMut::with_capacity(original.length());
 
         original.encode(&mut buf);
 

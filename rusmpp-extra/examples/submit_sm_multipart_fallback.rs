@@ -12,10 +12,10 @@ use rusmpp_core::{
     values::{Npi, Ton},
 };
 use rusmpp_extra::{
-    concatenation::owned::SubmitSmMultipartExt,
+    concatenation::owned::Multipart,
     encoding::{
-        gsm7bit::{Gsm7BitAlphabet, Gsm7BitUnpacked},
-        ucs2::Ucs2,
+        gsm7bit::{Gsm7BitAlphabet, Gsm7BitUnpackedEncoder},
+        ucs2::Ucs2Encoder,
     },
 };
 
@@ -26,9 +26,9 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
         .source_addr(COctetString::from_str("12345")?)
         .destination_addr(COctetString::from_str("491701234567")?)
         .build()
-        .multipart("Hi This message can not be encoded in gsm 7-bit default alphabet so it will fallback to ucs2: 你好")
-        .encoder(Gsm7BitUnpacked::new().with_alphabet(Gsm7BitAlphabet::default()))
-        .fallback(Ucs2::new())
+        .udh_multipart("Hi This message can not be encoded in gsm 7-bit default alphabet so it will fallback to ucs2: 你好")
+        .encoder(Gsm7BitUnpackedEncoder::new().with_alphabet(Gsm7BitAlphabet::default()))
+        .fallback(Ucs2Encoder::new())
         .build()?;
 
     let total = multipart.len();
@@ -36,7 +36,7 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
     println!("Submitting multipart message: total {total}");
 
     for (i, sm) in multipart.into_iter().enumerate() {
-        assert_eq!(sm.data_coding, Ucs2::new().data_coding());
+        assert_eq!(sm.data_coding, Ucs2Encoder::new().data_coding());
 
         println!(
             "Submitting part {}: short_message_len = {}, esm_class = {:?}, data_coding = {:?}, short_message = {:?}",

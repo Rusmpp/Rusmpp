@@ -3,9 +3,25 @@ use crate::concatenation::MAX_PARTS;
 /// Errors that can occur during UCS2 encoding.
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum Ucs2EncodeError {
-    /// Input contains un-encodable character.
-    #[error("Input contains un-encodable character")]
-    UnencodableCharacter,
+    /// Input contains invalid character.
+    #[error("Input contains invalid character: {0}")]
+    InvalidCharacter(char),
+}
+
+/// Errors that can occur during UCS2 decoding.
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum Ucs2DecodeError {
+    /// A decoded 16-bit code unit does not correspond to a valid Unicode scalar value.
+    #[error(
+        "A decoded 16-bit code unit does not correspond to a valid Unicode scalar value: {0:#06X}"
+    )]
+    InvalidCodeUnit(u16),
+    /// Input ended with a dangling high byte.
+    ///
+    /// An odd total number of bytes were fed without a matching low byte.
+    #[error("Input ended with a dangling high byte")]
+    TrailingByte,
 }
 
 /// Errors that can occur during UCS2 concatenation.

@@ -3,11 +3,11 @@ use rusmpp_macros::Rusmpp;
 use crate::{
     Sealed,
     decode::{
-        AnyOctetStringDecodeError, ConcatenatedShortMessageDecodeError, DecodeResultExt,
-        owned::{Decode, DecodeErrorType, DecodeWithKey, DecodeWithLength},
+        DecodeError, DecodeResultExt,
+        borrowed::{Decode, DecodeWithKey, DecodeWithLength},
     },
     encode::Length,
-    types::owned::AnyOctetString,
+    types::borrowed::AnyOctetString,
     udhs::{
         UdhId,
         concatenation::{ConcatenatedShortMessage8Bit, ConcatenatedShortMessage16Bit},
@@ -16,8 +16,8 @@ use crate::{
 
 /// User Data Header (UDH).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Rusmpp)]
-#[rusmpp(decode = owned, test = skip)]
-pub struct Udh {
+#[rusmpp(decode = borrowed, test = skip)]
+pub struct Udh<'a> {
     /// UDH length (excluding the length field itself).
     length: u8,
     /// UDH identifier.
@@ -26,12 +26,12 @@ pub struct Udh {
     // XXX: the length of the value is `self.length` - `self.id.length()`
     // `self.id.length()` is always `1`
     #[rusmpp(key = id, length = length - 1)]
-    value: Option<UdhValue>,
+    value: Option<UdhValue<'a>>,
 }
 
-impl Udh {
+impl<'a> Udh<'a> {
     /// Creates a new [`Udh`] from the given [`UdhValue`].
-    pub fn new(value: impl Into<UdhValue>) -> Self {
+    pub fn new(value: impl Into<UdhValue<'a>>) -> Self {
         let value = value.into();
         let id = value.id();
         let length = value.length() as u8 + id.length() as u8;
@@ -54,73 +54,66 @@ impl Udh {
     }
 
     /// Returns a reference to the UDH value.
-    pub const fn value(&self) -> Option<&UdhValue> {
+    pub const fn value(&self) -> Option<&UdhValue<'_>> {
         self.value.as_ref()
     }
 }
 
-impl From<UdhValue> for Udh {
-    fn from(value: UdhValue) -> Self {
+impl<'a> From<UdhValue<'a>> for Udh<'a> {
+    fn from(value: UdhValue<'a>) -> Self {
         Self::new(value)
     }
 }
 
 #[cfg(feature = "serde")]
 const _: () = {
-    use alloc::borrow::Cow;
-
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+    use crate::types::borrowed::AnyOctetString;
+
     #[derive(Serialize)]
-    #[serde(transparent)]
     struct SerUdh<'a> {
-        value: Cow<'a, UdhValue>,
+        value: &'a UdhValue<'a>,
     }
 
-    impl<'a> From<&'a Udh> for SerUdh<'a> {
-        fn from(udh: &'a Udh) -> Self {
-            let value =
-                udh.value
-                    .as_ref()
-                    .map(Cow::Borrowed)
-                    .unwrap_or(Cow::Owned(UdhValue::Other {
-                        udh_id: udh.id,
-                        value: Default::default(),
-                    }));
-
-            Self { value }
-        }
-    }
-
-    impl Serialize for Udh {
+    impl<'a> Serialize for Udh<'a> {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: Serializer,
         {
-            SerUdh::from(self).serialize(serializer)
+            let value = UdhValue::Other {
+                udh_id: self.id(),
+                value: AnyOctetString::empty(),
+            };
+
+            let value = self.value.as_ref().unwrap_or(&value);
+
+            let tlv = SerUdh { value };
+
+            tlv.serialize(serializer)
         }
     }
 
     #[derive(Deserialize)]
-    #[serde(transparent)]
-    struct DeUdh {
-        value: UdhValue,
+    #[serde(bound(deserialize = "'de: 'a"))]
+    struct DeUdh<'a> {
+        value: UdhValue<'a>,
     }
 
-    impl From<DeUdh> for Udh {
-        fn from(udh: DeUdh) -> Self {
-            Self::new(udh.value)
+    impl<'a> From<DeUdh<'a>> for Udh<'a> {
+        fn from(tlv: DeUdh<'a>) -> Self {
+            Self::new(tlv.value)
         }
     }
 
-    impl<'de> Deserialize<'de> for Udh {
+    impl<'de: 'a, 'a> Deserialize<'de> for Udh<'a> {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
             D: Deserializer<'de>,
         {
-            let udh = DeUdh::deserialize(deserializer)?;
+            let tlv = DeUdh::deserialize(deserializer)?;
 
-            Ok(Self::from(udh))
+            Ok(Self::from(tlv))
         }
     }
 };
@@ -129,7 +122,8 @@ const _: () = {
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-pub enum UdhValue {
+#[cfg_attr(feature = "serde", serde(bound(deserialize = "'de: 'a")))]
+pub enum UdhValue<'a> {
     /// 8-bit Concatenated Short Message UDH.
     ConcatenatedShortMessage8Bit(ConcatenatedShortMessage8Bit),
     /// 16-bit Concatenated Short Message UDH.
@@ -137,11 +131,11 @@ pub enum UdhValue {
     /// Other UDH types.
     Other {
         udh_id: UdhId,
-        value: AnyOctetString,
+        value: AnyOctetString<'a>,
     },
 }
 
-impl UdhValue {
+impl<'a> UdhValue<'a> {
     /// Returns the UDH identifier.
     pub const fn id(&self) -> UdhId {
         match self {
@@ -152,9 +146,9 @@ impl UdhValue {
     }
 }
 
-impl Sealed for UdhValue {}
+impl<'a> Sealed for UdhValue<'a> {}
 
-impl Length for UdhValue {
+impl<'a> Length for UdhValue<'a> {
     fn length(&self) -> usize {
         match self {
             UdhValue::ConcatenatedShortMessage8Bit(udh) => udh.length(),
@@ -164,7 +158,7 @@ impl Length for UdhValue {
     }
 }
 
-impl crate::encode::Encode for UdhValue {
+impl<'a> crate::encode::Encode for UdhValue<'a> {
     fn encode(&self, dst: &mut [u8]) -> usize {
         match self {
             UdhValue::ConcatenatedShortMessage8Bit(udh) => udh.encode(dst),
@@ -174,7 +168,8 @@ impl crate::encode::Encode for UdhValue {
     }
 }
 
-impl crate::encode::owned::Encode for UdhValue {
+#[cfg(feature = "alloc")]
+impl crate::encode::owned::Encode for UdhValue<'_> {
     fn encode(&self, dst: &mut bytes::BytesMut) {
         match self {
             UdhValue::ConcatenatedShortMessage8Bit(udh) => udh.encode(dst),
@@ -184,45 +179,23 @@ impl crate::encode::owned::Encode for UdhValue {
     }
 }
 
-#[derive(Debug, Clone, thiserror::Error)]
-pub enum UdhValueDecodeError {
-    #[error("ConcatenatedShortMessage8Bit decode error: {0}")]
-    ConcatenatedShortMessage8Bit(#[source] ConcatenatedShortMessageDecodeError),
-    #[error("ConcatenatedShortMessage16Bit decode error: {0}")]
-    ConcatenatedShortMessage16Bit(#[source] ConcatenatedShortMessageDecodeError),
-    #[error("Other decode error: {0}")]
-    Other(
-        #[from]
-        #[source]
-        AnyOctetStringDecodeError,
-    ),
-}
-
-impl DecodeErrorType for UdhValue {
-    type Error = UdhValueDecodeError;
-}
-
-impl DecodeWithKey for UdhValue {
+impl<'a> DecodeWithKey<'a> for UdhValue<'a> {
     type Key = UdhId;
 
-    fn decode(
-        key: Self::Key,
-        src: &mut bytes::BytesMut,
-        length: usize,
-    ) -> Result<(Self, usize), Self::Error> {
+    fn decode(key: Self::Key, src: &'a [u8], length: usize) -> Result<(Self, usize), DecodeError> {
         let (value, size) = match key {
-            UdhId::ConcatenatedShortMessages8Bit => Decode::decode(src)
-                .map_decoded(Self::ConcatenatedShortMessage8Bit)
-                .map_err(Self::Error::ConcatenatedShortMessage8Bit)?,
-            UdhId::ConcatenatedShortMessages16Bit => Decode::decode(src)
-                .map_decoded(Self::ConcatenatedShortMessage16Bit)
-                .map_err(Self::Error::ConcatenatedShortMessage16Bit)?,
-            other => DecodeWithLength::decode(src, length)
-                .map_decoded(|value| UdhValue::Other {
+            UdhId::ConcatenatedShortMessages8Bit => {
+                Decode::decode(src).map_decoded(Self::ConcatenatedShortMessage8Bit)?
+            }
+            UdhId::ConcatenatedShortMessages16Bit => {
+                Decode::decode(src).map_decoded(Self::ConcatenatedShortMessage16Bit)?
+            }
+            other => {
+                DecodeWithLength::decode(src, length).map_decoded(|value| UdhValue::Other {
                     udh_id: other,
                     value,
-                })
-                .map_err(Self::Error::Other)?,
+                })?
+            }
         };
 
         Ok((value, size))
@@ -279,6 +252,7 @@ mod tests {
             }
         }
 
+        #[cfg(feature = "alloc")]
         mod owned {
             use super::*;
 
@@ -332,57 +306,51 @@ mod tests {
     }
 
     mod decode {
-        use bytes::BytesMut;
-
-        use crate::decode::owned::Decode;
+        use crate::decode::borrowed::Decode;
 
         use super::*;
 
         #[test]
         fn ok() {
-            let mut buf = BytesMut::from(
-                &[
-                    0x06, // UDH length (following bytes = 6)
-                    0x08, // UDH ID: Concatenated Short Messages, 16-bit reference number
-                    0x04, // IE Data Length = 4 bytes
-                    0x12, // Ref high
-                    0x34, // Ref low
-                    0x03, // Total parts
-                    0x01, // Part number
-                    0x00, // Extra bytes
-                    0x00,
-                ][..],
-            );
+            let bytes = &[
+                0x06, // UDH length (following bytes = 6)
+                0x08, // UDH ID: Concatenated Short Messages, 16-bit reference number
+                0x04, // IE Data Length = 4 bytes
+                0x12, // Ref high
+                0x34, // Ref low
+                0x03, // Total parts
+                0x01, // Part number
+                0x00, // Extra bytes
+                0x00,
+            ];
 
-            let (udh, size) = <Udh as Decode>::decode(&mut buf).unwrap();
+            let (udh, size) = <Udh as Decode>::decode(bytes).unwrap();
 
             assert_eq!(size, 7);
             assert_eq!(
                 udh,
                 Udh::new(ConcatenatedShortMessage16Bit::new(0x1234, 3, 1).unwrap())
             );
-            assert_eq!(&buf[..], &[0x00, 0x00][..]);
+            assert_eq!(&bytes[size..], &[0x00, 0x00][..]);
 
-            let mut buf = BytesMut::from(
-                &[
-                    0x05, // UDH length (following bytes = 5)
-                    0x00, // UDH ID: Concatenated Short Messages, 8-bit reference number
-                    0x03, // IE Data Length = 3 bytes
-                    0x12, // Ref
-                    0x03, // Total parts
-                    0x01, // Part number
-                    0x00, // Extra bytes
-                    0x00,
-                ][..],
-            );
+            let bytes = &[
+                0x05, // UDH length (following bytes = 5)
+                0x00, // UDH ID: Concatenated Short Messages, 8-bit reference number
+                0x03, // IE Data Length = 3 bytes
+                0x12, // Ref
+                0x03, // Total parts
+                0x01, // Part number
+                0x00, // Extra bytes
+                0x00,
+            ];
 
-            let (udh, size) = <Udh as Decode>::decode(&mut buf).unwrap();
+            let (udh, size) = <Udh as Decode>::decode(bytes).unwrap();
             assert_eq!(size, 6);
             assert_eq!(
                 udh,
                 Udh::new(ConcatenatedShortMessage8Bit::new(0x12, 3, 1).unwrap())
             );
-            assert_eq!(&buf[..], &[0x00, 0x00][..]);
+            assert_eq!(&bytes[size..], &[0x00, 0x00][..]);
         }
     }
 }

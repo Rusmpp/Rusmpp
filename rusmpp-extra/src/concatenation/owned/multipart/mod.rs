@@ -1,11 +1,11 @@
-mod submit_sm;
-pub use submit_sm::SubmitSmMultipartExt;
+mod traits;
+pub use traits::Multipart;
 
 mod udh;
-pub use udh::SubmitSmMultipartBuilder;
+pub use udh::UdhMultipartBuilder;
 
 mod sar;
-pub use sar::SubmitSmSarMultipartBuilder;
+pub use sar::SarMultipartBuilder;
 
 #[cfg(test)]
 mod tests;

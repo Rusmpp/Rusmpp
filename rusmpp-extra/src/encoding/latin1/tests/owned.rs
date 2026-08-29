@@ -1,7 +1,7 @@
 use crate::{
     concatenation::{MAX_PARTS, owned::Concatenator},
     encoding::{
-        latin1::{Latin1, Latin1ConcatenateError, Latin1EncodeError},
+        latin1::{Latin1ConcatenateError, Latin1EncodeError, Latin1Encoder},
         owned::Encoder,
     },
 };
@@ -13,14 +13,14 @@ mod encode {
         use super::*;
 
         #[test]
-        fn unencodable_character() {
+        fn invalid_character() {
             let message = "Hi 😀";
 
-            let encoder = Latin1::new();
+            let encoder = Latin1Encoder::new();
 
             let err = encoder.encode(message).unwrap_err();
 
-            assert!(matches!(err, Latin1EncodeError::UnencodableCharacter))
+            assert!(matches!(err, Latin1EncodeError::InvalidCharacter('😀')))
         }
     }
 }
@@ -38,7 +38,7 @@ mod concatenate {
             let max_message_size = 6;
             let part_header_size = 6;
 
-            let encoder = Latin1::new();
+            let encoder = Latin1Encoder::new();
 
             let err = encoder
                 .concatenate(message, max_message_size, part_header_size)
@@ -53,7 +53,7 @@ mod concatenate {
             let max_message_size = 0;
             let part_header_size = 6;
 
-            let encoder = Latin1::new();
+            let encoder = Latin1Encoder::new();
 
             let err = encoder
                 .concatenate(message, max_message_size, part_header_size)
@@ -68,7 +68,7 @@ mod concatenate {
             let part_header_size = 0;
             let message = "123456".repeat(MAX_PARTS + 1);
 
-            let encoder = Latin1::new();
+            let encoder = Latin1Encoder::new();
 
             let err = encoder
                 .concatenate(&message, max_message_size, part_header_size)
@@ -123,7 +123,7 @@ mod concatenate {
         ];
 
         for case in cases {
-            let encoder = Latin1::new();
+            let encoder = Latin1Encoder::new();
 
             let result =
                 encoder.concatenate(case.message, case.max_message_size, case.part_header_size);
@@ -160,6 +160,69 @@ mod concatenate {
                     case.name
                 ),
             }
+        }
+    }
+}
+
+mod decode {
+    use crate::encoding::{latin1::Latin1Decoder, owned::Decoder};
+
+    use super::*;
+
+    #[test]
+    fn cases() {
+        struct TestCase {
+            name: &'static str,
+            message: &'static str,
+            max_message_size: usize,
+            part_header_size: usize,
+        }
+
+        let cases: &[TestCase] = &[
+            TestCase {
+                name: "empty_message",
+                message: "",
+                max_message_size: 16,
+                part_header_size: 6,
+            },
+            TestCase {
+                name: "one_part",
+                // cspell: disable-next-line
+                message: "agjwklgjkwPÓ",
+                max_message_size: 16,
+                part_header_size: 4,
+            },
+            TestCase {
+                name: "two_parts",
+                // cspell: disable-next-line
+                message: "agjwklgjkwPÓ",
+                max_message_size: 10,
+                part_header_size: 2,
+            },
+        ];
+
+        for case in cases {
+            let mut decoder = Latin1Decoder::new();
+
+            let encoder = Latin1Encoder::new();
+
+            let (concatenation, _) = encoder
+                .concatenate(case.message, case.max_message_size, case.part_header_size)
+                .expect("Failed to encode message");
+
+            for part in concatenation.collect().into_iter() {
+                decoder
+                    .feed(part.as_slice(), case.part_header_size)
+                    .expect("Failed to decode part");
+            }
+
+            let decoded = decoder.finish().expect("Failed to finish decoding");
+
+            assert!(
+                decoded == case.message,
+                "Test case '{}' failed: decoded message does not match original",
+                case.name
+            );
         }
     }
 }

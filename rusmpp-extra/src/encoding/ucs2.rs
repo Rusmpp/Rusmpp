@@ -1,24 +1,31 @@
 //! Ucs2 encoding/decoding support.
 
-mod errors;
-pub use errors::{Ucs2ConcatenateError, Ucs2EncodeError};
 use rusmpp_core::values::DataCoding;
 
-/// UCS2 codec.
+mod decode;
+
+#[cfg(any(test, feature = "alloc"))]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+pub use decode::owned::Ucs2Decoder;
+
+mod errors;
+pub use errors::{Ucs2ConcatenateError, Ucs2DecodeError, Ucs2EncodeError};
+
+/// UCS2 encoder.
 #[derive(Debug)]
-pub struct Ucs2 {
+pub struct Ucs2Encoder {
     /// Whether to allow splitting characters across message parts.
     allow_split_character: bool,
 }
 
-impl Default for Ucs2 {
+impl Default for Ucs2Encoder {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Ucs2 {
-    /// Creates a new [`Ucs2`] codec.
+impl Ucs2Encoder {
+    /// Creates a new [`Ucs2Encoder`] encoder.
     ///
     /// # Defaults
     ///
@@ -61,35 +68,29 @@ mod impl_owned {
 
     use super::*;
 
-    impl Ucs2 {
+    impl Ucs2Encoder {
         /// Encodes the given message into a vector of bytes.
         pub fn encode_to_vec(&self, input: &str) -> Result<Vec<u8>, Ucs2EncodeError> {
             // Maximum possible UCS-2 units = number of chars
             let char_count = input.chars().count();
-            let mut buffer = alloc::vec![0u16; char_count];
+            let mut encoded = Vec::with_capacity(char_count * 2);
 
-            match ucs2::encode(input, &mut buffer) {
-                Ok(len) => {
-                    let mut encoded = Vec::with_capacity(len * 2);
+            for ch in input.chars() {
+                // UCS-2 can only represent the Basic Multilingual Plane
+                // (U+0000..=U+FFFF). `char` already guarantees the value
+                // isn't a surrogate, so a range check is all that's needed.
+                let code_unit = u16::try_from(u32::from(ch))
+                    .map_err(|_| Ucs2EncodeError::InvalidCharacter(ch))?;
 
-                    for &code_unit in &buffer[..len] {
-                        encoded.push((code_unit >> 8) as u8);
-                        encoded.push((code_unit & 0xFF) as u8);
-                    }
-
-                    Ok(encoded)
-                }
-                Err(err) => match err {
-                    ucs2::Error::BufferOverflow => {
-                        unreachable!("We allocated more than enough space")
-                    }
-                    ucs2::Error::MultiByte => Err(Ucs2EncodeError::UnencodableCharacter),
-                },
+                encoded.push((code_unit >> 8) as u8);
+                encoded.push((code_unit & 0xFF) as u8);
             }
+
+            Ok(encoded)
         }
     }
 
-    impl Encoder for Ucs2 {
+    impl Encoder for Ucs2Encoder {
         type Error = Ucs2EncodeError;
 
         fn encode(&self, message: &str) -> Result<(Vec<u8>, DataCoding), Self::Error> {
@@ -98,7 +99,7 @@ mod impl_owned {
         }
     }
 
-    impl Concatenator for Ucs2 {
+    impl Concatenator for Ucs2Encoder {
         type Error = Ucs2ConcatenateError;
 
         fn concatenate(

@@ -46,6 +46,11 @@ impl EsmClass {
             gsm_features: GsmFeatures::UdhIndicator,
         }
     }
+
+    /// Checks if the UDH Indicator bit is set in the GSM Features field.
+    pub const fn is_udh_indicator_set(&self) -> bool {
+        matches!(self.gsm_features, GsmFeatures::UdhIndicator)
+    }
 }
 
 impl From<u8> for EsmClass {
