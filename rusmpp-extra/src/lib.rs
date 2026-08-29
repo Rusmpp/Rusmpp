@@ -26,3 +26,5 @@ pub mod fallback;
 
 mod sealed;
 use sealed::Sealed;
+
+mod traits;

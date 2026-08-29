@@ -8,7 +8,7 @@ use crate::{
     concatenation::{
         MAX_PARTS, MIN_PARTS,
         errors::MultipartError,
-        owned::{Concatenation, Concatenator, multipart::traits::UdhMultipart},
+        owned::{Concatenation, Concatenator},
     },
     encoding::{
         gsm7bit::{Gsm7BitPackedEncoder, Gsm7BitUnpackedEncoder},
@@ -16,6 +16,7 @@ use crate::{
         ucs2::Ucs2Encoder,
     },
     fallback::Fallback,
+    traits::owned::UdhMultipart,
 };
 
 /// Builder for creating multipart [`SubmitSm`](rusmpp_core::pdus::owned::SubmitSm) and [`DeliverSm`](rusmpp_core::pdus::owned::DeliverSm) messages.
