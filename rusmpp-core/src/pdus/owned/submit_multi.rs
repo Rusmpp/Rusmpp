@@ -262,7 +262,7 @@ impl SubmitMulti {
         self
     }
 
-    /// Sets the [`SubmitSm::data_coding`].
+    /// Sets the [`SubmitMulti::data_coding`].
     pub const fn with_data_coding(mut self, data_coding: DataCoding) -> Self {
         self.data_coding = data_coding;
         self

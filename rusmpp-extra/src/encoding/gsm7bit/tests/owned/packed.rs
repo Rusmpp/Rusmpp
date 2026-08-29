@@ -72,7 +72,7 @@ mod encode {
         use super::*;
 
         #[test]
-        fn unencodable_character() {
+        fn invalid_character() {
             let message = "Hi ✓";
 
             let encoder = Gsm7BitPackedEncoder::new();
