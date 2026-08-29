@@ -55,10 +55,7 @@ const _: () = {
 
 impl ConcatenatedShortMessage16Bit {
     /// The length of [`ConcatenatedShortMessage16Bit`].
-    const LENGTH: usize = 5;
-
-    /// The length of [`ConcatenatedShortMessage16Bit`] encoded as a full UDH.
-    pub const UDH_LENGTH: usize = Self::LENGTH + 2;
+    const LENGTH: usize = 4;
 
     /// Creates a new [`ConcatenatedShortMessage16Bit`].
     ///
@@ -126,21 +123,10 @@ impl ConcatenatedShortMessage16Bit {
     /// The byte representation of [`ConcatenatedShortMessage16Bit`].
     const fn bytes(&self) -> [u8; Self::LENGTH] {
         [
-            0x04,                          // IE Data Length = 4 bytes
             (self.reference >> 8) as u8,   // Ref high
             (self.reference & 0xFF) as u8, // Ref low
             self.total_parts,
             self.part_number,
-        ]
-    }
-
-    /// The bytes representation of [`ConcatenatedShortMessage16Bit`] encoded as a full UDH.
-    pub const fn udh_bytes(&self) -> [u8; Self::LENGTH + 2] {
-        let bytes = self.bytes();
-        [
-            0x06, // UDH length = 6
-            0x08, // IEI = 08 (16-bit reference)
-            bytes[0], bytes[1], bytes[2], bytes[3], bytes[4],
         ]
     }
 
@@ -222,24 +208,9 @@ impl<'a> crate::decode::borrowed::Decode<'a> for ConcatenatedShortMessage16Bit {
             );
         }
 
-        let length = src[0];
-
-        if length != 0x04_u8 {
-            use crate::decode::ConcatenatedShortMessageDecodeError;
-
-            return Err(
-                crate::decode::DecodeError::concatenated_short_message_decode_error(
-                    ConcatenatedShortMessageDecodeError::InvalidInformationElementLength {
-                        actual: length,
-                        expected: 0x04_u8,
-                    },
-                ),
-            );
-        }
-
-        let reference = ((src[1] as u16) << 8) | (src[2] as u16);
-        let total_parts = src[3];
-        let part_number = src[4];
+        let reference = ((src[0] as u16) << 8) | (src[1] as u16);
+        let total_parts = src[2];
+        let part_number = src[3];
 
         let decoded = Self::new(reference, total_parts, part_number)?;
 
@@ -264,22 +235,9 @@ impl crate::decode::owned::Decode for ConcatenatedShortMessage16Bit {
             });
         }
 
-        let length = src[0];
-
-        if length != 0x04_u8 {
-            use crate::decode::ConcatenatedShortMessageDecodeError;
-
-            return Err(
-                ConcatenatedShortMessageDecodeError::InvalidInformationElementLength {
-                    actual: length,
-                    expected: 0x04_u8,
-                },
-            );
-        }
-
-        let reference = ((src[1] as u16) << 8) | (src[2] as u16);
-        let total_parts = src[3];
-        let part_number = src[4];
+        let reference = ((src[0] as u16) << 8) | (src[1] as u16);
+        let total_parts = src[2];
+        let part_number = src[3];
 
         let decoded = Self::new(reference, total_parts, part_number)?;
 
@@ -354,7 +312,7 @@ mod tests {
 
             #[test]
             fn ok() {
-                let mut buf = BytesMut::from(&[0x04, 0x12, 0x34, 0x03, 0x02][..]);
+                let mut buf = BytesMut::from(&[0x12, 0x34, 0x03, 0x02][..]);
                 let (udh, size) = ConcatenatedShortMessage16Bit::decode(&mut buf).unwrap();
                 assert_eq!(size, 5);
                 assert_eq!(udh.reference, 0x1234);
@@ -364,7 +322,7 @@ mod tests {
 
             #[test]
             fn ok_remaining() {
-                let mut buf = BytesMut::from(&[0x04, 0x12, 0x34, 0x03, 0x02, 0x00, 0x00][..]);
+                let mut buf = BytesMut::from(&[0x12, 0x34, 0x03, 0x02, 0x00, 0x00][..]);
                 let (udh, size) = ConcatenatedShortMessage16Bit::decode(&mut buf).unwrap();
                 assert_eq!(size, 5);
                 assert_eq!(udh.reference, 0x1234);
@@ -375,7 +333,7 @@ mod tests {
 
             #[test]
             fn too_few_bytes() {
-                let mut buf = BytesMut::from(&[0x04, 0x12, 0x34][..]);
+                let mut buf = BytesMut::from(&[0x12, 0x34][..]);
                 let err = ConcatenatedShortMessage16Bit::decode(&mut buf).unwrap_err();
                 assert!(matches!(
                     err,
@@ -384,21 +342,8 @@ mod tests {
             }
 
             #[test]
-            fn invalid_information_element_length() {
-                let mut buf = BytesMut::from(&[0x03, 0x12, 0x34, 0x03, 0x02][..]);
-                let err = ConcatenatedShortMessage16Bit::decode(&mut buf).unwrap_err();
-                assert!(matches!(
-                    err,
-                    ConcatenatedShortMessageDecodeError::InvalidInformationElementLength {
-                        actual: 3,
-                        expected: 4
-                    }
-                ));
-            }
-
-            #[test]
             fn part_number_exceeds_total_parts() {
-                let mut buf = BytesMut::from(&[0x04, 0x12, 0x34, 0x02, 0x03][..]);
+                let mut buf = BytesMut::from(&[0x12, 0x34, 0x02, 0x03][..]);
                 let err = ConcatenatedShortMessage16Bit::decode(&mut buf).unwrap_err();
                 assert!(matches!(
                     err,
@@ -411,7 +356,7 @@ mod tests {
 
             #[test]
             fn total_parts_zero() {
-                let mut buf = BytesMut::from(&[0x04, 0x12, 0x34, 0x00, 0x01][..]);
+                let mut buf = BytesMut::from(&[0x12, 0x34, 0x00, 0x01][..]);
                 let err = ConcatenatedShortMessage16Bit::decode(&mut buf).unwrap_err();
                 assert!(matches!(
                     err,
@@ -421,7 +366,7 @@ mod tests {
 
             #[test]
             fn part_number_zero() {
-                let mut buf = BytesMut::from(&[0x04, 0x12, 0x34, 0x03, 0x00][..]);
+                let mut buf = BytesMut::from(&[0x12, 0x34, 0x03, 0x00][..]);
                 let err = ConcatenatedShortMessage16Bit::decode(&mut buf).unwrap_err();
                 assert!(matches!(
                     err,
@@ -437,9 +382,9 @@ mod tests {
 
             #[test]
             fn ok() {
-                let bytes = &[0x04, 0x12, 0x34, 0x03, 0x02];
+                let bytes = &[0x12, 0x34, 0x03, 0x02];
                 let (udh, size) = ConcatenatedShortMessage16Bit::decode(bytes).unwrap();
-                assert_eq!(size, 5);
+                assert_eq!(size, 4);
                 assert_eq!(udh.reference, 0x1234);
                 assert_eq!(udh.total_parts, 3);
                 assert_eq!(udh.part_number, 2);
@@ -447,9 +392,9 @@ mod tests {
 
             #[test]
             fn ok_remaining() {
-                let bytes = &[0x04, 0x12, 0x34, 0x03, 0x02, 0x00, 0x00];
+                let bytes = &[0x12, 0x34, 0x03, 0x02, 0x00, 0x00];
                 let (udh, size) = ConcatenatedShortMessage16Bit::decode(bytes).unwrap();
-                assert_eq!(size, 5);
+                assert_eq!(size, 4);
                 assert_eq!(udh.reference, 0x1234);
                 assert_eq!(udh.total_parts, 3);
                 assert_eq!(udh.part_number, 2);
@@ -458,7 +403,7 @@ mod tests {
 
             #[test]
             fn too_few_bytes() {
-                let bytes = &[0x04, 0x12, 0x34];
+                let bytes = &[0x12, 0x34];
                 let err = ConcatenatedShortMessage16Bit::decode(bytes).unwrap_err();
                 assert!(matches!(
                     err,
@@ -466,8 +411,8 @@ mod tests {
                         kind: DecodeErrorKind::UdhDecodeError(
                             UdhDecodeError::ConcatenatedShortMessageDecodeError(
                                 ConcatenatedShortMessageDecodeError::TooFewBytes {
-                                    actual: 3,
-                                    min: 5
+                                    actual: 2,
+                                    min: 4
                                 }
                             )
                         )
@@ -476,27 +421,8 @@ mod tests {
             }
 
             #[test]
-            fn invalid_information_element_length() {
-                let bytes = &[0x03, 0x12, 0x34, 0x03, 0x02];
-                let err = ConcatenatedShortMessage16Bit::decode(bytes).unwrap_err();
-                assert!(matches!(
-                    err,
-                    DecodeError {
-                        kind: DecodeErrorKind::UdhDecodeError(
-                            UdhDecodeError::ConcatenatedShortMessageDecodeError(
-                                ConcatenatedShortMessageDecodeError::InvalidInformationElementLength {
-                        actual: 3,
-                        expected: 4
-                    }
-                            )
-                        )
-                    }
-                ));
-            }
-
-            #[test]
             fn part_number_exceeds_total_parts() {
-                let bytes = &[0x04, 0x12, 0x34, 0x02, 0x03];
+                let bytes = &[0x12, 0x34, 0x02, 0x03];
                 let err = ConcatenatedShortMessage16Bit::decode(bytes).unwrap_err();
                 assert!(matches!(
                     err,
@@ -515,7 +441,7 @@ mod tests {
 
             #[test]
             fn total_parts_zero() {
-                let bytes = &[0x04, 0x12, 0x34, 0x00, 0x01];
+                let bytes = &[0x12, 0x34, 0x00, 0x01];
                 let err = ConcatenatedShortMessage16Bit::decode(bytes).unwrap_err();
                 assert!(matches!(
                     err,
@@ -531,7 +457,7 @@ mod tests {
 
             #[test]
             fn part_number_zero() {
-                let bytes = &[0x04, 0x12, 0x34, 0x03, 0x00];
+                let bytes = &[0x12, 0x34, 0x03, 0x00];
                 let err = ConcatenatedShortMessage16Bit::decode(bytes).unwrap_err();
                 assert!(matches!(
                     err,
@@ -555,10 +481,10 @@ mod tests {
         #[test]
         fn ok() {
             let udh = ConcatenatedShortMessage16Bit::new(0x1234, 3, 2).unwrap();
-            let mut buf = [0u8; 5];
+            let mut buf = [0u8; 4];
             let size = udh.encode(&mut buf);
-            assert_eq!(size, 5);
-            assert_eq!(buf, [0x04, 0x12, 0x34, 0x03, 0x02]);
+            assert_eq!(size, 4);
+            assert_eq!(buf, [0x12, 0x34, 0x03, 0x02]);
         }
 
         #[cfg(feature = "alloc")]
@@ -572,9 +498,9 @@ mod tests {
             #[test]
             fn ok() {
                 let udh = ConcatenatedShortMessage16Bit::new(0x1234, 3, 2).unwrap();
-                let mut buf = BytesMut::with_capacity(5);
+                let mut buf = BytesMut::with_capacity(4);
                 udh.encode(&mut buf);
-                assert_eq!(&buf[..], [0x04, 0x12, 0x34, 0x03, 0x02]);
+                assert_eq!(&buf[..], [0x12, 0x34, 0x03, 0x02]);
             }
         }
     }
