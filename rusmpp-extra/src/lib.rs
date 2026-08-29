@@ -3,7 +3,7 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(missing_debug_implementations)]
 
-//! Extra components for [`Rusmpp-Core`](https://crates.io/crates/rusmpp-core).
+//! Extra components for [`rusmpp-core`](https://crates.io/crates/rusmpp-core).
 //!
 //! ## Features
 //!

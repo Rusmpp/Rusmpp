@@ -8,4 +8,5 @@ pub mod ucs2;
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub mod owned;
 
-pub mod errors;
+mod errors;
+pub use errors::EncodeError;

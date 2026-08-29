@@ -1,8 +1,6 @@
 use humantime::format_duration;
 use pyo3::{create_exception, exceptions::PyException, PyErr};
-use rusmpp::extra::{
-    concatenation::errors::MultipartError, encoding::errors::EncodeError as REncodeError,
-};
+use rusmpp::extra::{concatenation::MultipartError, encoding::EncodeError as REncodeError};
 
 use crate::encoder::EncodeError;
 

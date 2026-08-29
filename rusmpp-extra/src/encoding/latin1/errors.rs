@@ -8,7 +8,7 @@ pub enum Latin1EncodeError {
     InvalidCharacter(char),
 }
 
-/// Errors that can occur during decoding Latin1 bytes.
+/// Errors that can occur during Latin1 decoding.
 ///
 /// Latin1 maps every byte to a Unicode scalar value, so decoding cannot fail.
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]

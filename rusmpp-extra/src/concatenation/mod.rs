@@ -4,7 +4,8 @@
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub mod owned;
 
-pub mod errors;
+mod errors;
+pub use errors::MultipartError;
 
 /// The minimum number of parts in a concatenated message.
 pub const MIN_PARTS: usize = 2;

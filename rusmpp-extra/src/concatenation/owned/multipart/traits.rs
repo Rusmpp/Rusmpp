@@ -11,7 +11,7 @@ use crate::{
 
 use super::{SarMultipartBuilder, UdhMultipartBuilder};
 
-/// Trait for [`SubmitSm`](rusmpp_core::pdus::owned::SubmitSm), [`DeliverSm`](rusmpp_core::pdus::owned::DeliverSm) and [`SubmitMulti`](rusmpp_core::pdus::owned::SubmitMulti) to create multipart messages.
+/// A trait for [`SubmitSm`](rusmpp_core::pdus::owned::SubmitSm), [`DeliverSm`](rusmpp_core::pdus::owned::DeliverSm) and [`SubmitMulti`](rusmpp_core::pdus::owned::SubmitMulti) to create multipart messages.
 pub trait Multipart: Sized {
     /// Creates a new [`UdhMultipartBuilder`] with the default [`Gsm7BitUnpackedEncoder`] encoder.
     ///

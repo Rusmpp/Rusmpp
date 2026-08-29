@@ -8,7 +8,7 @@ pub enum Ucs2EncodeError {
     InvalidCharacter(char),
 }
 
-/// Errors that can occur during decoding UCS2 bytes.
+/// Errors that can occur during UCS2 decoding.
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum Ucs2DecodeError {

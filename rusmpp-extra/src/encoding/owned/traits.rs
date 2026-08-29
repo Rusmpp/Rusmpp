@@ -94,7 +94,7 @@ where
     }
 }
 
-/// Trait for [`SubmitSm`](rusmpp_core::pdus::owned::SubmitSm), [`DeliverSm`](rusmpp_core::pdus::owned::DeliverSm) and [`SubmitMulti`](rusmpp_core::pdus::owned::SubmitMulti) to create encoded messages.
+/// A trait for [`SubmitSm`](rusmpp_core::pdus::owned::SubmitSm), [`DeliverSm`](rusmpp_core::pdus::owned::DeliverSm) and [`SubmitMulti`](rusmpp_core::pdus::owned::SubmitMulti) to create encoded messages.
 pub trait Encoded: Sized {
     /// Creates a new [`EncodedBuilder`] with the default [`Gsm7BitUnpackedEncoder`] encoder.
     ///
