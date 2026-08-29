@@ -12,7 +12,7 @@ use crate::{
     traits::owned::ShortMessage,
 };
 
-/// Builder for creating encoded [`SubmitSm`](rusmpp_core::pdus::owned::SubmitSm) and [`DeliverSm`](rusmpp_core::pdus::owned::DeliverSm) messages.
+/// Builder for creating encoded [`SubmitSm`](rusmpp_core::pdus::owned::SubmitSm), [`DeliverSm`](rusmpp_core::pdus::owned::DeliverSm) and [`SubmitMulti`](rusmpp_core::pdus::owned::SubmitMulti) messages.
 ///
 /// Created using [`Encoded::encoded`].
 #[derive(Debug)]
@@ -94,7 +94,7 @@ where
     }
 }
 
-/// Trait for [`SubmitSm`](rusmpp_core::pdus::owned::SubmitSm) and [`DeliverSm`](rusmpp_core::pdus::owned::DeliverSm) to create encoded messages.
+/// Trait for [`SubmitSm`](rusmpp_core::pdus::owned::SubmitSm), [`DeliverSm`](rusmpp_core::pdus::owned::DeliverSm) and [`SubmitMulti`](rusmpp_core::pdus::owned::SubmitMulti) to create encoded messages.
 pub trait Encoded: Sized {
     /// Creates a new [`EncodedBuilder`] with the default [`Gsm7BitUnpackedEncoder`] encoder.
     ///

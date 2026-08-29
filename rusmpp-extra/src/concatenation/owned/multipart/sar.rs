@@ -16,7 +16,7 @@ use crate::{
     traits::owned::SarMultipart,
 };
 
-/// Builder for creating multipart [`SubmitSm`](rusmpp_core::pdus::owned::SubmitSm) and [`DeliverSm`](rusmpp_core::pdus::owned::DeliverSm) messages using SAR TLVs.
+/// Builder for creating multipart [`SubmitSm`](rusmpp_core::pdus::owned::SubmitSm), [`DeliverSm`](rusmpp_core::pdus::owned::DeliverSm) and [`SubmitMulti`](rusmpp_core::pdus::owned::SubmitMulti) messages using SAR TLVs.
 ///
 /// Created using [`Multipart::sar_multipart`](super::Multipart::sar_multipart).
 #[derive(Debug)]

@@ -19,7 +19,7 @@ use crate::{
     traits::owned::UdhMultipart,
 };
 
-/// Builder for creating multipart [`SubmitSm`](rusmpp_core::pdus::owned::SubmitSm) and [`DeliverSm`](rusmpp_core::pdus::owned::DeliverSm) messages.
+/// Builder for creating multipart [`SubmitSm`](rusmpp_core::pdus::owned::SubmitSm), [`DeliverSm`](rusmpp_core::pdus::owned::DeliverSm) and [`SubmitMulti`](rusmpp_core::pdus::owned::SubmitMulti) messages.
 ///
 /// Created using [`Multipart::udh_multipart`](super::Multipart::udh_multipart).
 #[derive(Debug)]
