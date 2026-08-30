@@ -33,7 +33,7 @@ impl Gsm7BitSpanishAlphabet {
         Extended::encode(ch)
     }
 
-    /// Decodes the given spanish GSM 7-bit encoded byte into a character.
+    /// Decodes the given `spanish` GSM 7-bit encoded byte into a character.
     ///
     /// # Returns
     ///

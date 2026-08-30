@@ -1,11 +1,13 @@
 mod default;
 mod macros;
 mod spanish;
+mod turkish;
 
 pub use default::Gsm7BitDefaultAlphabet;
+pub use spanish::Gsm7BitSpanishAlphabet;
+pub use turkish::Gsm7BitTurkishAlphabet;
 
 use rusmpp_core::udhs::language::NationalLanguageIndicator;
-pub use spanish::Gsm7BitSpanishAlphabet;
 
 /// GSM 7-bit escape character.
 pub const ESCAPE_CHARACTER: u8 = 0x1B;
@@ -18,6 +20,8 @@ pub enum Gsm7BitAlphabet {
     Default(Gsm7BitDefaultAlphabet),
     /// Spanish GSM 7-bit alphabet.
     Spanish(Gsm7BitSpanishAlphabet),
+    /// Turkish GSM 7-bit alphabet.
+    Turkish(Gsm7BitTurkishAlphabet),
 }
 
 impl Default for Gsm7BitAlphabet {
@@ -42,11 +46,17 @@ impl Gsm7BitAlphabet {
         Self::Spanish(Gsm7BitSpanishAlphabet::new())
     }
 
+    /// Creates a new [`Gsm7BitAlphabet`] with the [`Gsm7BitTurkishAlphabet`].
+    pub const fn turkish() -> Self {
+        Self::Turkish(Gsm7BitTurkishAlphabet::new())
+    }
+
     /// Returns the standard GSM 7-bit character set.
     pub const fn standard(&self) -> &'static [(char, u8)] {
         match self {
             Self::Default(_) => Gsm7BitDefaultAlphabet::standard(),
             Self::Spanish(_) => Gsm7BitSpanishAlphabet::standard(),
+            Self::Turkish(_) => Gsm7BitTurkishAlphabet::standard(),
         }
     }
 
@@ -55,6 +65,7 @@ impl Gsm7BitAlphabet {
         match self {
             Self::Default(_) => Gsm7BitDefaultAlphabet::extended(),
             Self::Spanish(_) => Gsm7BitSpanishAlphabet::extended(),
+            Self::Turkish(_) => Gsm7BitTurkishAlphabet::extended(),
         }
     }
 
@@ -63,6 +74,7 @@ impl Gsm7BitAlphabet {
         match self {
             Self::Default(_) => Gsm7BitDefaultAlphabet::standard_national_language_indicator(),
             Self::Spanish(_) => Gsm7BitSpanishAlphabet::standard_national_language_indicator(),
+            Self::Turkish(_) => Gsm7BitTurkishAlphabet::standard_national_language_indicator(),
         }
     }
 
@@ -71,6 +83,7 @@ impl Gsm7BitAlphabet {
         match self {
             Self::Default(_) => Gsm7BitDefaultAlphabet::extended_national_language_indicator(),
             Self::Spanish(_) => Gsm7BitSpanishAlphabet::extended_national_language_indicator(),
+            Self::Turkish(_) => Gsm7BitTurkishAlphabet::extended_national_language_indicator(),
         }
     }
 
@@ -79,6 +92,7 @@ impl Gsm7BitAlphabet {
         match self {
             Self::Default(alphabet) => alphabet.encode_standard(ch),
             Self::Spanish(alphabet) => alphabet.encode_standard(ch),
+            Self::Turkish(alphabet) => alphabet.encode_standard(ch),
         }
     }
 
@@ -87,6 +101,7 @@ impl Gsm7BitAlphabet {
         match self {
             Self::Default(alphabet) => alphabet.encode_extended(ch),
             Self::Spanish(alphabet) => alphabet.encode_extended(ch),
+            Self::Turkish(alphabet) => alphabet.encode_extended(ch),
         }
     }
 
@@ -100,6 +115,7 @@ impl Gsm7BitAlphabet {
         match self {
             Self::Default(alphabet) => alphabet.decode(encoded),
             Self::Spanish(alphabet) => alphabet.decode(encoded),
+            Self::Turkish(alphabet) => alphabet.decode(encoded),
         }
     }
 

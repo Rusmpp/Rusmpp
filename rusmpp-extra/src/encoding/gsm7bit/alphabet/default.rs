@@ -33,7 +33,7 @@ impl Gsm7BitDefaultAlphabet {
         Extended::encode(ch)
     }
 
-    /// Decodes the given default GSM 7-bit encoded byte into a character.
+    /// Decodes the given `default` GSM 7-bit encoded byte into a character.
     ///
     /// # Returns
     ///
