@@ -4,36 +4,36 @@ use crate::encoding::gsm7bit::alphabet::macros::{decode, encode};
 
 use super::Encoded;
 
-/// Default GSM 7-bit alphabet.
+/// Turkish GSM 7-bit alphabet.
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy)]
-pub struct Gsm7BitDefaultAlphabet;
+pub struct Gsm7BitTurkishAlphabet;
 
-impl Default for Gsm7BitDefaultAlphabet {
+impl Default for Gsm7BitTurkishAlphabet {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Gsm7BitDefaultAlphabet {
-    /// Creates a new [`Gsm7BitDefaultAlphabet`].
+impl Gsm7BitTurkishAlphabet {
+    /// Creates a new [`Gsm7BitTurkishAlphabet`].
     pub const fn new() -> Self {
         Self
     }
 }
 
-impl Gsm7BitDefaultAlphabet {
-    /// Encodes the given character into a `default` GSM 7-bit encoded byte using the standard character set.   
+impl Gsm7BitTurkishAlphabet {
+    /// Encodes the given character into a `turkish` GSM 7-bit encoded byte using the standard character set.   
     pub const fn encode_standard(&self, ch: char) -> Option<u8> {
         Standard::encode(ch)
     }
 
-    /// Encodes the given character into a `default` GSM 7-bit encoded byte using the extended character set.
+    /// Encodes the given character into a `turkish` GSM 7-bit encoded byte using the extended character set.
     pub const fn encode_extended(&self, ch: char) -> Option<u8> {
         Extended::encode(ch)
     }
 
-    /// Decodes the given `default` GSM 7-bit encoded byte into a character.
+    /// Decodes the given `turkish` GSM 7-bit encoded byte into a character.
     ///
     /// # Returns
     ///
@@ -46,24 +46,24 @@ impl Gsm7BitDefaultAlphabet {
         }
     }
 
-    /// Returns the standard `default` GSM 7-bit character set.
+    /// Returns the standard `turkish` GSM 7-bit character set.
     pub const fn standard() -> &'static [(char, u8)] {
         STANDARD
     }
 
-    /// Returns the extended `default` GSM 7-bit character set.
+    /// Returns the extended `turkish` GSM 7-bit character set.
     pub const fn extended() -> &'static [(char, u8)] {
         EXTENDED
     }
 
-    /// Returns the standard [`NationalLanguageIndicator`] for the `default` GSM 7-bit alphabet.
+    /// Returns the standard [`NationalLanguageIndicator`] for the `turkish` GSM 7-bit alphabet.
     pub const fn standard_national_language_indicator() -> Option<NationalLanguageIndicator> {
-        None
+        Some(NationalLanguageIndicator::Turkish)
     }
 
-    /// Returns the extended [`NationalLanguageIndicator`] for the `default` GSM 7-bit alphabet.
+    /// Returns the extended [`NationalLanguageIndicator`] for the `turkish` GSM 7-bit alphabet.
     pub const fn extended_national_language_indicator() -> Option<NationalLanguageIndicator> {
-        None
+        Some(NationalLanguageIndicator::Turkish)
     }
 }
 
@@ -96,15 +96,15 @@ static STANDARD: &[(char, u8)] = &[
     ('£', 0x01),
     ('$', 0x02),
     ('¥', 0x03),
-    ('è', 0x04),
+    ('€', 0x04),
     ('é', 0x05),
     ('ù', 0x06),
-    ('ì', 0x07),
+    ('ı', 0x07),
     ('ò', 0x08),
     ('Ç', 0x09),
     ('\n', 0x0a),
-    ('Ø', 0x0b),
-    ('ø', 0x0c),
+    ('Ğ', 0x0B),
+    ('ğ', 0x0C),
     ('\r', 0x0d),
     ('Å', 0x0e),
     ('å', 0x0f),
@@ -119,8 +119,8 @@ static STANDARD: &[(char, u8)] = &[
     ('Σ', 0x18),
     ('Θ', 0x19),
     ('Ξ', 0x1A),
-    ('Æ', 0x1C),
-    ('æ', 0x1D),
+    ('Ş', 0x1C),
+    ('ş', 0x1D),
     ('ß', 0x1E),
     ('É', 0x1F),
     (' ', 0x20),
@@ -155,7 +155,7 @@ static STANDARD: &[(char, u8)] = &[
     ('=', 0x3D),
     ('>', 0x3E),
     ('?', 0x3F),
-    ('¡', 0x40),
+    ('İ', 0x40),
     ('A', 0x41),
     ('B', 0x42),
     ('C', 0x43),
@@ -187,7 +187,7 @@ static STANDARD: &[(char, u8)] = &[
     ('Ñ', 0x5D),
     ('Ü', 0x5E),
     ('§', 0x5F),
-    ('¿', 0x60),
+    ('ç', 0x60),
     ('a', 0x61),
     ('b', 0x62),
     ('c', 0x63),
@@ -230,5 +230,12 @@ static EXTENDED: &[(char, u8)] = &[
     ('~', 0x3D),
     (']', 0x3E),
     ('|', 0x40),
+    ('Ğ', 0x47),
+    ('İ', 0x49),
+    ('Ş', 0x53),
+    ('ç', 0x63),
     ('€', 0x65),
+    ('ğ', 0x67),
+    ('ı', 0x69),
+    ('ş', 0x73),
 ];
