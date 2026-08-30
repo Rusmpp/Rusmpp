@@ -235,12 +235,6 @@ impl crate::decode::owned::Decode for ConcatenatedShortMessage8Bit {
     }
 }
 
-impl From<ConcatenatedShortMessage8Bit> for crate::udhs::borrowed::UdhValue<'_> {
-    fn from(udh: ConcatenatedShortMessage8Bit) -> Self {
-        crate::udhs::borrowed::UdhValue::ConcatenatedShortMessage8Bit(udh)
-    }
-}
-
 #[cfg(feature = "alloc")]
 impl From<ConcatenatedShortMessage8Bit> for crate::udhs::owned::UdhValue {
     fn from(udh: ConcatenatedShortMessage8Bit) -> Self {
@@ -318,7 +312,7 @@ mod tests {
             fn ok() {
                 let mut buf = BytesMut::from(&[0x12, 0x34, 0x02][..]);
                 let (udh, size) = ConcatenatedShortMessage8Bit::decode(&mut buf).unwrap();
-                assert_eq!(size, 4);
+                assert_eq!(size, 3);
                 assert_eq!(udh.reference, 0x12);
                 assert_eq!(udh.total_parts, 0x34);
                 assert_eq!(udh.part_number, 0x02);
@@ -328,7 +322,7 @@ mod tests {
             fn ok_remaining() {
                 let mut buf = BytesMut::from(&[0x12, 0x34, 0x02, 0x00, 0x00][..]);
                 let (udh, size) = ConcatenatedShortMessage8Bit::decode(&mut buf).unwrap();
-                assert_eq!(size, 4);
+                assert_eq!(size, 3);
                 assert_eq!(udh.reference, 0x12);
                 assert_eq!(udh.total_parts, 0x34);
                 assert_eq!(udh.part_number, 0x02);
@@ -341,7 +335,7 @@ mod tests {
                 let err = ConcatenatedShortMessage8Bit::decode(&mut buf).unwrap_err();
                 assert!(matches!(
                     err,
-                    ConcatenatedShortMessageDecodeError::TooFewBytes { actual: 3, min: 4 }
+                    ConcatenatedShortMessageDecodeError::TooFewBytes { actual: 2, min: 3 }
                 ));
             }
 
@@ -502,9 +496,9 @@ mod tests {
             #[test]
             fn ok() {
                 let udh = ConcatenatedShortMessage8Bit::new(0x12, 0x34, 0x02).unwrap();
-                let mut buf = BytesMut::with_capacity(4);
+                let mut buf = BytesMut::with_capacity(3);
                 udh.encode(&mut buf);
-                assert_eq!(&buf[..], [0x03, 0x12, 0x34, 0x02]);
+                assert_eq!(&buf[..], [0x12, 0x34, 0x02]);
             }
         }
     }
