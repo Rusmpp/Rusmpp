@@ -366,6 +366,7 @@ mod concatenate {
         use std::format;
         use std::println;
         use std::string::String;
+        use std::vec;
         use std::vec::Vec;
 
         use rusmpp_core::udhs::concatenation::ConcatenatedShortMessage8Bit;
@@ -386,9 +387,11 @@ mod concatenate {
 
         /// The size of the 8-bit concatenation UDH, which is 6 bytes.
         fn udh_concatenation_size() -> usize {
-            rusmpp_core::encode::Length::length(&rusmpp_core::udhs::owned::Udh::new(
-                ConcatenatedShortMessage8Bit::new(1, 1, 1).expect("Valid"),
-            ))
+            rusmpp_core::encode::Length::length(&rusmpp_core::udhs::owned::Udh::new(vec![
+                rusmpp_core::udhs::owned::UdhElement::new(
+                    ConcatenatedShortMessage8Bit::new(1, 1, 1).expect("Valid"),
+                ),
+            ]))
         }
 
         let cases: &[TestCase] = &[

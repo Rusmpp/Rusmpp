@@ -1,8 +1,10 @@
+use rusmpp_core::udhs::language::NationalLanguageIndicator;
+
 use super::Encoded;
 
 /// Default GSM 7-bit alphabet.
 #[non_exhaustive]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Gsm7BitDefaultAlphabet;
 
 impl Default for Gsm7BitDefaultAlphabet {
@@ -23,7 +25,7 @@ impl Gsm7BitDefaultAlphabet {
     ///
     /// # Returns
     ///
-    /// - `Some(Self)` if the character is found in the GSM 7-bit tables.
+    /// - `Some(encoded)` if the character is found in the GSM 7-bit tables.
     /// - `None` if the character is not found.
     pub const fn encode(&self, ch: char) -> Option<Encoded> {
         if let Some(byte) = Standard::encode(ch) {
@@ -56,6 +58,16 @@ impl Gsm7BitDefaultAlphabet {
     /// Returns the extended `default` GSM 7-bit character set.
     pub const fn extended() -> &'static [(char, u8)] {
         EXTENDED
+    }
+
+    /// Returns the standard [`NationalLanguageIndicator`] for the `default` GSM 7-bit alphabet.
+    pub const fn standard_national_language_indicator() -> Option<NationalLanguageIndicator> {
+        None
+    }
+
+    /// Returns the extended [`NationalLanguageIndicator`] for the `default` GSM 7-bit alphabet.
+    pub const fn extended_national_language_indicator() -> Option<NationalLanguageIndicator> {
+        None
     }
 }
 
