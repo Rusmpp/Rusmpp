@@ -1,4 +1,4 @@
-use rusmpp_core::values::DataCoding;
+use rusmpp_core::{udhs::language::NationalLanguageIndicator, values::DataCoding};
 
 use crate::encoding::gsm7bit::alphabet::Gsm7BitAlphabet;
 
@@ -6,8 +6,10 @@ use crate::encoding::gsm7bit::alphabet::Gsm7BitAlphabet;
 #[non_exhaustive]
 #[derive(Debug)]
 pub struct Gsm7BitPackedEncoder {
-    /// The GSM 7-bit alphabet to use for encoding.
-    alphabet: Gsm7BitAlphabet,
+    /// The GSM 7-bit alphabet to use for standard encoding.
+    standard_alphabet: Gsm7BitAlphabet,
+    /// The GSM 7-bit alphabet to use for extended encoding.
+    extended_alphabet: Gsm7BitAlphabet,
     /// Whether to allow splitting extended characters across message parts.
     allow_split_extended_character: bool,
     /// Whether to apply the CR padding fix when packing.
@@ -33,20 +35,35 @@ impl Gsm7BitPackedEncoder {
     ///
     /// # Defaults
     ///
-    /// - `alphabet`: [`Gsm7BitAlphabet::Default`]
+    /// - `standard_alphabet`: [`Gsm7BitAlphabet::Default`]
+    /// - `extended_alphabet`: [`Gsm7BitAlphabet::Default`]
     /// - `allow_split_extended_character`: `false`
     /// - `cr_padding`: `true`
     pub const fn new() -> Self {
         Self {
-            alphabet: Gsm7BitAlphabet::default(),
+            standard_alphabet: Gsm7BitAlphabet::default(),
+            extended_alphabet: Gsm7BitAlphabet::default(),
             allow_split_extended_character: false,
             cr_padding: true,
         }
     }
 
-    /// Sets the alphabet for the encoder.
+    /// Sets both the standard and extended [`Gsm7BitAlphabet`] for the encoder.
     pub const fn with_alphabet(mut self, alphabet: Gsm7BitAlphabet) -> Self {
-        self.alphabet = alphabet;
+        self.standard_alphabet = alphabet;
+        self.extended_alphabet = alphabet;
+        self
+    }
+
+    /// Sets the standard [`Gsm7BitAlphabet`] for the encoder.
+    pub const fn with_standard_alphabet(mut self, alphabet: Gsm7BitAlphabet) -> Self {
+        self.standard_alphabet = alphabet;
+        self
+    }
+
+    /// Sets the extended [`Gsm7BitAlphabet`] for the encoder.
+    pub const fn with_extended_alphabet(mut self, alphabet: Gsm7BitAlphabet) -> Self {
+        self.extended_alphabet = alphabet;
         self
     }
 
@@ -61,11 +78,27 @@ impl Gsm7BitPackedEncoder {
         self
     }
 
-    /// Returns the associated [`Gsm7BitAlphabet`].
-    pub const fn alphabet(&self) -> &Gsm7BitAlphabet {
-        &self.alphabet
+    /// Returns the associated standard [`Gsm7BitAlphabet`].
+    pub const fn standard_alphabet(&self) -> &Gsm7BitAlphabet {
+        &self.standard_alphabet
     }
 
+    /// Returns the associated extended [`Gsm7BitAlphabet`].
+    pub const fn extended_alphabet(&self) -> &Gsm7BitAlphabet {
+        &self.extended_alphabet
+    }
+
+    /// Returns the National Language Single Shift.
+    pub const fn national_language_single_shift(&self) -> Option<NationalLanguageIndicator> {
+        self.extended_alphabet
+            .extended_national_language_indicator()
+    }
+
+    /// Returns the National Language Locking Shift.
+    pub const fn national_language_locking_shift(&self) -> Option<NationalLanguageIndicator> {
+        self.standard_alphabet
+            .standard_national_language_indicator()
+    }
     /// Returns the associated [`DataCoding`].
     pub const fn data_coding(&self) -> DataCoding {
         DataCoding::McSpecific
@@ -123,8 +156,7 @@ mod impl_owned {
         ///
         /// This function does not pack the septets into octets.
         fn encode_unpacked_to_vec(&self, input: &str) -> Result<Vec<u8>, Gsm7BitEncodeError> {
-            self.alphabet
-                .encode_to_vec(input)
+            Gsm7BitAlphabet::encode_to_vec(&self.standard_alphabet, &self.extended_alphabet, input)
                 .map_err(Gsm7BitEncodeError::InvalidCharacter)
         }
 
