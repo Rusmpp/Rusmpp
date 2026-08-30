@@ -3,13 +3,14 @@ mod spanish;
 
 pub use default::Gsm7BitDefaultAlphabet;
 
+use rusmpp_core::udhs::language::NationalLanguageIndicator;
 pub use spanish::Gsm7BitSpanishAlphabet;
 
 /// GSM 7-bit escape character.
 pub const ESCAPE_CHARACTER: u8 = 0x1B;
 
 /// GSM 7-bit alphabet.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 #[non_exhaustive]
 pub enum Gsm7BitAlphabet {
     /// Default GSM 7-bit alphabet.
@@ -53,6 +54,22 @@ impl Gsm7BitAlphabet {
         match self {
             Self::Default(_) => Gsm7BitDefaultAlphabet::extended(),
             Self::Spanish(_) => Gsm7BitSpanishAlphabet::extended(),
+        }
+    }
+
+    /// Returns the standard [`NationalLanguageIndicator`].
+    pub const fn standard_national_language_indicator(&self) -> Option<NationalLanguageIndicator> {
+        match self {
+            Self::Default(_) => Gsm7BitDefaultAlphabet::standard_national_language_indicator(),
+            Self::Spanish(_) => Gsm7BitSpanishAlphabet::standard_national_language_indicator(),
+        }
+    }
+
+    /// Returns the extended [`NationalLanguageIndicator`].
+    pub const fn extended_national_language_indicator(&self) -> Option<NationalLanguageIndicator> {
+        match self {
+            Self::Default(_) => Gsm7BitDefaultAlphabet::extended_national_language_indicator(),
+            Self::Spanish(_) => Gsm7BitSpanishAlphabet::extended_national_language_indicator(),
         }
     }
 

@@ -184,7 +184,7 @@ pub enum UdhValue {
     NationalLanguageSingleShift(NationalLanguageIndicator),
     /// National Language Locking Shift.
     NationalLanguageLockingShift(NationalLanguageIndicator),
-    /// Other UDH types.
+    /// Other UDH values.
     Other {
         udh_id: UdhId,
         value: AnyOctetString,
