@@ -1,5 +1,7 @@
 use rusmpp_core::udhs::language::NationalLanguageIndicator;
 
+use crate::encoding::gsm7bit::alphabet::macros::{decode, encode};
+
 use super::Encoded;
 
 /// Spanish GSM 7-bit alphabet.
@@ -81,35 +83,11 @@ impl Standard {
 
 impl Extended {
     const fn encode(ch: char) -> Option<u8> {
-        let mut i = 0;
-
-        while i < EXTENDED.len() {
-            let (c, byte) = EXTENDED[i];
-
-            if c == ch {
-                return Some(byte);
-            }
-
-            i += 1;
-        }
-
-        None
+        encode!(ch, EXTENDED)
     }
 
     const fn decode(byte: u8) -> Option<char> {
-        let mut i = 0;
-
-        while i < EXTENDED.len() {
-            let (c, b) = EXTENDED[i];
-
-            if b == byte {
-                return Some(c);
-            }
-
-            i += 1;
-        }
-
-        None
+        decode!(byte, EXTENDED)
     }
 }
 

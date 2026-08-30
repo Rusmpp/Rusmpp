@@ -1,4 +1,5 @@
 mod default;
+mod macros;
 mod spanish;
 
 pub use default::Gsm7BitDefaultAlphabet;
