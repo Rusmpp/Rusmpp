@@ -4,6 +4,7 @@ use crate::{
     Sealed,
     decode::{
         AnyOctetStringDecodeError, ConcatenatedShortMessageDecodeError, DecodeResultExt,
+        IntegerDecodeError,
         owned::{Decode, DecodeErrorType, DecodeWithKey, DecodeWithLength},
     },
     encode::Length,
@@ -11,6 +12,7 @@ use crate::{
     udhs::{
         UdhId,
         concatenation::{ConcatenatedShortMessage8Bit, ConcatenatedShortMessage16Bit},
+        language::NationalLanguageIndicator,
     },
 };
 
@@ -174,10 +176,14 @@ const _: () = {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub enum UdhValue {
-    /// 8-bit Concatenated Short Message UDH.
+    /// 8-bit Concatenated Short Message.
     ConcatenatedShortMessage8Bit(ConcatenatedShortMessage8Bit),
-    /// 16-bit Concatenated Short Message UDH.
+    /// 16-bit Concatenated Short Message.
     ConcatenatedShortMessage16Bit(ConcatenatedShortMessage16Bit),
+    /// National Language Single Shift.
+    NationalLanguageSingleShift(NationalLanguageIndicator),
+    /// National Language Locking Shift.
+    NationalLanguageLockingShift(NationalLanguageIndicator),
     /// Other UDH types.
     Other {
         udh_id: UdhId,
@@ -191,6 +197,8 @@ impl UdhValue {
         match self {
             UdhValue::ConcatenatedShortMessage8Bit(_) => UdhId::ConcatenatedShortMessages8Bit,
             UdhValue::ConcatenatedShortMessage16Bit(_) => UdhId::ConcatenatedShortMessages16Bit,
+            UdhValue::NationalLanguageSingleShift(_) => UdhId::NationalLanguageSingleShift,
+            UdhValue::NationalLanguageLockingShift(_) => UdhId::NationalLanguageLockingShift,
             UdhValue::Other { udh_id, .. } => *udh_id,
         }
     }
@@ -201,8 +209,10 @@ impl Sealed for UdhValue {}
 impl Length for UdhValue {
     fn length(&self) -> usize {
         match self {
-            UdhValue::ConcatenatedShortMessage8Bit(udh) => udh.length(),
-            UdhValue::ConcatenatedShortMessage16Bit(udh) => udh.length(),
+            UdhValue::ConcatenatedShortMessage8Bit(value) => value.length(),
+            UdhValue::ConcatenatedShortMessage16Bit(value) => value.length(),
+            UdhValue::NationalLanguageSingleShift(value) => value.length(),
+            UdhValue::NationalLanguageLockingShift(value) => value.length(),
             UdhValue::Other { value, .. } => value.length(),
         }
     }
@@ -211,8 +221,10 @@ impl Length for UdhValue {
 impl crate::encode::Encode for UdhValue {
     fn encode(&self, dst: &mut [u8]) -> usize {
         match self {
-            UdhValue::ConcatenatedShortMessage8Bit(udh) => udh.encode(dst),
-            UdhValue::ConcatenatedShortMessage16Bit(udh) => udh.encode(dst),
+            UdhValue::ConcatenatedShortMessage8Bit(value) => value.encode(dst),
+            UdhValue::ConcatenatedShortMessage16Bit(value) => value.encode(dst),
+            UdhValue::NationalLanguageSingleShift(value) => value.encode(dst),
+            UdhValue::NationalLanguageLockingShift(value) => value.encode(dst),
             UdhValue::Other { value, .. } => value.encode(dst),
         }
     }
@@ -221,8 +233,10 @@ impl crate::encode::Encode for UdhValue {
 impl crate::encode::owned::Encode for UdhValue {
     fn encode(&self, dst: &mut bytes::BytesMut) {
         match self {
-            UdhValue::ConcatenatedShortMessage8Bit(udh) => udh.encode(dst),
-            UdhValue::ConcatenatedShortMessage16Bit(udh) => udh.encode(dst),
+            UdhValue::ConcatenatedShortMessage8Bit(value) => value.encode(dst),
+            UdhValue::ConcatenatedShortMessage16Bit(value) => value.encode(dst),
+            UdhValue::NationalLanguageSingleShift(value) => value.encode(dst),
+            UdhValue::NationalLanguageLockingShift(value) => value.encode(dst),
             UdhValue::Other { value, .. } => value.encode(dst),
         }
     }
@@ -234,6 +248,10 @@ pub enum UdhValueDecodeError {
     ConcatenatedShortMessage8Bit(#[source] ConcatenatedShortMessageDecodeError),
     #[error("ConcatenatedShortMessage16Bit decode error: {0}")]
     ConcatenatedShortMessage16Bit(#[source] ConcatenatedShortMessageDecodeError),
+    #[error("NationalLanguageSingleShift decode error: {0}")]
+    NationalLanguageSingleShift(#[source] IntegerDecodeError),
+    #[error("NationalLanguageLockingShift decode error: {0}")]
+    NationalLanguageLockingShift(#[source] IntegerDecodeError),
     #[error("Other decode error: {0}")]
     Other(
         #[from]
@@ -261,6 +279,12 @@ impl DecodeWithKey for UdhValue {
             UdhId::ConcatenatedShortMessages16Bit => Decode::decode(src)
                 .map_decoded(Self::ConcatenatedShortMessage16Bit)
                 .map_err(Self::Error::ConcatenatedShortMessage16Bit)?,
+            UdhId::NationalLanguageSingleShift => Decode::decode(src)
+                .map_decoded(Self::NationalLanguageSingleShift)
+                .map_err(Self::Error::NationalLanguageSingleShift)?,
+            UdhId::NationalLanguageLockingShift => Decode::decode(src)
+                .map_decoded(Self::NationalLanguageLockingShift)
+                .map_err(Self::Error::NationalLanguageLockingShift)?,
             other => DecodeWithLength::decode(src, length)
                 .map_decoded(|value| UdhValue::Other {
                     udh_id: other,
@@ -548,6 +572,24 @@ mod tests {
                     Udh::new(alloc::vec![
                         UdhElement::new(ConcatenatedShortMessage16Bit::new(0x1234, 3, 1).unwrap()),
                         UdhElement::new(ConcatenatedShortMessage8Bit::new(0x12, 3, 1).unwrap()),
+                    ])
+                );
+
+                let mut buf =
+                    BytesMut::from(&[0x08, 0x00, 0x03, 0x4A, 0x03, 0x01, 0x25, 0x01, 0x01][..]);
+
+                let (udh, size) = <Udh as DecodeWithLength>::decode(&mut buf, 9).unwrap();
+
+                assert_eq!(size, 9);
+                assert_eq!(
+                    udh,
+                    Udh::new(alloc::vec![
+                        UdhElement::new(
+                            ConcatenatedShortMessage8Bit::new(0x4A, 0x03, 0x01).unwrap()
+                        ),
+                        UdhElement::new(UdhValue::NationalLanguageLockingShift(
+                            NationalLanguageIndicator::Turkish
+                        )),
                     ])
                 );
             }
