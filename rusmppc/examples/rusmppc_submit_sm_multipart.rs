@@ -8,128 +8,131 @@
 //! ```
 //!
 
-use std::{str::FromStr, time::Duration};
+// TODO: re-enable
+fn main() {}
 
-use futures::StreamExt;
-use rusmpp::{
-    Pdu,
-    extra::{concatenation::Multipart, encoding::ucs2::Ucs2Encoder},
-    pdus::{BindTransceiver, DeliverSmResp, SubmitSm},
-    types::{COctetString, OctetString},
-    values::{DataCoding, EsmClass, Npi, Ton},
-};
-use rusmppc::{ConnectionBuilder, event::Event};
+// use std::{str::FromStr, time::Duration};
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn core::error::Error>> {
-    tracing_subscriber::fmt()
-        .with_env_filter("rusmppc_submit_sm_multipart=info,rusmpp=debug,rusmppc=debug")
-        .init();
+// use futures::StreamExt;
+// use rusmpp::{
+//     Pdu,
+//     extra::{concatenation::Multipart, encoding::ucs2::Ucs2Encoder},
+//     pdus::{BindTransceiver, DeliverSmResp, SubmitSm},
+//     types::{COctetString, OctetString},
+//     values::{DataCoding, EsmClass, Npi, Ton},
+// };
+// use rusmppc::{ConnectionBuilder, event::Event};
 
-    let (client, mut events) = ConnectionBuilder::new()
-        // connect to the SMPP server using plain TCP
-        // or use `smpps://rusmpps.rusmpp.org:2776` for a TLS connection.
-        .connect("smpp://rusmpps.rusmpp.org:2775")
-        .await?;
+// #[tokio::main]
+// async fn main() -> Result<(), Box<dyn core::error::Error>> {
+//     tracing_subscriber::fmt()
+//         .with_env_filter("rusmppc_submit_sm_multipart=info,rusmpp=debug,rusmppc=debug")
+//         .init();
 
-    client
-        .bind_transceiver(
-            BindTransceiver::builder()
-                .system_id(COctetString::from_str("NfDfddEKVI0NCxO")?)
-                .password(COctetString::from_str("rEZYMq5j")?)
-                .build(),
-        )
-        .await?;
+//     let (client, mut events) = ConnectionBuilder::new()
+//         // connect to the SMPP server using plain TCP
+//         // or use `smpps://rusmpps.rusmpp.org:2776` for a TLS connection.
+//         .connect("smpp://rusmpps.rusmpp.org:2775")
+//         .await?;
 
-    let client_clone = client.clone();
+//     client
+//         .bind_transceiver(
+//             BindTransceiver::builder()
+//                 .system_id(COctetString::from_str("NfDfddEKVI0NCxO")?)
+//                 .password(COctetString::from_str("rEZYMq5j")?)
+//                 .build(),
+//         )
+//         .await?;
 
-    let events = tokio::spawn(async move {
-        while let Some(event) = events.next().await {
-            tracing::info!(?event, "Event");
+//     let client_clone = client.clone();
 
-            if let Event::Incoming(command) = event {
-                if let Some(Pdu::DeliverSm(deliver_sm)) = command.pdu() {
-                    tracing::info!("Received DeliverSm");
+//     let events = tokio::spawn(async move {
+//         while let Some(event) = events.next().await {
+//             tracing::info!(?event, "Event");
 
-                    let deliver_sm_resp = DeliverSmResp::builder()
-                        .message_id(
-                            deliver_sm
-                                .receipted_message_id()
-                                .cloned()
-                                .unwrap_or(COctetString::empty()),
-                        )
-                        .build();
+//             if let Event::Incoming(command) = event {
+//                 if let Some(Pdu::DeliverSm(deliver_sm)) = command.pdu() {
+//                     tracing::info!("Received DeliverSm");
 
-                    let _ = client_clone
-                        .deliver_sm_resp(command.sequence_number(), deliver_sm_resp)
-                        .await;
-                }
-            }
-        }
+//                     let deliver_sm_resp = DeliverSmResp::builder()
+//                         .message_id(
+//                             deliver_sm
+//                                 .receipted_message_id()
+//                                 .cloned()
+//                                 .unwrap_or(COctetString::empty()),
+//                         )
+//                         .build();
 
-        tracing::info!("Connection closed");
-    });
+//                     let _ = client_clone
+//                         .deliver_sm_resp(command.sequence_number(), deliver_sm_resp)
+//                         .await;
+//                 }
+//             }
+//         }
 
-    // c-spell: disable
-    let message = r##"GSM 3 parts : Hello world!
+//         tracing::info!("Connection closed");
+//     });
 
-@£$¥èéùìòÇØøÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà
+//     // c-spell: disable
+//     let message = r##"GSM 3 parts : Hello world!
 
-^{}\[~]|€Hello world!
+// @£$¥èéùìòÇØøÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà
 
-@£$¥èéùìòÇØøÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà
+// ^{}\[~]|€Hello world!
 
-^{}\[~]|€"##;
-    // c-spell: enable
+// @£$¥èéùìòÇØøÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà
 
-    let multipart = SubmitSm::builder()
-        .source_addr_ton(Ton::Unknown)
-        .source_addr_npi(Npi::Unknown)
-        .source_addr(COctetString::from_str("12345")?)
-        .destination_addr(COctetString::from_str("491701234567")?)
-        // esm_class will be updated with UDH indicator by the multipart builder.
-        .esm_class(EsmClass::default())
-        // data_coding will be overridden by the multipart builder to match the encoder.
-        .data_coding(DataCoding::default())
-        // short_message will be overridden by `short_message` of the multipart builder.
-        .short_message(OctetString::from_str("Hi, I am a short message.")?)
-        .build()
-        .udh_multipart(message)
-        // Use 16-bit reference number.
-        .reference_u16(1)
-        // Use gsm7bit unpacked encoding.
-        .gsm7bit_unpacked()
-        // Fallback to ucs2 encoding if the message can not be encoded in gsm7bit.
-        .fallback(Ucs2Encoder::new())
-        .build()?;
+// ^{}\[~]|€"##;
+//     // c-spell: enable
 
-    let total = multipart.len();
+//     let multipart = SubmitSm::builder()
+//         .source_addr_ton(Ton::Unknown)
+//         .source_addr_npi(Npi::Unknown)
+//         .source_addr(COctetString::from_str("12345")?)
+//         .destination_addr(COctetString::from_str("491701234567")?)
+//         // esm_class will be updated with UDH indicator by the multipart builder.
+//         .esm_class(EsmClass::default())
+//         // data_coding will be overridden by the multipart builder to match the encoder.
+//         .data_coding(DataCoding::default())
+//         // short_message will be overridden by `short_message` of the multipart builder.
+//         .short_message(OctetString::from_str("Hi, I am a short message.")?)
+//         .build()
+//         .udh_multipart(message)
+//         // Use 16-bit reference number.
+//         .reference_u16(1)
+//         // Use gsm7bit unpacked encoding.
+//         .gsm7bit_unpacked()
+//         // Fallback to ucs2 encoding if the message can not be encoded in gsm7bit.
+//         .fallback(Ucs2Encoder::new())
+//         .build()?;
 
-    tracing::info!(total, "Submitting multipart message");
+//     let total = multipart.len();
 
-    for (i, sm) in multipart.into_iter().enumerate() {
-        tracing::info!(part=i+1, short_message_len=sm.short_message().len(), esm_class=?sm.esm_class, data_coding=?sm.data_coding, "Sending SubmitSm");
+//     tracing::info!(total, "Submitting multipart message");
 
-        let response = client.submit_sm(sm).await?;
+//     for (i, sm) in multipart.into_iter().enumerate() {
+//         tracing::info!(part=i+1, short_message_len=sm.short_message().len(), esm_class=?sm.esm_class, data_coding=?sm.data_coding, "Sending SubmitSm");
 
-        tracing::info!(?response, "Got SubmitSmResp");
-    }
+//         let response = client.submit_sm(sm).await?;
 
-    tokio::time::sleep(Duration::from_secs(10)).await;
+//         tracing::info!(?response, "Got SubmitSmResp");
+//     }
 
-    tracing::info!("Unbinding from the server");
+//     tokio::time::sleep(Duration::from_secs(10)).await;
 
-    client.unbind().await?;
+//     tracing::info!("Unbinding from the server");
 
-    tracing::info!("Closing the connection");
+//     client.unbind().await?;
 
-    client.close().await?;
+//     tracing::info!("Closing the connection");
 
-    tracing::info!("Waiting for the connection to terminate");
+//     client.close().await?;
 
-    client.closed().await;
+//     tracing::info!("Waiting for the connection to terminate");
 
-    events.await?;
+//     client.closed().await;
 
-    Ok(())
-}
+//     events.await?;
+
+//     Ok(())
+// }
