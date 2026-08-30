@@ -247,12 +247,6 @@ impl crate::decode::owned::Decode for ConcatenatedShortMessage16Bit {
     }
 }
 
-impl From<ConcatenatedShortMessage16Bit> for crate::udhs::borrowed::UdhValue<'_> {
-    fn from(udh: ConcatenatedShortMessage16Bit) -> Self {
-        crate::udhs::borrowed::UdhValue::ConcatenatedShortMessage16Bit(udh)
-    }
-}
-
 #[cfg(feature = "alloc")]
 impl From<ConcatenatedShortMessage16Bit> for crate::udhs::owned::UdhValue {
     fn from(udh: ConcatenatedShortMessage16Bit) -> Self {
@@ -314,7 +308,7 @@ mod tests {
             fn ok() {
                 let mut buf = BytesMut::from(&[0x12, 0x34, 0x03, 0x02][..]);
                 let (udh, size) = ConcatenatedShortMessage16Bit::decode(&mut buf).unwrap();
-                assert_eq!(size, 5);
+                assert_eq!(size, 4);
                 assert_eq!(udh.reference, 0x1234);
                 assert_eq!(udh.total_parts, 3);
                 assert_eq!(udh.part_number, 2);
@@ -324,7 +318,7 @@ mod tests {
             fn ok_remaining() {
                 let mut buf = BytesMut::from(&[0x12, 0x34, 0x03, 0x02, 0x00, 0x00][..]);
                 let (udh, size) = ConcatenatedShortMessage16Bit::decode(&mut buf).unwrap();
-                assert_eq!(size, 5);
+                assert_eq!(size, 4);
                 assert_eq!(udh.reference, 0x1234);
                 assert_eq!(udh.total_parts, 3);
                 assert_eq!(udh.part_number, 2);
@@ -337,7 +331,7 @@ mod tests {
                 let err = ConcatenatedShortMessage16Bit::decode(&mut buf).unwrap_err();
                 assert!(matches!(
                     err,
-                    ConcatenatedShortMessageDecodeError::TooFewBytes { actual: 3, min: 5 }
+                    ConcatenatedShortMessageDecodeError::TooFewBytes { actual: 2, min: 4 }
                 ));
             }
 
