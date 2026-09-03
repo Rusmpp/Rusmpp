@@ -385,6 +385,16 @@ const _: () = {
     }
 };
 
+impl<const MIN: usize, const MAX: usize> From<crate::types::borrowed::OctetString<'_, MIN, MAX>>
+    for OctetString<MIN, MAX>
+{
+    fn from(value: crate::types::borrowed::OctetString<'_, MIN, MAX>) -> Self {
+        Self {
+            bytes: Bytes::copy_from_slice(value.bytes()),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -436,6 +436,16 @@ const _: () = {
     }
 };
 
+impl<const MIN: usize, const MAX: usize> From<crate::types::borrowed::COctetString<'_, MIN, MAX>>
+    for COctetString<MIN, MAX>
+{
+    fn from(value: crate::types::borrowed::COctetString<'_, MIN, MAX>) -> Self {
+        Self {
+            bytes: Bytes::copy_from_slice(value.bytes()),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

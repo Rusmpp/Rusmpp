@@ -277,6 +277,14 @@ const _: () = {
     }
 };
 
+impl From<crate::types::borrowed::AnyOctetString<'_>> for AnyOctetString {
+    fn from(value: crate::types::borrowed::AnyOctetString<'_>) -> Self {
+        Self {
+            bytes: Bytes::copy_from_slice(value.bytes()),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
