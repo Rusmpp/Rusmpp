@@ -3,16 +3,19 @@ use rusmpp_macros::Rusmpp;
 use crate::{
     Sealed,
     decode::{
-        AnyOctetStringDecodeError, ConcatenatedShortMessageDecodeError, DecodeResultExt,
-        IntegerDecodeError,
+        AnyOctetStringDecodeError, DecodeResultExt, IntegerDecodeError,
         owned::{Decode, DecodeErrorType, DecodeWithKey, DecodeWithLength},
     },
     encode::Length,
     types::owned::AnyOctetString,
     udhs::{
         UdhId,
-        concatenation::{ConcatenatedShortMessage8Bit, ConcatenatedShortMessage16Bit},
-        language::NationalLanguageIndicator,
+        values::{
+            ConcatenatedShortMessage8Bit, ConcatenatedShortMessage16Bit, NationalLanguageIndicator,
+            owned::errors::{
+                ConcatenatedShortMessage8BitDecodeError, ConcatenatedShortMessage16BitDecodeError,
+            },
+        },
     },
 };
 
@@ -245,9 +248,9 @@ impl crate::encode::owned::Encode for UdhValue {
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum UdhValueDecodeError {
     #[error("ConcatenatedShortMessage8Bit decode error: {0}")]
-    ConcatenatedShortMessage8Bit(#[source] ConcatenatedShortMessageDecodeError),
+    ConcatenatedShortMessage8Bit(#[source] ConcatenatedShortMessage8BitDecodeError),
     #[error("ConcatenatedShortMessage16Bit decode error: {0}")]
-    ConcatenatedShortMessage16Bit(#[source] ConcatenatedShortMessageDecodeError),
+    ConcatenatedShortMessage16Bit(#[source] ConcatenatedShortMessage16BitDecodeError),
     #[error("NationalLanguageSingleShift decode error: {0}")]
     NationalLanguageSingleShift(#[source] IntegerDecodeError),
     #[error("NationalLanguageLockingShift decode error: {0}")]

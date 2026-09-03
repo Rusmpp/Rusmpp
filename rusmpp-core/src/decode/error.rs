@@ -40,15 +40,6 @@ impl DecodeError {
     pub(crate) const fn unsupported_key(key: u32) -> Self {
         Self::new(DecodeErrorKind::UnsupportedKey { key })
     }
-
-    #[inline]
-    pub(crate) const fn concatenated_short_message_decode_error(
-        error: ConcatenatedShortMessageDecodeError,
-    ) -> Self {
-        Self::new(DecodeErrorKind::UdhDecodeError(
-            UdhDecodeError::ConcatenatedShortMessageDecodeError(error),
-        ))
-    }
 }
 
 /// Kind of [`DecodeError`].
@@ -60,7 +51,6 @@ pub enum DecodeErrorKind {
     OctetStringDecodeError(OctetStringDecodeError),
     AnyOctetStringDecodeError(AnyOctetStringDecodeError),
     HeaplessVecDecodeError(HeaplessVecDecodeError),
-    UdhDecodeError(UdhDecodeError),
     UnsupportedKey { key: u32 },
 }
 
@@ -117,32 +107,6 @@ pub enum HeaplessVecDecodeError {
     TooManyItems { max: usize },
 }
 
-/// An error that can occur when decoding a `UDH`.
-#[derive(Debug, Copy, Clone)]
-#[non_exhaustive]
-pub enum UdhDecodeError {
-    ConcatenatedShortMessageDecodeError(ConcatenatedShortMessageDecodeError),
-}
-
-/// An error that can occur when decoding a `ConcatenatedShortMessage` UDH.
-#[derive(Debug, Copy, Clone)]
-#[non_exhaustive]
-pub enum ConcatenatedShortMessageDecodeError {
-    /// The total number of parts is zero.
-    TotalPartsZero,
-    /// The part number is zero.
-    PartNumberZero,
-    /// The part number exceeds the total number of parts.
-    PartNumberExceedsTotalParts {
-        part_number: u8,
-        total_parts: u8,
-    },
-    TooFewBytes {
-        actual: usize,
-        min: usize,
-    },
-}
-
 /// An error that can occur when decoding a `Vec<T>`.
 #[derive(Debug, Copy, Clone)]
 pub enum VecDecodeError<E> {
@@ -177,9 +141,6 @@ impl ::core::error::Error for DecodeError {
                 Some(err as &(dyn ::core::error::Error + 'static))
             }
             DecodeErrorKind::UnsupportedKey { .. } => None,
-            DecodeErrorKind::UdhDecodeError(err) => {
-                Some(err as &(dyn ::core::error::Error + 'static))
-            }
         }
     }
 
@@ -199,7 +160,6 @@ impl ::core::fmt::Display for DecodeErrorKind {
                 write!(f, "Heapless vec decode error: {e}")
             }
             DecodeErrorKind::UnsupportedKey { key } => write!(f, "Unsupported key: {key}"),
-            DecodeErrorKind::UdhDecodeError(e) => write!(f, "UDH decode error: {e}"),
         }
     }
 }
@@ -275,46 +235,6 @@ impl ::core::fmt::Display for HeaplessVecDecodeError {
 }
 
 impl ::core::error::Error for HeaplessVecDecodeError {}
-
-impl ::core::fmt::Display for UdhDecodeError {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-        match self {
-            UdhDecodeError::ConcatenatedShortMessageDecodeError(e) => {
-                write!(f, "ConcatenatedShortMessage decode error: {e}")
-            }
-        }
-    }
-}
-
-impl ::core::error::Error for UdhDecodeError {}
-
-impl ::core::fmt::Display for ConcatenatedShortMessageDecodeError {
-    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-        match self {
-            ConcatenatedShortMessageDecodeError::PartNumberZero => {
-                write!(f, "Part number cannot be zero")
-            }
-            ConcatenatedShortMessageDecodeError::PartNumberExceedsTotalParts {
-                part_number,
-                total_parts,
-            } => {
-                write!(
-                    f,
-                    "Part number {} exceeds total parts {}",
-                    part_number, total_parts
-                )
-            }
-            ConcatenatedShortMessageDecodeError::TotalPartsZero => {
-                write!(f, "Total parts cannot be zero")
-            }
-            ConcatenatedShortMessageDecodeError::TooFewBytes { actual, min } => {
-                write!(f, "Too few bytes. actual: {actual}, min: {min}")
-            }
-        }
-    }
-}
-
-impl ::core::error::Error for ConcatenatedShortMessageDecodeError {}
 
 impl<E: ::core::fmt::Display> ::core::fmt::Display for VecDecodeError<E> {
     fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
