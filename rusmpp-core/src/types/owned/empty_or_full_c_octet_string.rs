@@ -390,6 +390,16 @@ const _: () = {
     }
 };
 
+impl<const N: usize> From<crate::types::borrowed::EmptyOrFullCOctetString<'_, N>>
+    for EmptyOrFullCOctetString<N>
+{
+    fn from(value: crate::types::borrowed::EmptyOrFullCOctetString<'_, N>) -> Self {
+        Self {
+            bytes: Bytes::copy_from_slice(value.bytes()),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
