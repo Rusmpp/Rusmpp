@@ -666,7 +666,7 @@ where
                             return Poll::Ready(());
                         }
                         Poll::Ready(None) => {
-                            tracing::debug!(target: CONN, "Connection closed by the server");
+                            tracing::debug!(target: CONN, "Unexpected end of stream");
 
                             self.as_mut().set_state(State::Errored);
 
