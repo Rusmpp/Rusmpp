@@ -7,6 +7,7 @@ use crate::{
     Sealed,
     decode::{
         COctetStringDecodeError,
+        copied::{Decode as CopiedDecode, DecodeErrorType as CopiedDecodeErrorType},
         owned::{Decode, DecodeErrorType},
     },
     encode::{Encode, Length, owned::Encode as BEncode},
@@ -342,6 +343,10 @@ impl<const MIN: usize, const MAX: usize> DecodeErrorType for COctetString<MIN, M
     type Error = COctetStringDecodeError;
 }
 
+impl<const MIN: usize, const MAX: usize> CopiedDecodeErrorType for COctetString<MIN, MAX> {
+    type Error = COctetStringDecodeError;
+}
+
 impl<const MIN: usize, const MAX: usize> Decode for COctetString<MIN, MAX> {
     fn decode(src: &mut BytesMut) -> Result<(Self, usize), Self::Error> {
         Self::_ASSERT_VALID;
@@ -360,6 +365,35 @@ impl<const MIN: usize, const MAX: usize> Decode for COctetString<MIN, MAX> {
             .ok_or(COctetStringDecodeError::NotNullTerminated)?;
 
         let bytes = src.split_to(index + 1).freeze();
+
+        if !bytes.is_ascii() {
+            return Err(COctetStringDecodeError::NotAscii);
+        }
+
+        let size = bytes.len();
+
+        Ok((Self { bytes }, size))
+    }
+}
+
+impl<const MIN: usize, const MAX: usize> CopiedDecode for COctetString<MIN, MAX> {
+    fn decode(src: &[u8]) -> Result<(Self, usize), Self::Error> {
+        Self::_ASSERT_VALID;
+
+        if src.len() < MIN {
+            return Err(COctetStringDecodeError::TooFewBytes {
+                actual: src.len(),
+                min: MIN,
+            });
+        }
+
+        let index = src
+            .iter()
+            .take(MAX)
+            .position(|&b| b == 0)
+            .ok_or(COctetStringDecodeError::NotNullTerminated)?;
+
+        let bytes = Bytes::copy_from_slice(&src[..index + 1]);
 
         if !bytes.is_ascii() {
             return Err(COctetStringDecodeError::NotAscii);
@@ -677,107 +711,220 @@ mod tests {
     }
 
     mod decode {
-        use super::*;
+        mod owned {
+            use bytes::BytesMut;
 
-        #[test]
-        fn unexpected_eof_empty() {
-            let mut buf = BytesMut::new();
-            let error = COctetString::<1, 6>::decode(&mut buf).unwrap_err();
+            use crate::{
+                decode::{COctetStringDecodeError, owned::Decode},
+                encode::Length,
+                types::owned::COctetString,
+            };
 
-            assert!(matches!(
-                error,
-                COctetStringDecodeError::TooFewBytes { actual: 0, min: 1 }
-            ));
+            #[test]
+            fn unexpected_eof_empty() {
+                let mut buf = BytesMut::new();
+                let error = COctetString::<1, 6>::decode(&mut buf).unwrap_err();
+
+                assert!(matches!(
+                    error,
+                    COctetStringDecodeError::TooFewBytes { actual: 0, min: 1 }
+                ));
+            }
+
+            #[test]
+            fn not_null_terminated() {
+                let mut buf = BytesMut::from(&b"hi"[..]);
+                let error = COctetString::<1, 6>::decode(&mut buf).unwrap_err();
+
+                assert!(matches!(error, COctetStringDecodeError::NotNullTerminated));
+            }
+
+            #[test]
+            fn too_many_bytes() {
+                let mut buf = BytesMut::from(&b"Hello\0"[..]);
+                let error = COctetString::<1, 5>::decode(&mut buf).unwrap_err();
+
+                assert!(matches!(error, COctetStringDecodeError::NotNullTerminated));
+            }
+
+            #[test]
+            fn too_few_bytes() {
+                let mut buf = BytesMut::from(&b"Hello\0"[..]);
+                let error = COctetString::<10, 20>::decode(&mut buf).unwrap_err();
+
+                assert!(matches!(
+                    error,
+                    COctetStringDecodeError::TooFewBytes { actual: 6, min: 10 }
+                ));
+            }
+
+            #[test]
+            fn not_ascii() {
+                let mut buf = BytesMut::from(&b"Hell\xF0\0"[..]);
+                let error = COctetString::<1, 6>::decode(&mut buf).unwrap_err();
+
+                assert!(matches!(error, COctetStringDecodeError::NotAscii));
+            }
+
+            #[test]
+            fn ok_max() {
+                let mut buf = BytesMut::from(&b"Hello\0"[..]);
+                let (string, size) = COctetString::<1, 6>::decode(&mut buf).unwrap();
+
+                assert_eq!(string.as_ref(), b"Hello\0");
+                assert_eq!(string.length(), 6);
+                assert_eq!(size, 6);
+                assert!(buf.is_empty());
+            }
+
+            #[test]
+            fn ok_not_max() {
+                let mut buf = BytesMut::from(&b"Hello\0"[..]);
+                let (string, size) = COctetString::<1, 25>::decode(&mut buf).unwrap();
+
+                assert_eq!(string.as_ref(), b"Hello\0");
+                assert_eq!(string.length(), 6);
+                assert_eq!(size, 6);
+                assert!(buf.is_empty());
+            }
+
+            #[test]
+            fn ok_empty_max() {
+                let mut buf = BytesMut::from(&b"\0"[..]);
+                let (string, size) = COctetString::<1, 1>::decode(&mut buf).unwrap();
+
+                assert_eq!(string.as_ref(), b"\0");
+                assert_eq!(string.length(), 1);
+                assert_eq!(size, 1);
+                assert!(buf.is_empty());
+            }
+
+            #[test]
+            fn ok_empty_not_max() {
+                let mut buf = BytesMut::from(&b"\0"[..]);
+                let (string, size) = COctetString::<1, 25>::decode(&mut buf).unwrap();
+
+                assert_eq!(string.as_ref(), b"\0");
+                assert_eq!(string.length(), 1);
+                assert_eq!(size, 1);
+                assert!(buf.is_empty());
+            }
+
+            #[test]
+            fn ok_remaining() {
+                let mut buf = BytesMut::from(&b"Hello\0World!"[..]);
+                let (string, size) = COctetString::<1, 10>::decode(&mut buf).unwrap();
+
+                assert_eq!(string.as_ref(), b"Hello\0");
+                assert_eq!(string.length(), 6);
+                assert_eq!(size, 6);
+                assert_eq!(&buf[..], b"World!");
+            }
         }
 
-        #[test]
-        fn not_null_terminated() {
-            let mut buf = BytesMut::from(&b"hi"[..]);
-            let error = COctetString::<1, 6>::decode(&mut buf).unwrap_err();
+        mod copied {
+            use crate::{
+                decode::{COctetStringDecodeError, copied::Decode},
+                encode::Length,
+                types::owned::COctetString,
+            };
 
-            assert!(matches!(error, COctetStringDecodeError::NotNullTerminated));
-        }
+            #[test]
+            fn unexpected_eof_empty() {
+                let bytes = b"";
+                let error = COctetString::<1, 6>::decode(bytes).unwrap_err();
 
-        #[test]
-        fn too_many_bytes() {
-            let mut buf = BytesMut::from(&b"Hello\0"[..]);
-            let error = COctetString::<1, 5>::decode(&mut buf).unwrap_err();
+                assert!(matches!(
+                    error,
+                    COctetStringDecodeError::TooFewBytes { actual: 0, min: 1 }
+                ));
+            }
 
-            assert!(matches!(error, COctetStringDecodeError::NotNullTerminated));
-        }
+            #[test]
+            fn not_null_terminated() {
+                let bytes = b"hi";
+                let error = COctetString::<1, 6>::decode(bytes).unwrap_err();
 
-        #[test]
-        fn too_few_bytes() {
-            let mut buf = BytesMut::from(&b"Hello\0"[..]);
-            let error = COctetString::<10, 20>::decode(&mut buf).unwrap_err();
+                assert!(matches!(error, COctetStringDecodeError::NotNullTerminated));
+            }
 
-            assert!(matches!(
-                error,
-                COctetStringDecodeError::TooFewBytes { actual: 6, min: 10 }
-            ));
-        }
+            #[test]
+            fn too_many_bytes() {
+                let bytes = b"Hello\0";
+                let error = COctetString::<1, 5>::decode(bytes).unwrap_err();
 
-        #[test]
-        fn not_ascii() {
-            let mut buf = BytesMut::from(&b"Hell\xF0\0"[..]);
-            let error = COctetString::<1, 6>::decode(&mut buf).unwrap_err();
+                assert!(matches!(error, COctetStringDecodeError::NotNullTerminated));
+            }
 
-            assert!(matches!(error, COctetStringDecodeError::NotAscii));
-        }
+            #[test]
+            fn too_few_bytes() {
+                let bytes = b"Hello\0";
+                let error = COctetString::<10, 20>::decode(bytes).unwrap_err();
 
-        #[test]
-        fn ok_max() {
-            let mut buf = BytesMut::from(&b"Hello\0"[..]);
-            let (string, size) = COctetString::<1, 6>::decode(&mut buf).unwrap();
+                assert!(matches!(
+                    error,
+                    COctetStringDecodeError::TooFewBytes { actual: 6, min: 10 }
+                ));
+            }
 
-            assert_eq!(string.as_ref(), b"Hello\0");
-            assert_eq!(string.length(), 6);
-            assert_eq!(size, 6);
-            assert!(buf.is_empty());
-        }
+            #[test]
+            fn not_ascii() {
+                let bytes = b"Hell\xF0\0";
+                let error = COctetString::<1, 6>::decode(bytes).unwrap_err();
 
-        #[test]
-        fn ok_not_max() {
-            let mut buf = BytesMut::from(&b"Hello\0"[..]);
-            let (string, size) = COctetString::<1, 25>::decode(&mut buf).unwrap();
+                assert!(matches!(error, COctetStringDecodeError::NotAscii));
+            }
 
-            assert_eq!(string.as_ref(), b"Hello\0");
-            assert_eq!(string.length(), 6);
-            assert_eq!(size, 6);
-            assert!(buf.is_empty());
-        }
+            #[test]
+            fn ok_max() {
+                let bytes = b"Hello\0";
+                let (string, size) = COctetString::<1, 6>::decode(bytes).unwrap();
 
-        #[test]
-        fn ok_empty_max() {
-            let mut buf = BytesMut::from(&b"\0"[..]);
-            let (string, size) = COctetString::<1, 1>::decode(&mut buf).unwrap();
+                assert_eq!(string.as_ref(), b"Hello\0");
+                assert_eq!(string.length(), 6);
+                assert_eq!(size, 6);
+            }
 
-            assert_eq!(string.as_ref(), b"\0");
-            assert_eq!(string.length(), 1);
-            assert_eq!(size, 1);
-            assert!(buf.is_empty());
-        }
+            #[test]
+            fn ok_not_max() {
+                let bytes = b"Hello\0";
+                let (string, size) = COctetString::<1, 25>::decode(bytes).unwrap();
 
-        #[test]
-        fn ok_empty_not_max() {
-            let mut buf = BytesMut::from(&b"\0"[..]);
-            let (string, size) = COctetString::<1, 25>::decode(&mut buf).unwrap();
+                assert_eq!(string.as_ref(), b"Hello\0");
+                assert_eq!(string.length(), 6);
+                assert_eq!(size, 6);
+            }
 
-            assert_eq!(string.as_ref(), b"\0");
-            assert_eq!(string.length(), 1);
-            assert_eq!(size, 1);
-            assert!(buf.is_empty());
-        }
+            #[test]
+            fn ok_empty_max() {
+                let bytes = b"\0";
+                let (string, size) = COctetString::<1, 1>::decode(bytes).unwrap();
 
-        #[test]
-        fn ok_remaining() {
-            let mut buf = BytesMut::from(&b"Hello\0World!"[..]);
-            let (string, size) = COctetString::<1, 10>::decode(&mut buf).unwrap();
+                assert_eq!(string.as_ref(), b"\0");
+                assert_eq!(string.length(), 1);
+                assert_eq!(size, 1);
+            }
 
-            assert_eq!(string.as_ref(), b"Hello\0");
-            assert_eq!(string.length(), 6);
-            assert_eq!(size, 6);
-            assert_eq!(&buf[..], b"World!");
+            #[test]
+            fn ok_empty_not_max() {
+                let bytes = b"\0";
+                let (string, size) = COctetString::<1, 25>::decode(bytes).unwrap();
+
+                assert_eq!(string.as_ref(), b"\0");
+                assert_eq!(string.length(), 1);
+                assert_eq!(size, 1);
+            }
+
+            #[test]
+            fn ok_remaining() {
+                let bytes = b"Hello\0World!";
+                let (string, size) = COctetString::<1, 10>::decode(bytes).unwrap();
+
+                assert_eq!(string.as_ref(), b"Hello\0");
+                assert_eq!(string.length(), 6);
+                assert_eq!(size, 6);
+                assert_eq!(&bytes[size..], b"World!");
+            }
         }
     }
 }
