@@ -87,6 +87,18 @@ impl Repr {
                     #repr_ident::decode(src).map(|(this, size)| (Self::from(this), size))
                 }
             }
+
+            #[cfg(feature = "alloc")]
+            impl crate::decode::copied::DecodeErrorType for #name {
+                type Error = <#repr_ident as crate::decode::copied::DecodeErrorType>::Error;
+            }
+
+            #[cfg(feature = "alloc")]
+            impl crate::decode::copied::Decode for #name {
+                fn decode(src: &[u8]) -> Result<(Self, usize), Self::Error> {
+                    #repr_ident::decode(src).map(|(this, size)| (Self::from(this), size))
+                }
+            }
         }
     }
 
