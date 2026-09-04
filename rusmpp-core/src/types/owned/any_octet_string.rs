@@ -5,6 +5,9 @@ use crate::{
     Sealed,
     decode::{
         AnyOctetStringDecodeError,
+        copied::{
+            DecodeErrorType as CopiedDecodeErrorType, DecodeWithLength as CopiedDecodeWithLength,
+        },
         owned::{DecodeErrorType, DecodeWithLength},
     },
     encode::{Encode, Length, owned::Encode as BEncode},
@@ -210,6 +213,10 @@ impl DecodeErrorType for AnyOctetString {
     type Error = AnyOctetStringDecodeError;
 }
 
+impl CopiedDecodeErrorType for AnyOctetString {
+    type Error = AnyOctetStringDecodeError;
+}
+
 impl DecodeWithLength for AnyOctetString {
     fn decode(src: &mut BytesMut, length: usize) -> Result<(Self, usize), Self::Error> {
         if src.len() < length {
@@ -217,6 +224,18 @@ impl DecodeWithLength for AnyOctetString {
         }
 
         let bytes = src.split_to(length).freeze();
+
+        Ok((Self { bytes }, length))
+    }
+}
+
+impl CopiedDecodeWithLength for AnyOctetString {
+    fn decode(src: &[u8], length: usize) -> Result<(Self, usize), Self::Error> {
+        if src.len() < length {
+            return Err(AnyOctetStringDecodeError::UnexpectedEndOfBuffer);
+        }
+
+        let bytes = Bytes::copy_from_slice(&src[..length]);
 
         Ok((Self { bytes }, length))
     }
@@ -323,50 +342,110 @@ mod tests {
     }
 
     mod decode {
-        use super::*;
+        mod owned {
+            use bytes::BytesMut;
 
-        #[test]
-        fn unexpected_eof_empty() {
-            let mut buf = BytesMut::new();
-            let error = AnyOctetString::decode(&mut buf, 5).unwrap_err();
+            use crate::{
+                decode::{AnyOctetStringDecodeError, owned::DecodeWithLength},
+                encode::Length,
+                types::owned::AnyOctetString,
+            };
 
-            assert!(matches!(
-                error,
-                AnyOctetStringDecodeError::UnexpectedEndOfBuffer
-            ));
+            #[test]
+            fn unexpected_eof_empty() {
+                let mut buf = BytesMut::new();
+                let error = AnyOctetString::decode(&mut buf, 5).unwrap_err();
+
+                assert!(matches!(
+                    error,
+                    AnyOctetStringDecodeError::UnexpectedEndOfBuffer
+                ));
+            }
+
+            #[test]
+            fn ok_zero() {
+                let mut buf = BytesMut::from(&b"Hello"[..]);
+                let (string, size) = AnyOctetString::decode(&mut buf, 0).unwrap();
+
+                assert_eq!(string.as_ref(), b"");
+                assert_eq!(string.length(), 0);
+                assert_eq!(size, 0);
+                assert_eq!(&buf[..], b"Hello");
+            }
+
+            #[test]
+            fn ok_all() {
+                let mut buf = BytesMut::from(&b"Hello"[..]);
+                let (string, size) = AnyOctetString::decode(&mut buf, 5).unwrap();
+
+                assert_eq!(string.as_ref(), b"Hello");
+                assert_eq!(string.length(), 5);
+                assert_eq!(size, 5);
+                assert!(buf.is_empty());
+            }
+
+            #[test]
+            fn ok_partial() {
+                let mut buf = BytesMut::from(&b"Hello"[..]);
+                let (string, size) = AnyOctetString::decode(&mut buf, 3).unwrap();
+
+                assert_eq!(string.as_ref(), b"Hel");
+                assert_eq!(string.length(), 3);
+                assert_eq!(size, 3);
+                assert_eq!(&buf[..], b"lo");
+            }
         }
 
-        #[test]
-        fn ok_zero() {
-            let mut buf = BytesMut::from(&b"Hello"[..]);
-            let (string, size) = AnyOctetString::decode(&mut buf, 0).unwrap();
+        mod copied {
+            use crate::{
+                decode::{AnyOctetStringDecodeError, copied::DecodeWithLength},
+                encode::Length,
+                types::owned::AnyOctetString,
+            };
 
-            assert_eq!(string.as_ref(), b"");
-            assert_eq!(string.length(), 0);
-            assert_eq!(size, 0);
-            assert_eq!(&buf[..], b"Hello");
-        }
+            #[test]
+            fn unexpected_eof_empty() {
+                let bytes = b"";
+                let error = AnyOctetString::decode(bytes, 5).unwrap_err();
 
-        #[test]
-        fn ok_all() {
-            let mut buf = BytesMut::from(&b"Hello"[..]);
-            let (string, size) = AnyOctetString::decode(&mut buf, 5).unwrap();
+                assert!(matches!(
+                    error,
+                    AnyOctetStringDecodeError::UnexpectedEndOfBuffer
+                ));
+            }
 
-            assert_eq!(string.as_ref(), b"Hello");
-            assert_eq!(string.length(), 5);
-            assert_eq!(size, 5);
-            assert!(buf.is_empty());
-        }
+            #[test]
+            fn ok_zero() {
+                let bytes = b"Hello";
+                let (string, size) = AnyOctetString::decode(bytes, 0).unwrap();
 
-        #[test]
-        fn ok_partial() {
-            let mut buf = BytesMut::from(&b"Hello"[..]);
-            let (string, size) = AnyOctetString::decode(&mut buf, 3).unwrap();
+                assert_eq!(string.as_ref(), b"");
+                assert_eq!(string.length(), 0);
+                assert_eq!(size, 0);
+                assert_eq!(&bytes[size..], b"Hello");
+            }
 
-            assert_eq!(string.as_ref(), b"Hel");
-            assert_eq!(string.length(), 3);
-            assert_eq!(size, 3);
-            assert_eq!(&buf[..], b"lo");
+            #[test]
+            fn ok_all() {
+                let bytes = b"Hello";
+                let (string, size) = AnyOctetString::decode(bytes, 5).unwrap();
+
+                assert_eq!(string.as_ref(), b"Hello");
+                assert_eq!(string.length(), 5);
+                assert_eq!(size, 5);
+                assert_eq!(&bytes[size..], b"");
+            }
+
+            #[test]
+            fn ok_partial() {
+                let bytes = b"Hello";
+                let (string, size) = AnyOctetString::decode(bytes, 3).unwrap();
+
+                assert_eq!(string.as_ref(), b"Hel");
+                assert_eq!(string.length(), 3);
+                assert_eq!(size, 3);
+                assert_eq!(&bytes[size..], b"lo");
+            }
         }
     }
 }
