@@ -8,3 +8,5 @@ pub mod owned;
 
 mod error;
 pub use error::*;
+
+pub mod copied;
