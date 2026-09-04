@@ -4,6 +4,11 @@ use crate::{
     CommandId, Sealed,
     decode::{
         AnyOctetStringDecodeError, DecodeResultExt,
+        copied::{
+            Decode as CopiedDecode, DecodeErrorType as CopiedDecodeErrorType,
+            DecodeWithKeyOptional as CopiedDecodeWithKeyOptional,
+            DecodeWithLength as CopiedDecodeWithLength,
+        },
         owned::{Decode, DecodeErrorType, DecodeWithKeyOptional, DecodeWithLength},
     },
     encode::Length,
@@ -517,16 +522,14 @@ impl DecodeErrorType for Pdu {
     type Error = PduDecodeError;
 }
 
-impl DecodeWithKeyOptional for Pdu {
-    type Key = CommandId;
+impl CopiedDecodeErrorType for Pdu {
+    type Error = PduDecodeError;
+}
 
-    fn decode(
-        key: Self::Key,
-        src: &mut BytesMut,
-        length: usize,
-    ) -> Result<Option<(Self, usize)>, Self::Error> {
-        if length == 0 {
-            let body = match key {
+macro_rules! decode {
+    ($key:ident, $src:ident, $length:ident, $trait:ident) => {{
+        if $length == 0 {
+            let body = match $key {
                 CommandId::Unbind => Pdu::Unbind,
                 CommandId::UnbindResp => Pdu::UnbindResp,
                 CommandId::EnquireLink => Pdu::EnquireLink,
@@ -541,67 +544,69 @@ impl DecodeWithKeyOptional for Pdu {
             return Ok(Some((body, 0)));
         }
 
-        let (body, size) = match key {
-            CommandId::BindTransmitter => Decode::decode(src).map_decoded(Self::BindTransmitter)?,
+        let (body, size) = match $key {
+            CommandId::BindTransmitter => {
+                $trait::decode($src, $length).map_decoded(Self::BindTransmitter)?
+            }
             CommandId::BindTransmitterResp => {
-                DecodeWithLength::decode(src, length).map_decoded(Self::BindTransmitterResp)?
+                $trait::decode($src, $length).map_decoded(Self::BindTransmitterResp)?
             }
-            CommandId::BindReceiver => Decode::decode(src).map_decoded(Self::BindReceiver)?,
+            CommandId::BindReceiver => {
+                $trait::decode($src, $length).map_decoded(Self::BindReceiver)?
+            }
             CommandId::BindReceiverResp => {
-                DecodeWithLength::decode(src, length).map_decoded(Self::BindReceiverResp)?
+                $trait::decode($src, $length).map_decoded(Self::BindReceiverResp)?
             }
-            CommandId::BindTransceiver => Decode::decode(src).map_decoded(Self::BindTransceiver)?,
+            CommandId::BindTransceiver => {
+                $trait::decode($src, $length).map_decoded(Self::BindTransceiver)?
+            }
             CommandId::BindTransceiverResp => {
-                DecodeWithLength::decode(src, length).map_decoded(Self::BindTransceiverResp)?
+                $trait::decode($src, $length).map_decoded(Self::BindTransceiverResp)?
             }
-            CommandId::Outbind => Decode::decode(src).map_decoded(Self::Outbind)?,
+            CommandId::Outbind => $trait::decode($src, $length).map_decoded(Self::Outbind)?,
             CommandId::AlertNotification => {
-                DecodeWithLength::decode(src, length).map_decoded(Self::AlertNotification)?
+                $trait::decode($src, $length).map_decoded(Self::AlertNotification)?
             }
-            CommandId::SubmitSm => SubmitSm::decode(src, length).map_decoded(Self::SubmitSm)?,
+            CommandId::SubmitSm => SubmitSm::decode($src, $length).map_decoded(Self::SubmitSm)?,
             CommandId::SubmitSmResp => {
-                DecodeWithLength::decode(src, length).map_decoded(Self::SubmitSmResp)?
+                $trait::decode($src, $length).map_decoded(Self::SubmitSmResp)?
             }
-            CommandId::QuerySm => Decode::decode(src).map_decoded(Self::QuerySm)?,
-            CommandId::QuerySmResp => Decode::decode(src).map_decoded(Self::QuerySmResp)?,
-            CommandId::DeliverSm => {
-                DecodeWithLength::decode(src, length).map_decoded(Self::DeliverSm)?
+            CommandId::QuerySm => $trait::decode($src, $length).map_decoded(Self::QuerySm)?,
+            CommandId::QuerySmResp => {
+                $trait::decode($src, $length).map_decoded(Self::QuerySmResp)?
             }
+            CommandId::DeliverSm => $trait::decode($src, $length).map_decoded(Self::DeliverSm)?,
             CommandId::DeliverSmResp => {
-                DecodeWithLength::decode(src, length).map_decoded(Self::DeliverSmResp)?
+                $trait::decode($src, $length).map_decoded(Self::DeliverSmResp)?
             }
-            CommandId::DataSm => DecodeWithLength::decode(src, length).map_decoded(Self::DataSm)?,
-            CommandId::DataSmResp => {
-                DecodeWithLength::decode(src, length).map_decoded(Self::DataSmResp)?
-            }
-            CommandId::CancelSm => Decode::decode(src).map_decoded(Self::CancelSm)?,
-            CommandId::ReplaceSm => {
-                DecodeWithLength::decode(src, length).map_decoded(Self::ReplaceSm)?
-            }
+            CommandId::DataSm => $trait::decode($src, $length).map_decoded(Self::DataSm)?,
+            CommandId::DataSmResp => $trait::decode($src, $length).map_decoded(Self::DataSmResp)?,
+            CommandId::CancelSm => $trait::decode($src, $length).map_decoded(Self::CancelSm)?,
+            CommandId::ReplaceSm => $trait::decode($src, $length).map_decoded(Self::ReplaceSm)?,
             CommandId::SubmitMulti => {
-                DecodeWithLength::decode(src, length).map_decoded(Self::SubmitMulti)?
+                $trait::decode($src, $length).map_decoded(Self::SubmitMulti)?
             }
             CommandId::SubmitMultiResp => {
-                DecodeWithLength::decode(src, length).map_decoded(Self::SubmitMultiResp)?
+                $trait::decode($src, $length).map_decoded(Self::SubmitMultiResp)?
             }
             CommandId::BroadcastSm => {
-                DecodeWithLength::decode(src, length).map_decoded(Self::BroadcastSm)?
+                $trait::decode($src, $length).map_decoded(Self::BroadcastSm)?
             }
             CommandId::BroadcastSmResp => {
-                DecodeWithLength::decode(src, length).map_decoded(Self::BroadcastSmResp)?
+                $trait::decode($src, $length).map_decoded(Self::BroadcastSmResp)?
             }
             CommandId::QueryBroadcastSm => {
-                DecodeWithLength::decode(src, length).map_decoded(Self::QueryBroadcastSm)?
+                $trait::decode($src, $length).map_decoded(Self::QueryBroadcastSm)?
             }
             CommandId::QueryBroadcastSmResp => {
-                DecodeWithLength::decode(src, length).map_decoded(Self::QueryBroadcastSmResp)?
+                $trait::decode($src, $length).map_decoded(Self::QueryBroadcastSmResp)?
             }
             CommandId::CancelBroadcastSm => {
-                DecodeWithLength::decode(src, length).map_decoded(Self::CancelBroadcastSm)?
+                $trait::decode($src, $length).map_decoded(Self::CancelBroadcastSm)?
             }
             CommandId::Other(_) => {
-                DecodeWithLength::decode(src, length).map_decoded(|body| Pdu::Other {
-                    command_id: key,
+                $trait::decode($src, $length).map_decoded(|body| Pdu::Other {
+                    command_id: $key,
                     body,
                 })?
             }
@@ -617,5 +622,29 @@ impl DecodeWithKeyOptional for Pdu {
         };
 
         Ok(Some((body, size)))
+    }};
+}
+
+impl DecodeWithKeyOptional for Pdu {
+    type Key = CommandId;
+
+    fn decode(
+        key: Self::Key,
+        src: &mut BytesMut,
+        length: usize,
+    ) -> Result<Option<(Self, usize)>, Self::Error> {
+        decode!(key, src, length, DecodeWithLength)
     }
 }
+
+// impl CopiedDecodeWithKeyOptional for Pdu {
+//     type Key = CommandId;
+
+//     fn decode(
+//         key: Self::Key,
+//         src: &[u8],
+//         length: usize,
+//     ) -> Result<Option<(Self, usize)>, Self::Error> {
+//         decode!(key, src, length, CopiedDecodeWithLength)
+//     }
+// }
