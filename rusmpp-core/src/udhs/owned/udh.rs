@@ -4,6 +4,10 @@ use crate::{
     Sealed,
     decode::{
         AnyOctetStringDecodeError, DecodeResultExt, IntegerDecodeError,
+        copied::{
+            Decode as CopiedDecode, DecodeErrorType as CopiedDecodeErrorType,
+            DecodeWithKey as CopiedDecodeWithKey, DecodeWithLength as CopiedDecodeWithLength,
+        },
         owned::{Decode, DecodeErrorType, DecodeWithKey, DecodeWithLength},
     },
     encode::Length,
@@ -267,28 +271,26 @@ impl DecodeErrorType for UdhValue {
     type Error = UdhValueDecodeError;
 }
 
-impl DecodeWithKey for UdhValue {
-    type Key = UdhId;
+impl CopiedDecodeErrorType for UdhValue {
+    type Error = UdhValueDecodeError;
+}
 
-    fn decode(
-        key: Self::Key,
-        src: &mut bytes::BytesMut,
-        length: usize,
-    ) -> Result<(Self, usize), Self::Error> {
-        let (value, size) = match key {
-            UdhId::ConcatenatedShortMessages8Bit => Decode::decode(src)
+macro_rules! decode {
+    ($key:ident, $src:ident, $length:ident, $trait:ident) => {{
+        let (value, size) = match $key {
+            UdhId::ConcatenatedShortMessages8Bit => $trait::decode($src, $length)
                 .map_decoded(Self::ConcatenatedShortMessage8Bit)
                 .map_err(Self::Error::ConcatenatedShortMessage8Bit)?,
-            UdhId::ConcatenatedShortMessages16Bit => Decode::decode(src)
+            UdhId::ConcatenatedShortMessages16Bit => $trait::decode($src, $length)
                 .map_decoded(Self::ConcatenatedShortMessage16Bit)
                 .map_err(Self::Error::ConcatenatedShortMessage16Bit)?,
-            UdhId::NationalLanguageSingleShift => Decode::decode(src)
+            UdhId::NationalLanguageSingleShift => $trait::decode($src, $length)
                 .map_decoded(Self::NationalLanguageSingleShift)
                 .map_err(Self::Error::NationalLanguageSingleShift)?,
-            UdhId::NationalLanguageLockingShift => Decode::decode(src)
+            UdhId::NationalLanguageLockingShift => $trait::decode($src, $length)
                 .map_decoded(Self::NationalLanguageLockingShift)
                 .map_err(Self::Error::NationalLanguageLockingShift)?,
-            other => DecodeWithLength::decode(src, length)
+            other => $trait::decode($src, $length)
                 .map_decoded(|value| UdhValue::Other {
                     udh_id: other,
                     value,
@@ -297,8 +299,28 @@ impl DecodeWithKey for UdhValue {
         };
 
         Ok((value, size))
+    }};
+}
+
+impl DecodeWithKey for UdhValue {
+    type Key = UdhId;
+
+    fn decode(
+        key: Self::Key,
+        src: &mut bytes::BytesMut,
+        length: usize,
+    ) -> Result<(Self, usize), Self::Error> {
+        decode!(key, src, length, DecodeWithLength)
     }
 }
+
+// impl CopiedDecodeWithKey for UdhValue {
+//     type Key = UdhId;
+
+//     fn decode(key: Self::Key, src: &[u8], length: usize) -> Result<(Self, usize), Self::Error> {
+//         decode!(key, src, length, CopiedDecodeWithLength)
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
