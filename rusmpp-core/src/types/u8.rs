@@ -42,6 +42,10 @@ impl crate::decode::owned::DecodeErrorType for u8 {
     type Error = IntegerDecodeError;
 }
 
+impl crate::decode::copied::DecodeErrorType for u8 {
+    type Error = IntegerDecodeError;
+}
+
 #[cfg(feature = "alloc")]
 impl crate::decode::owned::Decode for u8 {
     fn decode(src: &mut bytes::BytesMut) -> Result<(Self, usize), Self::Error> {
@@ -55,14 +59,19 @@ impl crate::decode::owned::Decode for u8 {
     }
 }
 
-impl borrowed::Decode<'_> for u8 {
-    fn decode(src: &[u8]) -> Result<(Self, usize), DecodeError> {
+impl crate::decode::copied::Decode for u8 {
+    fn decode(src: &[u8]) -> Result<(Self, usize), Self::Error> {
         if src.is_empty() {
-            return Err(DecodeError::integer_decode_error(
-                IntegerDecodeError::UnexpectedEndOfBuffer,
-            ));
+            return Err(IntegerDecodeError::UnexpectedEndOfBuffer);
         }
 
         Ok((src[0], 1))
+    }
+}
+
+impl borrowed::Decode<'_> for u8 {
+    fn decode(src: &[u8]) -> Result<(Self, usize), DecodeError> {
+        <Self as crate::decode::copied::Decode>::decode(src)
+            .map_err(DecodeError::integer_decode_error)
     }
 }
