@@ -6,9 +6,6 @@ use crate::{
     Sealed,
     decode::{
         OctetStringDecodeError,
-        copied::{
-            DecodeErrorType as CopiedDecodeErrorType, DecodeWithLength as CopiedDecodeWithLength,
-        },
         owned::{DecodeErrorType, DecodeWithLength},
     },
     encode::{Encode, Length, owned::Encode as BEncode},
@@ -287,10 +284,6 @@ impl<const MIN: usize, const MAX: usize> DecodeErrorType for OctetString<MIN, MA
     type Error = OctetStringDecodeError;
 }
 
-impl<const MIN: usize, const MAX: usize> CopiedDecodeErrorType for OctetString<MIN, MAX> {
-    type Error = OctetStringDecodeError;
-}
-
 impl<const MIN: usize, const MAX: usize> DecodeWithLength for OctetString<MIN, MAX> {
     fn decode(src: &mut BytesMut, length: usize) -> Result<(Self, usize), Self::Error> {
         Self::_ASSERT_VALID;
@@ -314,34 +307,6 @@ impl<const MIN: usize, const MAX: usize> DecodeWithLength for OctetString<MIN, M
         }
 
         let bytes = src.split_to(length).freeze();
-
-        Ok((Self { bytes }, length))
-    }
-}
-
-impl<const MIN: usize, const MAX: usize> CopiedDecodeWithLength for OctetString<MIN, MAX> {
-    fn decode(src: &[u8], length: usize) -> Result<(Self, usize), Self::Error> {
-        Self::_ASSERT_VALID;
-
-        if length > MAX {
-            return Err(OctetStringDecodeError::TooManyBytes {
-                actual: length,
-                max: MAX,
-            });
-        }
-
-        if length < MIN {
-            return Err(OctetStringDecodeError::TooFewBytes {
-                actual: length,
-                min: MIN,
-            });
-        }
-
-        if src.len() < length {
-            return Err(OctetStringDecodeError::UnexpectedEndOfBuffer);
-        }
-
-        let bytes = Bytes::copy_from_slice(&src[..length]);
 
         Ok((Self { bytes }, length))
     }
@@ -511,133 +476,61 @@ mod tests {
     }
 
     mod decode {
-        mod owned {
-            use bytes::BytesMut;
+        use super::*;
 
-            use crate::{
-                decode::{OctetStringDecodeError, owned::DecodeWithLength},
-                encode::Length,
-                types::owned::OctetString,
-            };
+        #[test]
+        fn unexpected_eof_empty() {
+            let mut buf = BytesMut::new();
+            let error = OctetString::<0, 6>::decode(&mut buf, 5).unwrap_err();
 
-            #[test]
-            fn unexpected_eof_empty() {
-                let mut buf = BytesMut::new();
-                let error = OctetString::<0, 6>::decode(&mut buf, 5).unwrap_err();
-
-                assert!(matches!(
-                    error,
-                    OctetStringDecodeError::UnexpectedEndOfBuffer
-                ));
-            }
-
-            #[test]
-            fn too_many_bytes() {
-                let mut buf = BytesMut::from(&b"Hello"[..]);
-                let error = OctetString::<0, 5>::decode(&mut buf, 15).unwrap_err();
-
-                assert!(matches!(
-                    error,
-                    OctetStringDecodeError::TooManyBytes { actual: 15, max: 5 }
-                ));
-            }
-
-            #[test]
-            fn too_few_bytes() {
-                let mut buf = BytesMut::from(&b"Hello"[..]);
-                let error = OctetString::<6, 10>::decode(&mut buf, 5).unwrap_err();
-
-                assert!(matches!(
-                    error,
-                    OctetStringDecodeError::TooFewBytes { actual: 5, min: 6 }
-                ));
-            }
-
-            #[test]
-            fn ok_all() {
-                let mut buf = BytesMut::from(&b"Hello"[..]);
-                let (string, size) = OctetString::<0, 5>::decode(&mut buf, 5).unwrap();
-
-                assert_eq!(string.as_ref(), b"Hello");
-                assert_eq!(string.length(), 5);
-                assert_eq!(size, 5);
-                assert!(buf.is_empty());
-            }
-
-            #[test]
-            fn ok_partial() {
-                let mut buf = BytesMut::from(&b"Hello"[..]);
-                let (string, size) = OctetString::<0, 5>::decode(&mut buf, 3).unwrap();
-
-                assert_eq!(string.as_ref(), b"Hel");
-                assert_eq!(string.length(), 3);
-                assert_eq!(size, 3);
-                assert_eq!(&buf[..], b"lo");
-            }
+            assert!(matches!(
+                error,
+                OctetStringDecodeError::UnexpectedEndOfBuffer
+            ));
         }
 
-        mod copied {
-            use crate::{
-                decode::{OctetStringDecodeError, copied::DecodeWithLength},
-                encode::Length,
-                types::owned::OctetString,
-            };
+        #[test]
+        fn too_many_bytes() {
+            let mut buf = BytesMut::from(&b"Hello"[..]);
+            let error = OctetString::<0, 5>::decode(&mut buf, 15).unwrap_err();
 
-            #[test]
-            fn unexpected_eof_empty() {
-                let bytes = b"";
-                let error = OctetString::<0, 6>::decode(bytes, 5).unwrap_err();
+            assert!(matches!(
+                error,
+                OctetStringDecodeError::TooManyBytes { actual: 15, max: 5 }
+            ));
+        }
 
-                assert!(matches!(
-                    error,
-                    OctetStringDecodeError::UnexpectedEndOfBuffer
-                ));
-            }
+        #[test]
+        fn too_few_bytes() {
+            let mut buf = BytesMut::from(&b"Hello"[..]);
+            let error = OctetString::<6, 10>::decode(&mut buf, 5).unwrap_err();
 
-            #[test]
-            fn too_many_bytes() {
-                let bytes = b"Hello";
-                let error = OctetString::<0, 5>::decode(bytes, 15).unwrap_err();
+            assert!(matches!(
+                error,
+                OctetStringDecodeError::TooFewBytes { actual: 5, min: 6 }
+            ));
+        }
 
-                assert!(matches!(
-                    error,
-                    OctetStringDecodeError::TooManyBytes { actual: 15, max: 5 }
-                ));
-            }
+        #[test]
+        fn ok_all() {
+            let mut buf = BytesMut::from(&b"Hello"[..]);
+            let (string, size) = OctetString::<0, 5>::decode(&mut buf, 5).unwrap();
 
-            #[test]
-            fn too_few_bytes() {
-                let bytes = b"Hello";
-                let error = OctetString::<6, 10>::decode(bytes, 5).unwrap_err();
+            assert_eq!(string.as_ref(), b"Hello");
+            assert_eq!(string.length(), 5);
+            assert_eq!(size, 5);
+            assert!(buf.is_empty());
+        }
 
-                assert!(matches!(
-                    error,
-                    OctetStringDecodeError::TooFewBytes { actual: 5, min: 6 }
-                ));
-            }
+        #[test]
+        fn ok_partial() {
+            let mut buf = BytesMut::from(&b"Hello"[..]);
+            let (string, size) = OctetString::<0, 5>::decode(&mut buf, 3).unwrap();
 
-            #[test]
-            fn ok_all() {
-                let bytes = b"Hello";
-                let (string, size) = OctetString::<0, 5>::decode(bytes, 5).unwrap();
-
-                assert_eq!(string.as_ref(), b"Hello");
-                assert_eq!(string.length(), 5);
-
-                assert_eq!(size, 5);
-                assert_eq!(&bytes[size..], b"");
-            }
-
-            #[test]
-            fn ok_partial() {
-                let bytes = b"Hello";
-                let (string, size) = OctetString::<0, 5>::decode(bytes, 3).unwrap();
-
-                assert_eq!(string.as_ref(), b"Hel");
-                assert_eq!(string.length(), 3);
-                assert_eq!(size, 3);
-                assert_eq!(&bytes[size..], b"lo");
-            }
+            assert_eq!(string.as_ref(), b"Hel");
+            assert_eq!(string.length(), 3);
+            assert_eq!(size, 3);
+            assert_eq!(&buf[..], b"lo");
         }
     }
 }
