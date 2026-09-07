@@ -5,10 +5,6 @@ use crate::{
     decode::{
         AnyOctetStringDecodeError, COctetStringDecodeError, DecodeResultExt, IntegerDecodeError,
         OctetStringDecodeError,
-        copied::{
-            Decode as CopiedDecode, DecodeErrorType as CopiedDecodeErrorType,
-            DecodeWithKey as CopiedDecodeWithKey, DecodeWithLength as CopiedDecodeWithLength,
-        },
         owned::{Decode, DecodeErrorType, DecodeWithKey, DecodeWithLength},
     },
     encode::Length,
@@ -555,217 +551,6 @@ impl DecodeErrorType for TlvValue {
     type Error = TlvValueDecodeError;
 }
 
-impl CopiedDecodeErrorType for TlvValue {
-    type Error = TlvValueDecodeError;
-}
-
-macro_rules! decode {
-    ($key:ident, $src:ident, $length:ident, $trait:ident) => {{
-        let (value, size) = match $key {
-            TlvTag::AdditionalStatusInfoText => $trait::decode($src, $length)
-                .map_decoded(Self::AdditionalStatusInfoText)
-                .map_err(Self::Error::AdditionalStatusInfoText)?,
-            TlvTag::AlertOnMessageDelivery => $trait::decode($src, $length)
-                .map_decoded(Self::AlertOnMessageDelivery)
-                .map_err(Self::Error::AlertOnMessageDelivery)?,
-            TlvTag::BillingIdentification => $trait::decode($src, $length)
-                .map_decoded(Self::BillingIdentification)
-                .map_err(Self::Error::BillingIdentification)?,
-            TlvTag::BroadcastAreaIdentifier => $trait::decode($src, $length)
-                .map_decoded(Self::BroadcastAreaIdentifier)
-                .map_err(Self::Error::BroadcastAreaIdentifier)?,
-            TlvTag::BroadcastAreaSuccess => $trait::decode($src, $length)
-                .map_decoded(Self::BroadcastAreaSuccess)
-                .map_err(Self::Error::BroadcastAreaSuccess)?,
-            TlvTag::BroadcastContentTypeInfo => $trait::decode($src, $length)
-                .map_decoded(Self::BroadcastContentTypeInfo)
-                .map_err(Self::Error::BroadcastContentTypeInfo)?,
-            TlvTag::BroadcastChannelIndicator => $trait::decode($src, $length)
-                .map_decoded(Self::BroadcastChannelIndicator)
-                .map_err(Self::Error::BroadcastChannelIndicator)?,
-            TlvTag::BroadcastContentType => $trait::decode($src, $length)
-                .map_decoded(Self::BroadcastContentType)
-                .map_err(Self::Error::BroadcastContentType)?,
-            TlvTag::BroadcastEndTime => $trait::decode($src, $length)
-                .map_decoded(Self::BroadcastEndTime)
-                .map_err(Self::Error::BroadcastEndTime)?,
-            TlvTag::BroadcastErrorStatus => $trait::decode($src, $length)
-                .map_decoded(Self::BroadcastErrorStatus)
-                .map_err(Self::Error::BroadcastErrorStatus)?,
-            TlvTag::BroadcastFrequencyInterval => $trait::decode($src, $length)
-                .map_decoded(Self::BroadcastFrequencyInterval)
-                .map_err(Self::Error::BroadcastFrequencyInterval)?,
-            TlvTag::BroadcastMessageClass => $trait::decode($src, $length)
-                .map_decoded(Self::BroadcastMessageClass)
-                .map_err(Self::Error::BroadcastMessageClass)?,
-            TlvTag::BroadcastRepNum => $trait::decode($src, $length)
-                .map_decoded(Self::BroadcastRepNum)
-                .map_err(Self::Error::BroadcastRepNum)?,
-            TlvTag::BroadcastServiceGroup => $trait::decode($src, $length)
-                .map_decoded(Self::BroadcastServiceGroup)
-                .map_err(Self::Error::BroadcastServiceGroup)?,
-            TlvTag::CallbackNum => $trait::decode($src, $length)
-                .map_decoded(Self::CallbackNum)
-                .map_err(Self::Error::CallbackNum)?,
-            TlvTag::CallbackNumAtag => $trait::decode($src, $length)
-                .map_decoded(Self::CallbackNumAtag)
-                .map_err(Self::Error::CallbackNumAtag)?,
-            TlvTag::CallbackNumPresInd => $trait::decode($src, $length)
-                .map_decoded(Self::CallbackNumPresInd)
-                .map_err(Self::Error::CallbackNumPresInd)?,
-            TlvTag::CongestionState => $trait::decode($src, $length)
-                .map_decoded(Self::CongestionState)
-                .map_err(Self::Error::CongestionState)?,
-            TlvTag::DeliveryFailureReason => $trait::decode($src, $length)
-                .map_decoded(Self::DeliveryFailureReason)
-                .map_err(Self::Error::DeliveryFailureReason)?,
-            TlvTag::DestAddrNpCountry => $trait::decode($src, $length)
-                .map_decoded(Self::DestAddrNpCountry)
-                .map_err(Self::Error::DestAddrNpCountry)?,
-            TlvTag::DestAddrNpInformation => $trait::decode($src, $length)
-                .map_decoded(Self::DestAddrNpInformation)
-                .map_err(Self::Error::DestAddrNpInformation)?,
-            TlvTag::DestAddrNpResolution => $trait::decode($src, $length)
-                .map_decoded(Self::DestAddrNpResolution)
-                .map_err(Self::Error::DestAddrNpResolution)?,
-            TlvTag::DestAddrSubunit => $trait::decode($src, $length)
-                .map_decoded(Self::DestAddrSubunit)
-                .map_err(Self::Error::DestAddrSubunit)?,
-            TlvTag::DestBearerType => $trait::decode($src, $length)
-                .map_decoded(Self::DestBearerType)
-                .map_err(Self::Error::DestBearerType)?,
-            TlvTag::DestNetworkId => $trait::decode($src, $length)
-                .map_decoded(Self::DestNetworkId)
-                .map_err(Self::Error::DestNetworkId)?,
-            TlvTag::DestNetworkType => $trait::decode($src, $length)
-                .map_decoded(Self::DestNetworkType)
-                .map_err(Self::Error::DestNetworkType)?,
-            TlvTag::DestNodeId => $trait::decode($src, $length)
-                .map_decoded(Self::DestNodeId)
-                .map_err(Self::Error::DestNodeId)?,
-            TlvTag::DestSubaddress => $trait::decode($src, $length)
-                .map_decoded(Self::DestSubaddress)
-                .map_err(Self::Error::DestSubaddress)?,
-            TlvTag::DestTelematicsId => $trait::decode($src, $length)
-                .map_decoded(Self::DestTelematicsId)
-                .map_err(Self::Error::DestTelematicsId)?,
-            TlvTag::DestPort => $trait::decode($src, $length)
-                .map_decoded(Self::DestPort)
-                .map_err(Self::Error::DestPort)?,
-            TlvTag::DisplayTime => $trait::decode($src, $length)
-                .map_decoded(Self::DisplayTime)
-                .map_err(Self::Error::DisplayTime)?,
-            TlvTag::DpfResult => $trait::decode($src, $length)
-                .map_decoded(Self::DpfResult)
-                .map_err(Self::Error::DpfResult)?,
-            TlvTag::ItsReplyType => $trait::decode($src, $length)
-                .map_decoded(Self::ItsReplyType)
-                .map_err(Self::Error::ItsReplyType)?,
-            TlvTag::ItsSessionInfo => $trait::decode($src, $length)
-                .map_decoded(Self::ItsSessionInfo)
-                .map_err(Self::Error::ItsSessionInfo)?,
-            TlvTag::LanguageIndicator => $trait::decode($src, $length)
-                .map_decoded(Self::LanguageIndicator)
-                .map_err(Self::Error::LanguageIndicator)?,
-            TlvTag::MessagePayload => $trait::decode($src, $length)
-                .map_decoded(Self::MessagePayload)
-                .map_err(Self::Error::MessagePayload)?,
-            TlvTag::MessageState => $trait::decode($src, $length)
-                .map_decoded(Self::MessageState)
-                .map_err(Self::Error::MessageState)?,
-            TlvTag::MoreMessagesToSend => $trait::decode($src, $length)
-                .map_decoded(Self::MoreMessagesToSend)
-                .map_err(Self::Error::MoreMessagesToSend)?,
-            TlvTag::MsAvailabilityStatus => $trait::decode($src, $length)
-                .map_decoded(Self::MsAvailabilityStatus)
-                .map_err(Self::Error::MsAvailabilityStatus)?,
-            TlvTag::MsMsgWaitFacilities => $trait::decode($src, $length)
-                .map_decoded(Self::MsMsgWaitFacilities)
-                .map_err(Self::Error::MsMsgWaitFacilities)?,
-            TlvTag::MsValidity => $trait::decode($src, $length)
-                .map_decoded(Self::MsValidity)
-                .map_err(Self::Error::MsValidity)?,
-            TlvTag::NetworkErrorCode => $trait::decode($src, $length)
-                .map_decoded(Self::NetworkErrorCode)
-                .map_err(Self::Error::NetworkErrorCode)?,
-            TlvTag::NumberOfMessages => $trait::decode($src, $length)
-                .map_decoded(Self::NumberOfMessages)
-                .map_err(Self::Error::NumberOfMessages)?,
-            TlvTag::PayloadType => $trait::decode($src, $length)
-                .map_decoded(Self::PayloadType)
-                .map_err(Self::Error::PayloadType)?,
-            TlvTag::PrivacyIndicator => $trait::decode($src, $length)
-                .map_decoded(Self::PrivacyIndicator)
-                .map_err(Self::Error::PrivacyIndicator)?,
-            TlvTag::QosTimeToLive => $trait::decode($src, $length)
-                .map_decoded(Self::QosTimeToLive)
-                .map_err(Self::Error::QosTimeToLive)?,
-            TlvTag::ReceiptedMessageId => $trait::decode($src, $length)
-                .map_decoded(Self::ReceiptedMessageId)
-                .map_err(Self::Error::ReceiptedMessageId)?,
-            TlvTag::SarMsgRefNum => $trait::decode($src, $length)
-                .map_decoded(Self::SarMsgRefNum)
-                .map_err(Self::Error::SarMsgRefNum)?,
-            TlvTag::SarSegmentSeqnum => $trait::decode($src, $length)
-                .map_decoded(Self::SarSegmentSeqnum)
-                .map_err(Self::Error::SarSegmentSeqnum)?,
-            TlvTag::SarTotalSegments => $trait::decode($src, $length)
-                .map_decoded(Self::SarTotalSegments)
-                .map_err(Self::Error::SarTotalSegments)?,
-            TlvTag::ScInterfaceVersion => $trait::decode($src, $length)
-                .map_decoded(Self::ScInterfaceVersion)
-                .map_err(Self::Error::ScInterfaceVersion)?,
-            TlvTag::SetDpf => $trait::decode($src, $length)
-                .map_decoded(Self::SetDpf)
-                .map_err(Self::Error::SetDpf)?,
-            TlvTag::SmsSignal => $trait::decode($src, $length)
-                .map_decoded(Self::SmsSignal)
-                .map_err(Self::Error::SmsSignal)?,
-            TlvTag::SourceAddrSubunit => $trait::decode($src, $length)
-                .map_decoded(Self::SourceAddrSubunit)
-                .map_err(Self::Error::SourceAddrSubunit)?,
-            TlvTag::SourceBearerType => $trait::decode($src, $length)
-                .map_decoded(Self::SourceBearerType)
-                .map_err(Self::Error::SourceBearerType)?,
-            TlvTag::SourceNetworkId => $trait::decode($src, $length)
-                .map_decoded(Self::SourceNetworkId)
-                .map_err(Self::Error::SourceNetworkId)?,
-            TlvTag::SourceNetworkType => $trait::decode($src, $length)
-                .map_decoded(Self::SourceNetworkType)
-                .map_err(Self::Error::SourceNetworkType)?,
-            TlvTag::SourceNodeId => $trait::decode($src, $length)
-                .map_decoded(Self::SourceNodeId)
-                .map_err(Self::Error::SourceNodeId)?,
-            TlvTag::SourcePort => $trait::decode($src, $length)
-                .map_decoded(Self::SourcePort)
-                .map_err(Self::Error::SourcePort)?,
-            TlvTag::SourceSubaddress => $trait::decode($src, $length)
-                .map_decoded(Self::SourceSubaddress)
-                .map_err(Self::Error::SourceSubaddress)?,
-            TlvTag::SourceTelematicsId => $trait::decode($src, $length)
-                .map_decoded(Self::SourceTelematicsId)
-                .map_err(Self::Error::SourceTelematicsId)?,
-            TlvTag::UserMessageReference => $trait::decode($src, $length)
-                .map_decoded(Self::UserMessageReference)
-                .map_err(Self::Error::UserMessageReference)?,
-            TlvTag::UserResponseCode => $trait::decode($src, $length)
-                .map_decoded(Self::UserResponseCode)
-                .map_err(Self::Error::UserResponseCode)?,
-            TlvTag::UssdServiceOp => $trait::decode($src, $length)
-                .map_decoded(Self::UssdServiceOp)
-                .map_err(Self::Error::UssdServiceOp)?,
-            TlvTag::Other(other) => $trait::decode($src, $length)
-                .map_decoded(|value| TlvValue::Other {
-                    tag: TlvTag::Other(other),
-                    value,
-                })
-                .map_err(Self::Error::Other)?,
-        };
-
-        Ok((value, size))
-    }};
-}
-
 impl DecodeWithKey for TlvValue {
     type Key = TlvTag;
 
@@ -774,14 +559,207 @@ impl DecodeWithKey for TlvValue {
         src: &mut BytesMut,
         length: usize,
     ) -> Result<(Self, usize), Self::Error> {
-        decode!(key, src, length, DecodeWithLength)
+        let (value, size) = match key {
+            TlvTag::AdditionalStatusInfoText => Decode::decode(src)
+                .map_decoded(Self::AdditionalStatusInfoText)
+                .map_err(Self::Error::AdditionalStatusInfoText)?,
+            TlvTag::AlertOnMessageDelivery => Decode::decode(src)
+                .map_decoded(Self::AlertOnMessageDelivery)
+                .map_err(Self::Error::AlertOnMessageDelivery)?,
+            TlvTag::BillingIdentification => DecodeWithLength::decode(src, length)
+                .map_decoded(Self::BillingIdentification)
+                .map_err(Self::Error::BillingIdentification)?,
+            TlvTag::BroadcastAreaIdentifier => DecodeWithLength::decode(src, length)
+                .map_decoded(Self::BroadcastAreaIdentifier)
+                .map_err(Self::Error::BroadcastAreaIdentifier)?,
+            TlvTag::BroadcastAreaSuccess => Decode::decode(src)
+                .map_decoded(Self::BroadcastAreaSuccess)
+                .map_err(Self::Error::BroadcastAreaSuccess)?,
+            TlvTag::BroadcastContentTypeInfo => DecodeWithLength::decode(src, length)
+                .map_decoded(Self::BroadcastContentTypeInfo)
+                .map_err(Self::Error::BroadcastContentTypeInfo)?,
+            TlvTag::BroadcastChannelIndicator => Decode::decode(src)
+                .map_decoded(Self::BroadcastChannelIndicator)
+                .map_err(Self::Error::BroadcastChannelIndicator)?,
+            TlvTag::BroadcastContentType => Decode::decode(src)
+                .map_decoded(Self::BroadcastContentType)
+                .map_err(Self::Error::BroadcastContentType)?,
+            TlvTag::BroadcastEndTime => DecodeWithLength::decode(src, length)
+                .map_decoded(Self::BroadcastEndTime)
+                .map_err(Self::Error::BroadcastEndTime)?,
+            TlvTag::BroadcastErrorStatus => Decode::decode(src)
+                .map_decoded(Self::BroadcastErrorStatus)
+                .map_err(Self::Error::BroadcastErrorStatus)?,
+            TlvTag::BroadcastFrequencyInterval => Decode::decode(src)
+                .map_decoded(Self::BroadcastFrequencyInterval)
+                .map_err(Self::Error::BroadcastFrequencyInterval)?,
+            TlvTag::BroadcastMessageClass => Decode::decode(src)
+                .map_decoded(Self::BroadcastMessageClass)
+                .map_err(Self::Error::BroadcastMessageClass)?,
+            TlvTag::BroadcastRepNum => Decode::decode(src)
+                .map_decoded(Self::BroadcastRepNum)
+                .map_err(Self::Error::BroadcastRepNum)?,
+            TlvTag::BroadcastServiceGroup => DecodeWithLength::decode(src, length)
+                .map_decoded(Self::BroadcastServiceGroup)
+                .map_err(Self::Error::BroadcastServiceGroup)?,
+            TlvTag::CallbackNum => DecodeWithLength::decode(src, length)
+                .map_decoded(Self::CallbackNum)
+                .map_err(Self::Error::CallbackNum)?,
+            TlvTag::CallbackNumAtag => DecodeWithLength::decode(src, length)
+                .map_decoded(Self::CallbackNumAtag)
+                .map_err(Self::Error::CallbackNumAtag)?,
+            TlvTag::CallbackNumPresInd => Decode::decode(src)
+                .map_decoded(Self::CallbackNumPresInd)
+                .map_err(Self::Error::CallbackNumPresInd)?,
+            TlvTag::CongestionState => Decode::decode(src)
+                .map_decoded(Self::CongestionState)
+                .map_err(Self::Error::CongestionState)?,
+            TlvTag::DeliveryFailureReason => Decode::decode(src)
+                .map_decoded(Self::DeliveryFailureReason)
+                .map_err(Self::Error::DeliveryFailureReason)?,
+            TlvTag::DestAddrNpCountry => DecodeWithLength::decode(src, length)
+                .map_decoded(Self::DestAddrNpCountry)
+                .map_err(Self::Error::DestAddrNpCountry)?,
+            TlvTag::DestAddrNpInformation => DecodeWithLength::decode(src, length)
+                .map_decoded(Self::DestAddrNpInformation)
+                .map_err(Self::Error::DestAddrNpInformation)?,
+            TlvTag::DestAddrNpResolution => Decode::decode(src)
+                .map_decoded(Self::DestAddrNpResolution)
+                .map_err(Self::Error::DestAddrNpResolution)?,
+            TlvTag::DestAddrSubunit => Decode::decode(src)
+                .map_decoded(Self::DestAddrSubunit)
+                .map_err(Self::Error::DestAddrSubunit)?,
+            TlvTag::DestBearerType => Decode::decode(src)
+                .map_decoded(Self::DestBearerType)
+                .map_err(Self::Error::DestBearerType)?,
+            TlvTag::DestNetworkId => Decode::decode(src)
+                .map_decoded(Self::DestNetworkId)
+                .map_err(Self::Error::DestNetworkId)?,
+            TlvTag::DestNetworkType => Decode::decode(src)
+                .map_decoded(Self::DestNetworkType)
+                .map_err(Self::Error::DestNetworkType)?,
+            TlvTag::DestNodeId => DecodeWithLength::decode(src, length)
+                .map_decoded(Self::DestNodeId)
+                .map_err(Self::Error::DestNodeId)?,
+            TlvTag::DestSubaddress => DecodeWithLength::decode(src, length)
+                .map_decoded(Self::DestSubaddress)
+                .map_err(Self::Error::DestSubaddress)?,
+            TlvTag::DestTelematicsId => Decode::decode(src)
+                .map_decoded(Self::DestTelematicsId)
+                .map_err(Self::Error::DestTelematicsId)?,
+            TlvTag::DestPort => Decode::decode(src)
+                .map_decoded(Self::DestPort)
+                .map_err(Self::Error::DestPort)?,
+            TlvTag::DisplayTime => Decode::decode(src)
+                .map_decoded(Self::DisplayTime)
+                .map_err(Self::Error::DisplayTime)?,
+            TlvTag::DpfResult => Decode::decode(src)
+                .map_decoded(Self::DpfResult)
+                .map_err(Self::Error::DpfResult)?,
+            TlvTag::ItsReplyType => Decode::decode(src)
+                .map_decoded(Self::ItsReplyType)
+                .map_err(Self::Error::ItsReplyType)?,
+            TlvTag::ItsSessionInfo => Decode::decode(src)
+                .map_decoded(Self::ItsSessionInfo)
+                .map_err(Self::Error::ItsSessionInfo)?,
+            TlvTag::LanguageIndicator => Decode::decode(src)
+                .map_decoded(Self::LanguageIndicator)
+                .map_err(Self::Error::LanguageIndicator)?,
+            TlvTag::MessagePayload => DecodeWithLength::decode(src, length)
+                .map_decoded(Self::MessagePayload)
+                .map_err(Self::Error::MessagePayload)?,
+            TlvTag::MessageState => Decode::decode(src)
+                .map_decoded(Self::MessageState)
+                .map_err(Self::Error::MessageState)?,
+            TlvTag::MoreMessagesToSend => Decode::decode(src)
+                .map_decoded(Self::MoreMessagesToSend)
+                .map_err(Self::Error::MoreMessagesToSend)?,
+            TlvTag::MsAvailabilityStatus => Decode::decode(src)
+                .map_decoded(Self::MsAvailabilityStatus)
+                .map_err(Self::Error::MsAvailabilityStatus)?,
+            TlvTag::MsMsgWaitFacilities => Decode::decode(src)
+                .map_decoded(Self::MsMsgWaitFacilities)
+                .map_err(Self::Error::MsMsgWaitFacilities)?,
+            TlvTag::MsValidity => DecodeWithLength::decode(src, length)
+                .map_decoded(Self::MsValidity)
+                .map_err(Self::Error::MsValidity)?,
+            TlvTag::NetworkErrorCode => Decode::decode(src)
+                .map_decoded(Self::NetworkErrorCode)
+                .map_err(Self::Error::NetworkErrorCode)?,
+            TlvTag::NumberOfMessages => Decode::decode(src)
+                .map_decoded(Self::NumberOfMessages)
+                .map_err(Self::Error::NumberOfMessages)?,
+            TlvTag::PayloadType => Decode::decode(src)
+                .map_decoded(Self::PayloadType)
+                .map_err(Self::Error::PayloadType)?,
+            TlvTag::PrivacyIndicator => Decode::decode(src)
+                .map_decoded(Self::PrivacyIndicator)
+                .map_err(Self::Error::PrivacyIndicator)?,
+            TlvTag::QosTimeToLive => Decode::decode(src)
+                .map_decoded(Self::QosTimeToLive)
+                .map_err(Self::Error::QosTimeToLive)?,
+            TlvTag::ReceiptedMessageId => Decode::decode(src)
+                .map_decoded(Self::ReceiptedMessageId)
+                .map_err(Self::Error::ReceiptedMessageId)?,
+            TlvTag::SarMsgRefNum => Decode::decode(src)
+                .map_decoded(Self::SarMsgRefNum)
+                .map_err(Self::Error::SarMsgRefNum)?,
+            TlvTag::SarSegmentSeqnum => Decode::decode(src)
+                .map_decoded(Self::SarSegmentSeqnum)
+                .map_err(Self::Error::SarSegmentSeqnum)?,
+            TlvTag::SarTotalSegments => Decode::decode(src)
+                .map_decoded(Self::SarTotalSegments)
+                .map_err(Self::Error::SarTotalSegments)?,
+            TlvTag::ScInterfaceVersion => Decode::decode(src)
+                .map_decoded(Self::ScInterfaceVersion)
+                .map_err(Self::Error::ScInterfaceVersion)?,
+            TlvTag::SetDpf => Decode::decode(src)
+                .map_decoded(Self::SetDpf)
+                .map_err(Self::Error::SetDpf)?,
+            TlvTag::SmsSignal => Decode::decode(src)
+                .map_decoded(Self::SmsSignal)
+                .map_err(Self::Error::SmsSignal)?,
+            TlvTag::SourceAddrSubunit => Decode::decode(src)
+                .map_decoded(Self::SourceAddrSubunit)
+                .map_err(Self::Error::SourceAddrSubunit)?,
+            TlvTag::SourceBearerType => Decode::decode(src)
+                .map_decoded(Self::SourceBearerType)
+                .map_err(Self::Error::SourceBearerType)?,
+            TlvTag::SourceNetworkId => Decode::decode(src)
+                .map_decoded(Self::SourceNetworkId)
+                .map_err(Self::Error::SourceNetworkId)?,
+            TlvTag::SourceNetworkType => Decode::decode(src)
+                .map_decoded(Self::SourceNetworkType)
+                .map_err(Self::Error::SourceNetworkType)?,
+            TlvTag::SourceNodeId => DecodeWithLength::decode(src, length)
+                .map_decoded(Self::SourceNodeId)
+                .map_err(Self::Error::SourceNodeId)?,
+            TlvTag::SourcePort => Decode::decode(src)
+                .map_decoded(Self::SourcePort)
+                .map_err(Self::Error::SourcePort)?,
+            TlvTag::SourceSubaddress => DecodeWithLength::decode(src, length)
+                .map_decoded(Self::SourceSubaddress)
+                .map_err(Self::Error::SourceSubaddress)?,
+            TlvTag::SourceTelematicsId => Decode::decode(src)
+                .map_decoded(Self::SourceTelematicsId)
+                .map_err(Self::Error::SourceTelematicsId)?,
+            TlvTag::UserMessageReference => Decode::decode(src)
+                .map_decoded(Self::UserMessageReference)
+                .map_err(Self::Error::UserMessageReference)?,
+            TlvTag::UserResponseCode => Decode::decode(src)
+                .map_decoded(Self::UserResponseCode)
+                .map_err(Self::Error::UserResponseCode)?,
+            TlvTag::UssdServiceOp => Decode::decode(src)
+                .map_decoded(Self::UssdServiceOp)
+                .map_err(Self::Error::UssdServiceOp)?,
+            TlvTag::Other(other) => DecodeWithLength::decode(src, length)
+                .map_decoded(|value| TlvValue::Other {
+                    tag: TlvTag::Other(other),
+                    value,
+                })
+                .map_err(Self::Error::Other)?,
+        };
+
+        Ok((value, size))
     }
 }
-
-// impl CopiedDecodeWithKey for TlvValue {
-//     type Key = TlvTag;
-
-//     fn decode(key: Self::Key, src: &[u8], length: usize) -> Result<(Self, usize), Self::Error> {
-//         decode!(key, src, length, CopiedDecodeWithLength)
-//     }
-// }
