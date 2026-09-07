@@ -211,12 +211,15 @@ impl DecodeErrorType for AnyOctetString {
 }
 
 impl DecodeWithLength for AnyOctetString {
-    fn decode(src: &mut BytesMut, length: usize) -> Result<(Self, usize), Self::Error> {
-        if src.len() < length {
+    fn decode(
+        src: &mut impl crate::decode::owned::Buf,
+        length: usize,
+    ) -> Result<(Self, usize), Self::Error> {
+        if src.length() < length {
             return Err(AnyOctetStringDecodeError::UnexpectedEndOfBuffer);
         }
 
-        let bytes = src.split_to(length).freeze();
+        let bytes = src.split_to(length).into_bytes();
 
         Ok((Self { bytes }, length))
     }

@@ -1,11 +1,10 @@
-use bytes::BytesMut;
 use rusmpp_macros::Rusmpp;
 
 use crate::{
     Sealed,
     decode::{
         DecodeResultExt,
-        owned::{Decode, DecodeErrorType, DecodeWithKey},
+        owned::{Buf, Decode, DecodeErrorType, DecodeWithKey},
     },
     encode::Length,
     types::owned::COctetString,
@@ -117,7 +116,7 @@ impl DecodeErrorType for DestAddressValue {
 impl DecodeWithKey for DestAddressValue {
     type Key = DestFlag;
 
-    fn decode(key: Self::Key, src: &mut BytesMut, _: usize) -> Result<(Self, usize), Self::Error> {
+    fn decode(key: Self::Key, src: &mut impl Buf, _: usize) -> Result<(Self, usize), Self::Error> {
         let (value, size) = match key {
             DestFlag::SmeAddress => Decode::decode(src).map_decoded(Self::SmeAddress)?,
             DestFlag::DistributionListName => {

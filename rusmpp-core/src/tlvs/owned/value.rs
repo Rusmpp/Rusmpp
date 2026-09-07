@@ -1,11 +1,9 @@
-use bytes::BytesMut;
-
 use crate::{
     CommandStatus, Sealed,
     decode::{
         AnyOctetStringDecodeError, COctetStringDecodeError, DecodeResultExt, IntegerDecodeError,
         OctetStringDecodeError,
-        owned::{Decode, DecodeErrorType, DecodeWithKey, DecodeWithLength},
+        owned::{Buf, Decode, DecodeErrorType, DecodeWithKey, DecodeWithLength},
     },
     encode::Length,
     tlvs::TlvTag,
@@ -556,7 +554,7 @@ impl DecodeWithKey for TlvValue {
 
     fn decode(
         key: Self::Key,
-        src: &mut BytesMut,
+        src: &mut impl Buf,
         length: usize,
     ) -> Result<(Self, usize), Self::Error> {
         let (value, size) = match key {

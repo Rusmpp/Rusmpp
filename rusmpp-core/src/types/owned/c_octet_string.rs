@@ -343,23 +343,23 @@ impl<const MIN: usize, const MAX: usize> DecodeErrorType for COctetString<MIN, M
 }
 
 impl<const MIN: usize, const MAX: usize> Decode for COctetString<MIN, MAX> {
-    fn decode(src: &mut BytesMut) -> Result<(Self, usize), Self::Error> {
+    fn decode(src: &mut impl crate::decode::owned::Buf) -> Result<(Self, usize), Self::Error> {
         Self::_ASSERT_VALID;
 
-        if src.len() < MIN {
+        if src.length() < MIN {
             return Err(COctetStringDecodeError::TooFewBytes {
-                actual: src.len(),
+                actual: src.length(),
                 min: MIN,
             });
         }
 
         let index = src
-            .iter()
+            .iterator()
             .take(MAX)
-            .position(|&b| b == 0)
+            .position(|b| b == 0)
             .ok_or(COctetStringDecodeError::NotNullTerminated)?;
 
-        let bytes = src.split_to(index + 1).freeze();
+        let bytes = src.split_to(index + 1).into_bytes();
 
         if !bytes.is_ascii() {
             return Err(COctetStringDecodeError::NotAscii);

@@ -241,7 +241,7 @@ fn quote_owned_decode(input: &DeriveInput, fields: &ValidFields) -> TokenStream 
     quote! {
         #[cfg(feature = "alloc")]
         impl #impl_generics crate::decode::owned::Decode for #name #ty_generics #where_clause {
-            fn decode(src: &mut ::bytes::BytesMut) -> Result<(Self, usize), Self::Error> {
+            fn decode(src: &mut impl crate::decode::owned::Buf) -> Result<(Self, usize), Self::Error> {
                 let size = 0;
                 #(#fields)*
 
@@ -301,7 +301,7 @@ fn quote_owned_decode_with_length(input: &DeriveInput, fields: &ValidFields) -> 
     quote! {
         #[cfg(feature = "alloc")]
         impl #impl_generics crate::decode::owned::DecodeWithLength for #name #ty_generics #where_clause {
-            fn decode(src: &mut ::bytes::BytesMut, length: usize) -> Result<(Self, usize), Self::Error> {
+            fn decode(src: &mut impl crate::decode::owned::Buf, length: usize) -> Result<(Self, usize), Self::Error> {
                 let size = 0;
                 #(
                     #fields

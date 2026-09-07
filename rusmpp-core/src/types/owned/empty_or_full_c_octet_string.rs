@@ -293,7 +293,7 @@ impl<const N: usize> DecodeErrorType for EmptyOrFullCOctetString<N> {
 }
 
 impl<const N: usize> Decode for EmptyOrFullCOctetString<N> {
-    fn decode(src: &mut BytesMut) -> Result<(Self, usize), Self::Error> {
+    fn decode(src: &mut impl crate::decode::owned::Buf) -> Result<(Self, usize), Self::Error> {
         Self::_ASSERT_VALID;
 
         if src.is_empty() {
@@ -301,14 +301,14 @@ impl<const N: usize> Decode for EmptyOrFullCOctetString<N> {
         }
 
         let index = src
-            .iter()
+            .iterator()
             .take(N)
-            .position(|&b| b == 0)
+            .position(|b| b == 0)
             .ok_or(COctetStringDecodeError::NotNullTerminated)?;
 
         let len = index + 1;
 
-        let bytes = src.split_to(len).freeze();
+        let bytes = src.split_to(len).into_bytes();
 
         if len > 1 && len < N {
             return Err(COctetStringDecodeError::TooFewBytes {
