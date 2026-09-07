@@ -1,7 +1,6 @@
 //! Traits for decoding `SMPP` values.
 
 pub use rusmpp_core::decode::{
-    AnyOctetStringDecodeError, COctetStringDecodeError, ConcatenatedShortMessageDecodeError,
-    DecodeError, DecodeErrorKind, HeaplessVecDecodeError, IntegerDecodeError,
-    OctetStringDecodeError, UdhDecodeError, borrowed::*,
+    AnyOctetStringDecodeError, COctetStringDecodeError, DecodeError, DecodeErrorKind,
+    HeaplessVecDecodeError, IntegerDecodeError, OctetStringDecodeError, borrowed::*,
 };
