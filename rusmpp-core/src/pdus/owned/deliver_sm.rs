@@ -175,6 +175,17 @@ impl DeliverSm {
         DeliverSmBuilder::new()
     }
 
+    /// Returns the first value of [`TlvValue::MessagePayload`] if present.
+    pub fn message_payload(&self) -> Option<&MessagePayload> {
+        self.tlvs.iter().find_map(|tlv| {
+            if let Some(TlvValue::MessagePayload(value)) = tlv.value() {
+                Some(value)
+            } else {
+                None
+            }
+        })
+    }
+
     /// Returns the first value of [`TlvValue::ReceiptedMessageId`] if present.
     pub fn receipted_message_id(&self) -> Option<&COctetString<1, 65>> {
         self.tlvs.iter().find_map(|tlv| {
@@ -265,6 +276,14 @@ impl DeliverSm {
     /// See [`Self::set_short_message`] for details.
     pub fn with_short_message(mut self, short_message: OctetString<0, 255>) -> Self {
         self.set_short_message(short_message);
+        self
+    }
+
+    /// See [`Self::with_short_message`].
+    pub fn with_message_payload(mut self, message_payload: MessagePayload) -> Self {
+        self.push_tlv(MessageDeliveryRequestTlvValue::MessagePayload(
+            message_payload,
+        ));
         self
     }
 }

@@ -37,6 +37,14 @@ impl From<MessagePayload> for AnyOctetString {
     }
 }
 
+impl ::core::ops::Deref for MessagePayload {
+    type Target = AnyOctetString;
+
+    fn deref(&self) -> &Self::Target {
+        &self.value
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

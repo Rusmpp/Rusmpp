@@ -205,6 +205,17 @@ impl SubmitMulti {
         SubmitMultiBuilder::new()
     }
 
+    /// Returns the first value of [`TlvValue::MessagePayload`] if present.
+    pub fn message_payload(&self) -> Option<&MessagePayload> {
+        self.tlvs.iter().find_map(|tlv| {
+            if let Some(TlvValue::MessagePayload(value)) = tlv.value() {
+                Some(value)
+            } else {
+                None
+            }
+        })
+    }
+
     /// Returns the first value of [`TlvValue::SarMsgRefNum`] if present.
     pub fn sar_msg_ref_num(&self) -> Option<u16> {
         self.tlvs.iter().find_map(|tlv| {
@@ -284,6 +295,14 @@ impl SubmitMulti {
     /// See [`Self::set_short_message`] for details.
     pub fn with_short_message(mut self, short_message: OctetString<0, 255>) -> Self {
         self.set_short_message(short_message);
+        self
+    }
+
+    /// See [`Self::with_short_message`].
+    pub fn with_message_payload(mut self, message_payload: MessagePayload) -> Self {
+        self.push_tlv(MessageSubmissionRequestTlvValue::MessagePayload(
+            message_payload,
+        ));
         self
     }
 }

@@ -83,7 +83,7 @@ impl Repr {
 
             #[cfg(feature = "alloc")]
             impl crate::decode::owned::Decode for #name {
-                fn decode(src: &mut ::bytes::BytesMut) -> Result<(Self, usize), Self::Error> {
+                fn decode(src: &mut impl crate::decode::owned::Buf) -> Result<(Self, usize), Self::Error> {
                     #repr_ident::decode(src).map(|(this, size)| (Self::from(this), size))
                 }
             }

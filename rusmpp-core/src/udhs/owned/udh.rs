@@ -4,7 +4,7 @@ use crate::{
     Sealed,
     decode::{
         AnyOctetStringDecodeError, DecodeResultExt, IntegerDecodeError,
-        owned::{Decode, DecodeErrorType, DecodeWithKey, DecodeWithLength},
+        owned::{Buf, Decode, DecodeErrorType, DecodeWithKey, DecodeWithLength},
     },
     encode::Length,
     types::owned::AnyOctetString,
@@ -272,7 +272,7 @@ impl DecodeWithKey for UdhValue {
 
     fn decode(
         key: Self::Key,
-        src: &mut bytes::BytesMut,
+        src: &mut impl Buf,
         length: usize,
     ) -> Result<(Self, usize), Self::Error> {
         let (value, size) = match key {
