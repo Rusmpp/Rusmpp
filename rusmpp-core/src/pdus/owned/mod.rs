@@ -1,7 +1,5 @@
 //! Owned `SMPP` PDUs.
 
-mod sm;
-
 mod pdu;
 pub use pdu::{Pdu, PduDecodeError};
 
