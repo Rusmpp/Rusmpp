@@ -305,7 +305,7 @@ impl<const MIN: usize, const MAX: usize> DecodeWithLength for OctetString<MIN, M
             });
         }
 
-        if src.length() < length {
+        if src.len() < length {
             return Err(OctetStringDecodeError::UnexpectedEndOfBuffer);
         }
 

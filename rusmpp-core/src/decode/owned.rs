@@ -4,26 +4,49 @@ use crate::Sealed;
 
 use super::error::VecDecodeError;
 
-/// A decode buffer.
+/// A decode buffer. Used by all decoding traits.
+///
+/// - [`Decode`]
+/// - [`DecodeWithLength`]
+/// - [`DecodeWithKey`]
+/// - [`DecodeWithKeyOptional`]
 pub trait Buf: Sealed {
-    fn length(&self) -> usize;
+    /// Get a single byte from the buffer.
+    ///
+    /// Moves the buffer forward by 1 byte.
     fn get_u8(&mut self) -> u8;
-    fn get_u16(&mut self) -> u16;
-    fn get_u32(&mut self) -> u32;
-    fn split_to(&mut self, at: usize) -> Self;
-    fn into_bytes(self) -> bytes::Bytes;
-    fn iterator(&self) -> impl Iterator<Item = u8> + '_;
 
+    /// Get a 2-byte unsigned integer from the buffer in big-endian byte order.
+    ///
+    /// Moves the buffer forward by 2 bytes.
+    fn get_u16(&mut self) -> u16;
+
+    /// Get a 4-byte unsigned integer from the buffer in big-endian byte order.
+    ///
+    /// Moves the buffer forward by 4 bytes.
+    fn get_u32(&mut self) -> u32;
+
+    /// Split the buffer into two at the given index, returning the first part and leaving the second part in the original buffer.
+    fn split_to(&mut self, at: usize) -> Self;
+
+    /// Get a slice of the buffer without consuming it.
+    fn as_slice(&self) -> &[u8];
+
+    /// Convert the buffer into a [`bytes::Bytes`] instance, consuming the buffer.
+    fn into_bytes(self) -> bytes::Bytes;
+
+    /// Get the length of the buffer.
+    fn len(&self) -> usize {
+        self.as_slice().len()
+    }
+
+    /// Check if the buffer is empty.
     fn is_empty(&self) -> bool {
-        self.length() == 0
+        self.len() == 0
     }
 }
 
 impl Buf for &[u8] {
-    fn length(&self) -> usize {
-        self.len()
-    }
-
     fn get_u8(&mut self) -> u8 {
         bytes::Buf::get_u8(self)
     }
@@ -48,18 +71,14 @@ impl Buf for &[u8] {
         bytes::Bytes::copy_from_slice(self)
     }
 
-    fn iterator(&self) -> impl Iterator<Item = u8> + '_ {
-        self.iter().copied()
+    fn as_slice(&self) -> &[u8] {
+        self
     }
 }
 
 impl Sealed for bytes::BytesMut {}
 
 impl Buf for bytes::BytesMut {
-    fn length(&self) -> usize {
-        self.len()
-    }
-
     fn get_u8(&mut self) -> u8 {
         bytes::Buf::get_u8(self)
     }
@@ -80,8 +99,8 @@ impl Buf for bytes::BytesMut {
         self.freeze()
     }
 
-    fn iterator(&self) -> impl Iterator<Item = u8> + '_ {
-        self.iter().copied()
+    fn as_slice(&self) -> &[u8] {
+        self.as_ref()
     }
 }
 
@@ -277,7 +296,7 @@ impl<T: Decode> DecodeWithLength for alloc::vec::Vec<T> {
             return Ok((alloc::vec::Vec::new(), 0));
         }
 
-        if length > src.length() {
+        if length > src.len() {
             return Err(VecDecodeError::UnexpectedEndOfBuffer);
         }
 
