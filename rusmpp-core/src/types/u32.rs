@@ -50,7 +50,7 @@ impl crate::decode::owned::DecodeErrorType for u32 {
 #[cfg(feature = "alloc")]
 impl crate::decode::owned::Decode for u32 {
     fn decode(src: &mut impl crate::decode::owned::Buf) -> Result<(Self, usize), Self::Error> {
-        if src.length() < 4 {
+        if src.len() < 4 {
             return Err(IntegerDecodeError::UnexpectedEndOfBuffer);
         }
 

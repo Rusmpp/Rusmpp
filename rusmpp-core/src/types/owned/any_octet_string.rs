@@ -215,7 +215,7 @@ impl DecodeWithLength for AnyOctetString {
         src: &mut impl crate::decode::owned::Buf,
         length: usize,
     ) -> Result<(Self, usize), Self::Error> {
-        if src.length() < length {
+        if src.len() < length {
             return Err(AnyOctetStringDecodeError::UnexpectedEndOfBuffer);
         }
 

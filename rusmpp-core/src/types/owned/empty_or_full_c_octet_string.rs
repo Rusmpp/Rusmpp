@@ -301,9 +301,10 @@ impl<const N: usize> Decode for EmptyOrFullCOctetString<N> {
         }
 
         let index = src
-            .iterator()
+            .as_slice()
+            .iter()
             .take(N)
-            .position(|b| b == 0)
+            .position(|b| *b == 0)
             .ok_or(COctetStringDecodeError::NotNullTerminated)?;
 
         let len = index + 1;
