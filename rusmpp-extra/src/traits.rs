@@ -30,29 +30,15 @@ pub mod owned {
         fn message_payload(&self) -> Option<&MessagePayload>;
 
         fn udh(&self) -> Option<Result<(Udh, &[u8]), UdhDecodeError>> {
-            if !self.udh_indicator_exists() {
-                return None;
-            }
+            self.udh_indicator_exists().then_some(()).map(|_| {
+                let (mut slice, length) = self
+                    .message_payload()
+                    .map(|payload| (payload.as_ref(), payload.len()))
+                    .unwrap_or_else(|| (self.short_message().as_ref(), self.short_message().len()));
 
-            let (mut slice, length) = match self.message_payload() {
-                Some(payload) => {
-                    let length = payload.len();
-                    let slice = payload.iter().as_slice();
-
-                    (slice, length)
-                }
-                None => {
-                    let length = self.short_message().len();
-                    let slice = self.short_message().iter().as_slice();
-
-                    (slice, length)
-                }
-            };
-
-            match Udh::decode(&mut slice, length) {
-                Ok((udh, size)) => Some(Ok((udh, &self.short_message()[size..]))),
-                Err(err) => Some(Err(err)),
-            }
+                Udh::decode(&mut slice, length)
+                    .map(|(udh, size)| (udh, &self.short_message()[size..]))
+            })
         }
     }
 
