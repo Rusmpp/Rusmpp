@@ -1,4 +1,4 @@
-use rusmpp_core::{udhs::language::NationalLanguageIndicator, values::DataCoding};
+use rusmpp_core::{udhs::values::NationalLanguageIndicator, values::DataCoding};
 
 use crate::encoding::gsm7bit::alphabet::Gsm7BitAlphabet;
 

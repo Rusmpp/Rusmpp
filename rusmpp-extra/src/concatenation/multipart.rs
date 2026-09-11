@@ -1,24 +1,22 @@
 //! Multipart associated types and structs.
 
-use rusmpp_core::decode::{
-    ConcatenatedShortMessageDecodeError, DecodeError, DecodeErrorKind, UdhDecodeError,
+use rusmpp_core::{
+    encode::Length,
+    udhs::owned::{Udh, UdhDecodeError},
 };
 
 /// The type of multipart message.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum MultipartType {
     /// UDH (User Data Header) multipart message.
-    Udh {
-        /// The size of the UDH in bytes.
-        size: usize,
-    },
+    Udh(Udh),
     /// SAR (Segmentation and Reassembly) multipart message.
     Sar,
 }
 
 /// A segment of a multipart message.
 #[non_exhaustive]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct MultipartSegment {
     /// The type of multipart message.
     pub r#type: MultipartType,
@@ -101,7 +99,7 @@ impl MultipartSegment {
     /// Returns the UDH size if the [`MultipartSegment`] is of type [`MultipartType::Udh`].
     pub const fn udh_size(&self) -> Option<usize> {
         match self.r#type {
-            MultipartType::Udh { size } => Some(size),
+            MultipartType::Udh(udh) => Some(udh.length()),
             MultipartType::Sar => None,
         }
     }
@@ -124,7 +122,11 @@ impl MultipartSegment {
 pub enum MultipartSegmentError {
     /// The underlying decode error.
     #[error("Decode error: {0}")]
-    Decode(#[source] DecodeError),
+    Decode(
+        #[source]
+        #[from]
+        UdhDecodeError,
+    ),
     /// The total number of parts is zero.
     #[error("Total parts cannot be zero")]
     TotalPartsZero,
@@ -134,26 +136,4 @@ pub enum MultipartSegmentError {
     /// The part number exceeds the total number of parts.
     #[error("Part number {part_number} exceeds total parts {total_parts}")]
     PartNumberExceedsTotalParts { part_number: u8, total_parts: u8 },
-}
-
-impl From<DecodeError> for MultipartSegmentError {
-    fn from(err: DecodeError) -> Self {
-        match err.kind {
-            DecodeErrorKind::UdhDecodeError(
-                UdhDecodeError::ConcatenatedShortMessageDecodeError(concatenation_err),
-            ) => match concatenation_err {
-                ConcatenatedShortMessageDecodeError::TotalPartsZero => Self::TotalPartsZero,
-                ConcatenatedShortMessageDecodeError::PartNumberZero => Self::PartNumberZero,
-                ConcatenatedShortMessageDecodeError::PartNumberExceedsTotalParts {
-                    part_number,
-                    total_parts,
-                } => Self::PartNumberExceedsTotalParts {
-                    part_number,
-                    total_parts,
-                },
-                _ => Self::Decode(err),
-            },
-            _ => Self::Decode(err),
-        }
-    }
 }
