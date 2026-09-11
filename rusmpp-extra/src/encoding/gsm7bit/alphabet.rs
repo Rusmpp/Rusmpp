@@ -7,7 +7,7 @@ pub use default::Gsm7BitDefaultAlphabet;
 pub use spanish::Gsm7BitSpanishAlphabet;
 pub use turkish::Gsm7BitTurkishAlphabet;
 
-use rusmpp_core::udhs::language::NationalLanguageIndicator;
+use rusmpp_core::udhs::values::NationalLanguageIndicator;
 
 /// GSM 7-bit escape character.
 pub const ESCAPE_CHARACTER: u8 = 0x1B;

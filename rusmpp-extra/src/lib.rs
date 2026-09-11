@@ -16,10 +16,11 @@ extern crate alloc;
 
 #[cfg(feature = "concatenation")]
 #[cfg_attr(docsrs, doc(cfg(feature = "concatenation")))]
-// pub mod concatenation;
+pub mod concatenation;
+
 #[cfg(feature = "encoding")]
 #[cfg_attr(docsrs, doc(cfg(feature = "encoding")))]
-// pub mod encoding;
+pub mod encoding;
 pub mod fallback;
 
 mod sealed;
