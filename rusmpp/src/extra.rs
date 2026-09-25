@@ -1,41 +1,43 @@
 //! Encoding/decoding and concatenation support for extra `SMPP` features.
 
-pub mod fallback {
-    //! Fallback behavior for encoding/decoding and concatenation.
+// TODO: restore
 
-    pub use rusmpp_extra::fallback::*;
-}
+// pub mod fallback {
+//     //! Fallback behavior for encoding/decoding and concatenation.
 
-pub mod encoding {
-    //! Encoding/decoding support.
+//     pub use rusmpp_extra::fallback::*;
+// }
 
-    pub use rusmpp_extra::encoding::owned::*;
+// pub mod encoding {
+//     //! Encoding/decoding support.
 
-    pub use rusmpp_extra::encoding::EncodeError;
+//     pub use rusmpp_extra::encoding::owned::*;
 
-    pub mod gsm7bit {
-        //! GSM 7-bit encoding/decoding support.
+//     pub use rusmpp_extra::encoding::EncodeError;
 
-        pub use rusmpp_extra::encoding::gsm7bit::*;
-    }
+//     pub mod gsm7bit {
+//         //! GSM 7-bit encoding/decoding support.
 
-    pub mod ucs2 {
-        //! UCS2 encoding/decoding support.
+//         pub use rusmpp_extra::encoding::gsm7bit::*;
+//     }
 
-        pub use rusmpp_extra::encoding::ucs2::*;
-    }
+//     pub mod ucs2 {
+//         //! UCS2 encoding/decoding support.
 
-    pub mod latin1 {
-        //! Latin1 encoding/decoding support.
+//         pub use rusmpp_extra::encoding::ucs2::*;
+//     }
 
-        pub use rusmpp_extra::encoding::latin1::*;
-    }
-}
+//     pub mod latin1 {
+//         //! Latin1 encoding/decoding support.
 
-pub mod concatenation {
-    //! Concatenation support.
+//         pub use rusmpp_extra::encoding::latin1::*;
+//     }
+// }
 
-    pub use rusmpp_extra::concatenation::{
-        MAX_PARTS, MIN_PARTS, MultipartError, multipart::*, owned::*,
-    };
-}
+// pub mod concatenation {
+//     //! Concatenation support.
+
+//     pub use rusmpp_extra::concatenation::{
+//         MAX_PARTS, MIN_PARTS, MultipartError, multipart::*, owned::*,
+//     };
+// }
