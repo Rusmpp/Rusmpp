@@ -33,7 +33,7 @@ default = ["tokio-codec"]
 # Implements tokio's util codec Encoder/Decoder traits.
 tokio-codec = ["dep:rusmpp-tokio-codec"]
 # Enables encoding/decoding and concatenation support for SubmitSm.
-extra = ["rusmpp-extra/encoding", "rusmpp-extra/concatenation"]
+extra = []
 # Derives serde Serialize and Deserialize for all SMPP types.
 serde = ["rusmpp-core/serde"]
 # Enables logging via the `tracing` crate.
