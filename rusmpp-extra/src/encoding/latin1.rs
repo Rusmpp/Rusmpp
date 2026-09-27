@@ -86,7 +86,7 @@ mod impl_owned {
             message: &str,
             max_message_size: usize,
             part_header_size: usize,
-        ) -> Result<(Concatenation, DataCoding), Self::Error> {
+        ) -> Result<(Concatenation, DataCoding), <Self as Concatenator>::Error> {
             let encoded = self.encode_to_vec(message)?;
 
             let total = encoded.len();

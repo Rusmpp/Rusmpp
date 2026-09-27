@@ -63,6 +63,12 @@ impl Udh {
         self.elements.push(element.into());
         self.length = self.elements.length() as u8;
     }
+
+    /// Extends the elements of the [`Udh`] with the given iterator.
+    pub fn extend_elements(&mut self, elements: impl IntoIterator<Item = UdhElement>) {
+        self.elements.extend(elements);
+        self.length = self.elements.length() as u8;
+    }
 }
 
 /// User Data Header (UDH) element.
