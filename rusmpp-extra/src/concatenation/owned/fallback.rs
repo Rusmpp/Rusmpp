@@ -17,7 +17,7 @@ where
         message: &str,
         max_message_size: usize,
         part_header_size: usize,
-    ) -> Result<(Concatenation, DataCoding), <Self as Concatenator>::Error> {
+    ) -> Result<(Concatenation, DataCoding), Self::Error> {
         match self
             .first
             .concatenate(message, max_message_size, part_header_size)

@@ -130,14 +130,6 @@ mod impl_owned {
             self.encode_to_vec(message)
                 .map(|vec| (vec, self.data_coding()))
         }
-
-        fn national_language_locking_shift(&self) -> Option<NationalLanguageIndicator> {
-            self.national_language_locking_shift()
-        }
-
-        fn national_language_single_shift(&self) -> Option<NationalLanguageIndicator> {
-            self.national_language_single_shift()
-        }
     }
 
     impl Concatenator for Gsm7BitUnpackedEncoder {
@@ -148,7 +140,7 @@ mod impl_owned {
             message: &str,
             max_message_size: usize,
             part_header_size: usize,
-        ) -> Result<(Concatenation, DataCoding), <Self as Concatenator>::Error> {
+        ) -> Result<(Concatenation, DataCoding), Self::Error> {
             let encoded = self.encode_to_vec(message)?;
 
             let total = encoded.len();

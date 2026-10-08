@@ -56,28 +56,6 @@ impl<S, E> ShortMessageBuilder<S, E> {
     }
 }
 
-impl<S, E> ShortMessageBuilder<S, E> {
-    /// Adds UDH elements for national language locking shift and single shift indicators if they exist in the encoder.
-    ///
-    /// This method must be called once before consuming the builder.
-    ///
-    /// Successive calls to this method will add duplicate UDH elements.
-    fn add_udh_alphabet_indicators(&mut self)
-    where
-        E: Concatenator,
-    {
-        if let Some(lang) = self.encoder.national_language_locking_shift() {
-            self._push_udh_element(UdhElement::new(UdhValue::NationalLanguageLockingShift(
-                lang,
-            )));
-        }
-
-        if let Some(lang) = self.encoder.national_language_single_shift() {
-            self._push_udh_element(UdhElement::new(UdhValue::NationalLanguageSingleShift(lang)));
-        }
-    }
-}
-
 enum UdhReferenceNumber {
     EightBit(u8),
     SixteenBit(u16),
@@ -96,8 +74,6 @@ impl<S: Sm, E> ShortMessageUdhMultipartBuilder<S, E> {
     where
         E: Concatenator,
     {
-        self.builder.add_udh_alphabet_indicators();
-
         todo!()
     }
 }
@@ -115,8 +91,6 @@ impl<S: Sm, E> ShortMessageSarMultipartBuilder<S, E> {
     where
         E: Concatenator,
     {
-        self.builder.add_udh_alphabet_indicators();
-
         todo!()
     }
 }

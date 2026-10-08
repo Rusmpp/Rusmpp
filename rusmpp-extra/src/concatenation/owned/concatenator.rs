@@ -1,9 +1,9 @@
 use rusmpp_core::values::DataCoding;
 
-use crate::{concatenation::owned::concatenation::Concatenation, encoding::owned::Encoder};
+use crate::concatenation::owned::concatenation::Concatenation;
 
 /// A trait for concatenating messages into smaller parts.
-pub trait Concatenator: Encoder {
+pub trait Concatenator {
     /// The type of errors that can occur during concatenation.
     type Error;
 
@@ -28,5 +28,5 @@ pub trait Concatenator: Encoder {
         message: &str,
         max_message_size: usize,
         part_header_size: usize,
-    ) -> Result<(Concatenation, DataCoding), <Self as Concatenator>::Error>;
+    ) -> Result<(Concatenation, DataCoding), Self::Error>;
 }
