@@ -177,7 +177,7 @@ mod managed_;
 #[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
 pub mod managed {
     //! A managed `SMPP` client that automatically handles reconnection and binding.
-    pub use super::managed_::{ManagedClient, ManagedEvent};
+    pub use super::managed_::{ManagedClient, ManagedEvent, ManagedState, ManagedStatus};
 
     pub mod builder {
         //! Types related to building a managed `SMPP` client.

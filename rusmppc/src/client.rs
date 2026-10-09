@@ -262,6 +262,19 @@ impl<T: Timeout> Client<T> {
         self.inner.watch.closed().await
     }
 
+    /// A termination-only watcher: a clone of the connection's watch **sender**.
+    ///
+    /// Awaiting [`watch::Sender::closed`] on it resolves when the connection's task has
+    /// terminated (its receiver is dropped). It is a sender clone, not a receiver, so it
+    /// keeps nothing alive — not the connection, whose lifetime is its task's and the
+    /// actions channel's ("the last client drop closes the connection"), and not the
+    /// signal itself, whose `closed()` condition is "all receivers dropped". The managed
+    /// layer uses it to publish `Disconnected` from connection termination rather than
+    /// from event consumption.
+    pub(crate) fn termination_watch(&self) -> watch::Sender<()> {
+        self.inner.watch.clone()
+    }
+
     /// Closes the connection and waits for it to terminate.
     pub async fn close_and_wait(&self) -> Result<(), Error> {
         self.close().await?;
