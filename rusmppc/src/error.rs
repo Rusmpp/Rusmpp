@@ -8,6 +8,42 @@ use rusmpp::{
     values::InterfaceVersion,
 };
 
+/// Why a request was never handed to the transport.
+///
+/// Carried by [`Error::NotSent`]: every reason here means the request definitely did not
+/// reach the server, so retrying it can not duplicate a message.
+#[non_exhaustive]
+#[derive(Debug, thiserror::Error)]
+pub enum NotSentReason {
+    /// The response timeout elapsed while the request was still queued.
+    #[error("the response timeout elapsed before the request reached the transport")]
+    Timeout,
+    /// The connection ended while the request was still queued.
+    #[error("the connection ended before the request reached the transport")]
+    ConnectionClosed,
+    /// The transport refused the write before accepting the bytes.
+    #[error("the write could not begin: {0}")]
+    Write(#[source] EncodeError),
+    /// The connection still owes responses for too many written requests and refused this
+    /// one before writing it.
+    ///
+    /// Every written request keeps its sequence number reserved — live or abandoned alike —
+    /// until its response arrives or the connection ends: releasing one early would let a
+    /// late reply be delivered to a newer request that reused the number. The reservation
+    /// table is therefore bounded by admission, not by eviction, and this is the explicit
+    /// refusal at that bound. Nothing was written, so retrying after some responses land
+    /// (or on a new connection) can not duplicate a message.
+    #[error(
+        "the connection's sequence-number reservations are at capacity ({reserved} unresolved of a bound of {cap})"
+    )]
+    Capacity {
+        /// How many sequence numbers the connection still reserves.
+        reserved: usize,
+        /// The bound it refuses to exceed.
+        cap: usize,
+    },
+}
+
 /// Errors that can occur during `SMPP` operations.
 #[non_exhaustive]
 #[derive(Debug, thiserror::Error)]
@@ -92,6 +128,20 @@ pub enum Error {
         /// The response that was received from the server.
         response: Box<Command>,
     },
+    /// The request was never handed to the transport: it definitely did not reach the
+    /// server, and retrying it can not duplicate a message.
+    ///
+    /// The boundary is the transport's `start_send`. Before it the request is retractable:
+    /// a cancellation (a dropped future, or the response timeout), a failed write that never
+    /// began, or a connection that ends while the request is still queued all leave it
+    /// **unsent**. After it the bytes are out: a failure of a written request is reported
+    /// as an ordinary error (or a timeout), which means **maybe sent** — a conservative
+    /// consumer must not retry those blindly.
+    #[error("Request not sent: {reason}")]
+    NotSent {
+        /// Why the request was not sent.
+        reason: NotSentReason,
+    },
     /// The client used an interface version that is not supported by the library.
     ///
     /// The library supports only `SMPP v5.0`.
@@ -118,6 +168,10 @@ impl Error {
             version,
             supported_version: InterfaceVersion::Smpp5_0,
         }
+    }
+
+    pub(crate) const fn not_sent(reason: NotSentReason) -> Self {
+        Self::NotSent { reason }
     }
 
     pub(crate) const fn response_timeout(sequence_number: u32, timeout: Duration) -> Self {

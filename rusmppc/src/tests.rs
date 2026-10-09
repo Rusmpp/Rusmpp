@@ -27,7 +27,7 @@ use tokio_util::codec::Framed;
 
 use crate::{
     ConnectionBuilder,
-    error::Error,
+    error::{Error, NotSentReason},
     event::{Event, Insight, InsightEvent},
     mock::io::MockIo,
 };
@@ -197,8 +197,12 @@ pub fn init_tracing() {
         .try_init();
 }
 
+/// Cancelling a request that was handed to the transport does not free its sequence
+/// number: the server still owes a reply, and delivering that reply to a newer request
+/// that reused the number would be worse than holding the number (the tombstone). The
+/// reply arrives as a late event, and only then is the number free again.
 #[tokio::test]
-async fn cancel_request_future_should_remove_pending_response() {
+async fn cancel_request_future_reserves_the_sequence_until_the_response_arrives() {
     init_tracing();
 
     let (server, client) = tokio::io::duplex(1024);
@@ -226,11 +230,11 @@ async fn cancel_request_future_should_remove_pending_response() {
         .expect("Failed to get pending responses");
 
     assert!(
-        !pending_response.contains(&1),
-        "Pending response was not removed"
+        pending_response.contains(&1),
+        "the cancelled request's sequence number must stay reserved until its response arrives"
     );
 
-    // The submit sm response should be sent to the event stream
+    // The submit sm response should be sent to the event stream as a late reply.
 
     let Some(Event::Incoming(command)) = events.next().await else {
         panic!("Expected command event");
@@ -239,6 +243,17 @@ async fn cancel_request_future_should_remove_pending_response() {
     assert!(matches!(command.id(), CommandId::SubmitSmResp));
     assert_eq!(command.sequence_number(), 1);
 
+    // The late reply settled the tombstone: the number is free again.
+    let pending_response = client
+        .pending_responses()
+        .await
+        .expect("Failed to get pending responses");
+
+    assert!(
+        !pending_response.contains(&1),
+        "the response must have settled the reserved sequence number"
+    );
+
     client.close().await.expect("Failed to close connection");
 
     client.closed().await;
@@ -246,7 +261,8 @@ async fn cancel_request_future_should_remove_pending_response() {
     let _ = events.count().await;
 }
 
-/// Similar to [`cancel_request_future_should_remove_pending_response`] but this one uses the raw request builder.
+/// Similar to [`cancel_request_future_reserves_the_sequence_until_the_response_arrives`]
+/// but this one uses the raw request builder.
 #[tokio::test]
 async fn raw_cancel_request_future_should_remove_pending_response() {
     init_tracing();
@@ -281,11 +297,11 @@ async fn raw_cancel_request_future_should_remove_pending_response() {
         .expect("Failed to get pending responses");
 
     assert!(
-        !pending_response.contains(&1),
-        "Pending response was not removed"
+        pending_response.contains(&1),
+        "the cancelled request's sequence number must stay reserved until its response arrives"
     );
 
-    // The submit sm response should be sent to the event stream
+    // The submit sm response should be sent to the event stream as a late reply.
 
     let Some(Event::Incoming(command)) = events.next().await else {
         panic!("Expected command event");
@@ -294,6 +310,17 @@ async fn raw_cancel_request_future_should_remove_pending_response() {
     assert!(matches!(command.id(), CommandId::SubmitSmResp));
     assert_eq!(command.sequence_number(), 1);
 
+    // The late reply settled the tombstone: the number is free again.
+    let pending_response = client
+        .pending_responses()
+        .await
+        .expect("Failed to get pending responses");
+
+    assert!(
+        !pending_response.contains(&1),
+        "the response must have settled the reserved sequence number"
+    );
+
     client.close().await.expect("Failed to close connection");
 
     client.closed().await;
@@ -301,8 +328,11 @@ async fn raw_cancel_request_future_should_remove_pending_response() {
     let _ = events.count().await;
 }
 
+/// A response timeout on a request that was handed to the transport leaves the sequence
+/// number reserved: the request may be out, and its late reply must not be delivered to a
+/// newer request that reused the number.
 #[tokio::test]
-async fn request_timeout_should_remove_pending_response() {
+async fn request_timeout_reserves_the_sequence_until_the_response_arrives() {
     init_tracing();
 
     let (server, client) = tokio::io::duplex(1024);
@@ -332,11 +362,11 @@ async fn request_timeout_should_remove_pending_response() {
         .expect("Failed to get pending responses");
 
     assert!(
-        !pending_response.contains(&sequence_number),
-        "Pending response was not removed"
+        pending_response.contains(&sequence_number),
+        "the timed-out request's sequence number must stay reserved until its response arrives"
     );
 
-    // The submit sm response should be sent to the event stream
+    // The submit sm response should be sent to the event stream as a late reply.
 
     let Some(Event::Incoming(command)) = events.next().await else {
         panic!("Expected command event");
@@ -344,6 +374,17 @@ async fn request_timeout_should_remove_pending_response() {
 
     assert!(matches!(command.id(), CommandId::SubmitSmResp));
     assert_eq!(command.sequence_number(), sequence_number);
+
+    // The late reply settled the tombstone: the number is free again.
+    let pending_response = client
+        .pending_responses()
+        .await
+        .expect("Failed to get pending responses");
+
+    assert!(
+        !pending_response.contains(&sequence_number),
+        "the response must have settled the reserved sequence number"
+    );
 
     client.close().await.expect("Failed to close connection");
 
@@ -443,7 +484,15 @@ async fn request_after_closing_connection_should_fail() {
 
     let error = client.submit_sm(SubmitSm::default()).await.unwrap_err();
 
-    assert!(matches!(error, Error::ConnectionClosed));
+    // The request could not even be enqueued (the closed connection's action channel is
+    // gone) and nothing was written: a definite "not sent", never a closed-connection
+    // outcome that a caller could mistake for a maybe-sent failure.
+    assert!(matches!(
+        error,
+        Error::NotSent {
+            reason: NotSentReason::ConnectionClosed
+        }
+    ));
 
     client.closed().await;
 
@@ -523,9 +572,17 @@ async fn enquire_link_timeout_busy_sequential_should_close_connection() {
     let now = Instant::now();
 
     loop {
-        if let Err(Error::ConnectionClosed) = client.submit_sm(SubmitSm::default()).await {
-            // Connection closed as expected
-            break;
+        if let Err(error) = client.submit_sm(SubmitSm::default()).await {
+            match error {
+                // Connection closed as expected: the request was either already written
+                // (maybe sent) when the connection died, or could not even be enqueued
+                // (definitely not sent).
+                Error::ConnectionClosed
+                | Error::NotSent {
+                    reason: NotSentReason::ConnectionClosed,
+                } => break,
+                other => panic!("unexpected error while waiting for the close: {other:?}"),
+            }
         }
     }
 
@@ -626,7 +683,15 @@ async fn connection_lost_should_close_connection() {
 
     let error = client.submit_sm(SubmitSm::default()).await.unwrap_err();
 
-    assert!(matches!(error, Error::ConnectionClosed));
+    // The connection is gone and the request could not be enqueued: nothing was written,
+    // so the verdict is a definite "not sent" (the connection-closed reason is carried by
+    // the `NotSent` variant; see `Error::NotSent`).
+    assert!(matches!(
+        error,
+        Error::NotSent {
+            reason: NotSentReason::ConnectionClosed
+        }
+    ));
 
     let _ = events.count().await;
 }
@@ -652,7 +717,14 @@ async fn server_unbinds_and_closes_connection_should_close_connection() {
                     .await
                     .unwrap_err();
 
-                assert!(matches!(error, Error::ConnectionClosed));
+                // The response could not be enqueued on the closed connection: nothing
+                // was written — a definite "not sent".
+                assert!(matches!(
+                    error,
+                    Error::NotSent {
+                        reason: NotSentReason::ConnectionClosed
+                    }
+                ));
             }
         }
     }

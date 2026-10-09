@@ -5,22 +5,28 @@ use std::{
 
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::Action;
+use crate::{Action, RequestCell, RequestId};
 
 pin_project_lite::pin_project! {
-    /// The [`RequestFutureGuard`] is used to wrap a pending request future and remove its corresponding sequence number
-    /// from the pending responses if the future got dropped.
+    /// The [`RequestFutureGuard`] wraps a pending request future and gives the request's
+    /// state cell its cancellation transition if the future is dropped before it completes.
     ///
-    /// Why is removing the pending response so important even though the connection will pipe responses to the event stream anyway
-    /// if sending the response to the client fails due to the receiving half being dropped/closed?
+    /// The guard is what makes "definitely not sent" independent of the connection: the
+    /// cell's `Queued -> Abandoned` transition happens synchronously here, in the caller's
+    /// task, and the write gate refuses an abandoned request — so a cancelled send never
+    /// reaches the peer, even when the connection is busy, starved or gone.
     ///
-    /// * [`Client::pending_responses`](crate::Client::pending_responses) must be correct.
-    /// * Prevent memory leaks. If the client sends a request and then the waiting future is dropped (using [`tokio::select!`]) and the server never responds to the sent request.
-    ///     The pending response will stay in the connection's pending responses map and never gets removed.
-    /// (response is never removed manually or because the server did not respond: memory leak).
+    /// If the request had already been handed to the sink, the cell records that instead:
+    /// the request may be out, and its sequence number stays reserved (unresolved) until
+    /// the response arrives. And if a response is already committed but the caller never
+    /// consumed it, the drop takes it and routes it late — the reply is owed to the
+    /// application even when the caller walked away. The [`Action::Cancel`] is only a
+    /// cleanup hint that lets the connection drop the queued entry early; it is never the
+    /// authority.
     pub struct RequestFutureGuard<'a, F> {
         done: bool,
-        sequence_number: u32,
+        id: RequestId,
+        cell: RequestCell,
         actions: &'a UnboundedSender<Action>,
         #[pin]
         fut: F,
@@ -31,18 +37,32 @@ pin_project_lite::pin_project! {
             let this = this.project();
 
             if !*this.done {
-                let _ = this.actions
-                    .send(Action::Remove(*this.sequence_number));
+                // The cell is the arbiter, and it settles this atomically: a response
+                // committed but not yet consumed is taken here and routed late — the
+                // caller is gone, and the reply is still owed to the application. When
+                // nothing is stored, the request is abandoned synchronously, so the write
+                // gate refuses it if it is still queued.
+                if let Some(command) = this.cell.abandon_or_take() {
+                    this.cell.forward_late(command);
+                }
+
+                let _ = this.actions.send(Action::Cancel(*this.id));
             }
         }
     }
 }
 
 impl<'a, F> RequestFutureGuard<'a, F> {
-    pub fn new(actions: &'a UnboundedSender<Action>, sequence_number: u32, fut: F) -> Self {
+    pub fn new(
+        actions: &'a UnboundedSender<Action>,
+        id: RequestId,
+        cell: RequestCell,
+        fut: F,
+    ) -> Self {
         Self {
             done: false,
-            sequence_number,
+            id,
+            cell,
             actions,
             fut,
         }
@@ -57,7 +77,8 @@ impl<'a, F: Future> Future for RequestFutureGuard<'a, F> {
 
         match this.fut.poll(cx) {
             Poll::Ready(result) => {
-                // Mark as done to prevent removing the sequence number on drop
+                // Mark as done to prevent abandoning the request on drop: the outcome has
+                // already been decided.
                 *this.done = true;
 
                 Poll::Ready(result)
