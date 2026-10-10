@@ -6,12 +6,11 @@ use std::{
     fmt::Debug,
     sync::{
         Arc,
-        atomic::{AtomicU32, Ordering},
+        atomic::{AtomicU32, AtomicU64, Ordering},
     },
     time::Duration,
 };
 
-use futures::TryFutureExt;
 use rusmpp::{
     Command, CommandId, CommandStatus, Pdu,
     command::CommandParts,
@@ -23,16 +22,28 @@ use rusmpp::{
     },
     values::InterfaceVersion,
 };
-use tokio::sync::{mpsc::UnboundedSender, oneshot, watch};
+use tokio::sync::{mpsc::UnboundedSender, watch};
 
 use crate::{
-    Action, CloseRequest, CommandExt, DefaultTokioConnectionBuilder, DefaultWasmConnectionBuilder,
-    PendingResponses, RegisteredRequest, RequestFutureGuard, UnregisteredRequest,
+    AbandonOutcome, Action, CloseRequest, CommandExt, DefaultTokioConnectionBuilder,
+    DefaultWasmConnectionBuilder, Outcome, OutcomeReceiver, PendingResponses, RegisteredRequest,
+    RequestCell, RequestFutureGuard, RequestId, TimeoutSettlement, UnregisteredRequest,
     error::Error,
+    error::NotSentReason,
     runtime_::{Timeout, tokio::Tokio, wasm::Wasm},
 };
 
 const TARGET: &str = "rusmppc::client";
+
+/// The highest sequence number in the SMPP range: `0x00000001..=0x7FFFFFFF` (0 is not a
+/// valid sequence number).
+///
+/// The client allocates the odd numbers in that range and the connection its own even
+/// ones, so the two allocators on one connection never collide with each other. A wrap
+/// can still land on a number a live request — or an abandoned one's tombstone — still
+/// reserves; the connection does not refuse such a request: its write gate assigns the
+/// number actually written, skipping to the next free number in the same class.
+pub(crate) const MAX_SEQUENCE_NUMBER: u32 = 0x7fff_ffff;
 
 /// `SMPP` Client.
 ///
@@ -81,11 +92,13 @@ impl Client<Wasm> {
 }
 
 impl<T: Timeout> Client<T> {
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         actions: UnboundedSender<Action>,
         response_timeout: Option<Duration>,
         check_interface_version: bool,
         watch: watch::Sender<()>,
+        late_responses_dropped: Arc<AtomicU64>,
     ) -> Self {
         Self {
             inner: Arc::new(ClientInner::new(
@@ -93,8 +106,21 @@ impl<T: Timeout> Client<T> {
                 response_timeout,
                 check_interface_version,
                 watch,
+                late_responses_dropped,
             )),
         }
+    }
+
+    /// How many late responses could not be delivered to the event stream.
+    ///
+    /// A response whose caller is gone is still owed to the application: the request's
+    /// cell forwards it to the connection's late lane, and the connection surfaces it as
+    /// an incoming event. The forward can fail on either side of that lane — the lane's
+    /// connection task is gone (the send fails), or the event channel refuses the surfaced
+    /// command — and such a loss is counted here rather than dropped silently. Monotonic
+    /// for the life of the connection.
+    pub fn late_responses_dropped(&self) -> u64 {
+        self.inner.late_responses_dropped.load(Ordering::Relaxed)
     }
 
     /// Sends a [`BindTransmitter`] command to the server and waits for a successful [`BindTransmitterResp`].
@@ -235,6 +261,14 @@ impl<T: Timeout> Client<T> {
             .await
     }
 
+    /// Test-only: seeds the sequence allocator (see [`ClientInner::next_sequence_number`]).
+    #[cfg(test)]
+    pub(crate) fn seed_sequence_number(&self, sequence_number: u32) {
+        self.inner
+            .sequence_number
+            .store(sequence_number, Ordering::Relaxed);
+    }
+
     /// Closes the connection.
     ///
     /// This method completes, when the connection has registered the close request.
@@ -348,30 +382,77 @@ struct ClientInner<T = Tokio> {
     actions: UnboundedSender<Action>,
     response_timeout: Option<Duration>,
     sequence_number: AtomicU32,
+    /// The id of the next request (see [`RequestId`]): the address its cancellation
+    /// cleanup hint uses.
+    request_id: AtomicU64,
     check_interface_version: bool,
     watch: watch::Sender<()>,
+    /// Late responses (their caller is gone) that could not be delivered to the event
+    /// stream. Read through [`Client::late_responses_dropped`]: the loss happens at either
+    /// end of the late lane, so it must be observable outside the connection.
+    late_responses_dropped: Arc<AtomicU64>,
     _t: std::marker::PhantomData<T>,
 }
 
 impl<T: Timeout> ClientInner<T> {
+    #[allow(clippy::too_many_arguments)]
     const fn new(
         actions: UnboundedSender<Action>,
         response_timeout: Option<Duration>,
         check_interface_version: bool,
         watch: watch::Sender<()>,
+        late_responses_dropped: Arc<AtomicU64>,
     ) -> Self {
         Self {
             actions,
             response_timeout,
             sequence_number: AtomicU32::new(1),
+            request_id: AtomicU64::new(0),
             check_interface_version,
             watch,
+            late_responses_dropped,
             _t: std::marker::PhantomData,
         }
     }
 
+    /// The id of the next request on this connection (see [`RequestId`]).
+    fn next_request_id(&self) -> RequestId {
+        self.request_id.fetch_add(1, Ordering::Relaxed)
+    }
+
+    /// Allocates the next odd sequence number, inside the SMPP range.
+    ///
+    /// The client owns the odd numbers (`1, 3, … , 0x7FFFFFFF`) and the connection its
+    /// own even ones, so the two allocators on one connection never collide with each
+    /// other. A stored value consumed by a wrap (or seeded outside the range in tests)
+    /// restarts the cycle at 1. The restarted number is only a proposal: the connection's
+    /// write gate assigns the number actually written, skipping the ones still reserved by
+    /// a live request or a tombstone — a wrap can never replace a live registration or
+    /// leave the range.
     fn next_sequence_number(&self) -> u32 {
-        self.sequence_number.fetch_add(2, Ordering::Relaxed)
+        loop {
+            let current = self.sequence_number.load(Ordering::Relaxed);
+
+            let allocated = if current == 0 || current > MAX_SEQUENCE_NUMBER {
+                1
+            } else {
+                current
+            };
+
+            let next = if allocated >= MAX_SEQUENCE_NUMBER - 1 {
+                1
+            } else {
+                allocated + 2
+            };
+
+            if self
+                .sequence_number
+                .compare_exchange_weak(current, next, Ordering::Relaxed, Ordering::Relaxed)
+                .is_ok()
+            {
+                return allocated;
+            }
+        }
     }
 
     async fn close(&self) -> Result<(), Error> {
@@ -384,74 +465,125 @@ impl<T: Timeout> ClientInner<T> {
         ack.await.map_err(|_| Error::ConnectionClosed)
     }
 
-    /// Sends a [`Command`] to the server and returns a receiver for the response.
-    ///
-    /// # Note
-    ///
-    /// This function does not use the [`RequestFutureGuard`] to remove the pending response on drop.
-    /// The caller is responsible for handling that.
-    async fn send_registered(&self, command: Command) -> Result<oneshot::Receiver<Command>, Error> {
+    /// Queues a registered request and returns what the caller holds while it is in flight:
+    /// the request's one outcome channel, its state cell (the cancellation authority) and
+    /// its id (the cleanup hint's address).
+    async fn send_registered(
+        &self,
+        command: Command,
+    ) -> Result<(OutcomeReceiver, RequestCell, RequestId), Error> {
         let sequence_number = command.sequence_number();
         let status = command.status();
         let id = command.id();
 
         tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Sending request");
 
-        let (request, ack, response) = RegisteredRequest::new(command);
+        let request_id = self.next_request_id();
+        let (request, outcome) = RegisteredRequest::new(request_id, command);
+        let cell = request.cell.clone();
 
         self.actions
             .send(Action::registered_request(request))
-            .map_err(|_| Error::ConnectionClosed)?;
+            .map_err(|_| Error::not_sent(NotSentReason::ConnectionClosed))?;
 
-        tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Waiting for ack");
-
-        ack.await.map_err(|_| Error::ConnectionClosed)??;
-
-        Ok(response)
+        Ok((outcome, cell, request_id))
     }
 
-    /// Awaits a response for a sent command.
+    /// Awaits the terminal outcome, applying the caller's response timeout.
     ///
-    /// # Note
-    ///
-    /// This function does not perform any validation on the response.
-    async fn await_response(
+    /// The timeout is measured from queueing: the request is registered (or refused) no
+    /// later than the write, so a stalled flush can not postpone the deadline. When the
+    /// timeout wins, the request is abandoned synchronously — the write gate will not write
+    /// it any more — and the verdict follows the cell: a request that had been handed to
+    /// the sink may be out, one that was still queued never left.
+    async fn await_terminal_with_timeout(
         &self,
-        response: oneshot::Receiver<Command>,
-        sequence_number: u32,
+        receiver: &mut OutcomeReceiver,
+        cell: &RequestCell,
+        id: RequestId,
         response_timeout: Option<Duration>,
     ) -> Result<Command, Error> {
-        tracing::trace!(target: TARGET, sequence_number, timeout = ?response_timeout, "Waiting for response");
+        let terminal = await_terminal(receiver, cell);
 
         match response_timeout {
-            None => response.await.map_err(|_| Error::ConnectionClosed),
-            Some(timeout) => T::timeout(timeout, response)
-                .await
-                .ok_or_else(|| {
-                    self.actions.send(Action::Remove(sequence_number)).ok();
+            None => terminal.await,
+            Some(timeout) => match T::timeout(timeout, terminal).await {
+                Some(result) => result,
+                None => {
+                    // The atomic settlement: a response committed to the cell before this
+                    // decision wins — the caller gets its response, never a timeout for a
+                    // request the peer already answered. Only when nothing is stored does
+                    // the timeout abandon the request, and every later commit goes to the
+                    // late path instead.
+                    match cell.settle_timeout() {
+                        TimeoutSettlement::Response(command) => Ok(command),
+                        TimeoutSettlement::Abandoned(abandoned) => {
+                            // A cleanup hint only: the cell already decided, the gate
+                            // refuses a still-queued request by itself, and a written
+                            // request's reservation stays until its late reply arrives
+                            // or the connection ends.
+                            let _ = self.actions.send(Action::Cancel(id));
 
-                    Error::response_timeout(sequence_number, timeout)
-                })?
-                .map_err(|_| Error::ConnectionClosed),
+                            Err(match abandoned {
+                                // The request was handed to the transport: it may be out.
+                                // A retry can duplicate — this stays a "maybe sent" verdict.
+                                AbandonOutcome::Written { sequence_number } => {
+                                    Error::response_timeout(sequence_number, timeout)
+                                }
+                                // It never left the queue: definitely not sent, safe to
+                                // retry.
+                                AbandonOutcome::NotWritten => {
+                                    Error::not_sent(NotSentReason::Timeout)
+                                }
+                            })
+                        }
+                    }
+                }
+            },
         }
     }
+}
 
-    /// See [`Self::send_registered`] and [`Self::await_response`].
-    async fn send_registered_and_await_response(
-        &self,
-        command: Command,
-        response_timeout: Option<Duration>,
-    ) -> Result<Command, Error> {
-        let sequence_number = command.sequence_number();
-        let status = command.status();
-        let id = command.id();
+/// Waits for the terminal outcome of a queued request.
+///
+/// The write acknowledgement is not terminal: the response (or the failure that ends the
+/// request) is still owed, and a response that arrived first wins over any later failure. A
+/// channel closed without a terminal outcome means the connection dropped the request or
+/// its registration; the request's own cell says what that meant.
+async fn await_terminal(
+    receiver: &mut OutcomeReceiver,
+    cell: &RequestCell,
+) -> Result<Command, Error> {
+    loop {
+        match receiver.recv().await {
+            Some(Outcome::Written { .. }) => continue,
+            Some(Outcome::ResponseReady) => {
+                // The response itself lives in the cell, never in the channel: take it
+                // from where the commit left it. Nothing to take means another arm of
+                // this request settled it (the response-timeout settlement is atomic
+                // with the commit) — keep waiting for a terminal it will provide.
+                if let Some(command) = cell.take_response() {
+                    return Ok(command);
+                }
+            }
+            Some(Outcome::Failed(error)) => return Err(error),
+            None => return Err(closed_without_outcome(cell)),
+        }
+    }
+}
 
-        let response = self.send_registered(command).await?;
-
-        tracing::trace!(target: TARGET, sequence_number, ?status, ?id, timeout = ?response_timeout, "Starting response timer");
-
-        self.await_response(response, sequence_number, response_timeout)
-            .await
+/// The verdict for a request whose outcome channel closed without a terminal outcome: the
+/// connection dropped the request (or its registration) before anything resolved it.
+///
+/// The cell says what the request had reached: a request the write gate never claimed
+/// definitely did not leave the queue, and retrying it can not duplicate; one that had
+/// been handed to the transport may be out, so it stays a conservative "maybe sent".
+fn closed_without_outcome(cell: &RequestCell) -> Error {
+    match cell.resolution() {
+        AbandonOutcome::Written { .. } => Error::ConnectionClosed,
+        AbandonOutcome::NotWritten => {
+            Error::not_sent(crate::error::NotSentReason::ConnectionClosed)
+        }
     }
 }
 
@@ -514,18 +646,62 @@ impl<'a, T: Timeout> UnregisteredRequestBuilder<'a, T> {
 
         tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Sending request");
 
-        let (request, ack) = UnregisteredRequest::new(command);
+        let request_id = self.client.inner.next_request_id();
+        let (request, outcome) = UnregisteredRequest::new(request_id, command);
+        let cell = request.cell.clone();
 
-        self.client
+        if self
+            .client
             .inner
             .actions
             .send(Action::unregistered_request(request))
-            .map_err(|_| Error::ConnectionClosed)?;
+            .is_err()
+        {
+            // The connection's action channel is gone: nothing was queued and nothing was
+            // written, so this is a definite "not sent", not a closed-connection outcome.
+            return Err(Error::not_sent(NotSentReason::ConnectionClosed));
+        }
 
-        tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Waiting for ack");
+        self.wait_for_ack(outcome, cell, request_id, sequence_number, status, id)
+            .await
+    }
 
-        // No need to timeout here, since we are not waiting for a response from the server.
-        ack.await.map_err(|_| Error::ConnectionClosed)?
+    /// Awaits a written request's write acknowledgement.
+    ///
+    /// An unregistered request is not waiting for a response, so there is no timeout here:
+    /// the future resolves with the acknowledgement, or with the failure that ended the
+    /// request before it was written.
+    async fn wait_for_ack(
+        self,
+        mut outcome: OutcomeReceiver,
+        cell: RequestCell,
+        request_id: RequestId,
+        sequence_number: u32,
+        status: CommandStatus,
+        id: CommandId,
+    ) -> Result<(), Error> {
+        tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Waiting for the write acknowledgement");
+
+        let write_stage = async {
+            loop {
+                match outcome.recv().await {
+                    Some(Outcome::Written { .. }) => return Ok(()),
+                    // Unreachable: nothing is registered under an unregistered request's
+                    // sequence number, so no response is ever routed to it.
+                    Some(Outcome::ResponseReady) => continue,
+                    Some(Outcome::Failed(error)) => return Err(error),
+                    None => return Err(closed_without_outcome(&cell)),
+                }
+            }
+        };
+
+        RequestFutureGuard::new(
+            &self.client.inner.actions,
+            request_id,
+            cell.clone(),
+            write_stage,
+        )
+        .await
     }
 
     /// Sends a [`DataSmResp`] command to the server.
@@ -720,19 +896,29 @@ impl<'a, T: Timeout> RegisteredRequestBuilder<'a, T> {
     }
 
     fn request(&self, pdu: impl Into<Pdu>) -> impl Future<Output = Result<Command, Error>> {
-        let sequence_number = self.client.inner.next_sequence_number();
+        let pdu = pdu.into();
 
-        let command = Command::builder()
-            .status(self.status)
-            .sequence_number(sequence_number)
-            .pdu(pdu.into());
+        async move {
+            let sequence_number = self.client.inner.next_sequence_number();
 
-        let future = self
-            .client
-            .inner
-            .send_registered_and_await_response(command, self.response_timeout);
+            let command = Command::builder()
+                .status(self.status)
+                .sequence_number(sequence_number)
+                .pdu(pdu.clone());
 
-        RequestFutureGuard::new(&self.client.inner.actions, sequence_number, future)
+            let (mut outcome, cell, id) = self.client.inner.send_registered(command).await?;
+
+            tracing::trace!(target: TARGET, sequence_number, timeout = ?self.response_timeout, "Waiting for the write acknowledgement and the response");
+
+            let exchange = self.client.inner.await_terminal_with_timeout(
+                &mut outcome,
+                &cell,
+                id,
+                self.response_timeout,
+            );
+
+            RequestFutureGuard::new(&self.client.inner.actions, id, cell.clone(), exchange).await
+        }
     }
 
     async fn request_extract<R>(
@@ -900,10 +1086,6 @@ impl<'a, T: Timeout> NoWaitRequestBuilder<'a, T> {
         Self { client, status }
     }
 
-    const fn unregistered_request(&'_ self) -> UnregisteredRequestBuilder<'_, T> {
-        UnregisteredRequestBuilder::new(self.client, self.status)
-    }
-
     /// Sets the command status for the next request.
     pub const fn status(mut self, status: CommandStatus) -> Self {
         self.status = status;
@@ -913,12 +1095,47 @@ impl<'a, T: Timeout> NoWaitRequestBuilder<'a, T> {
     /// Sends a [`Pdu`] to the server without waiting for the response.
     async fn send(&self, pdu: impl Into<Pdu>) -> Result<u32, Error> {
         let sequence_number = self.client.inner.next_sequence_number();
+        let request_id = self.client.inner.next_request_id();
 
-        self.unregistered_request()
-            .unregistered_request(pdu.into(), sequence_number)
-            .await?;
+        let command = Command::builder()
+            .status(self.status)
+            .sequence_number(sequence_number)
+            .pdu(pdu.into());
 
-        Ok(sequence_number)
+        let (request, mut outcome) = UnregisteredRequest::new(request_id, command);
+        let cell = request.cell.clone();
+
+        if self
+            .client
+            .inner
+            .actions
+            .send(Action::unregistered_request(request))
+            .is_err()
+        {
+            // The connection's action channel is gone: nothing was queued and nothing was
+            // written, so this is a definite "not sent", not a closed-connection outcome.
+            return Err(Error::not_sent(NotSentReason::ConnectionClosed));
+        }
+
+        // The write stage is guarded: dropping this future while the request is queued must
+        // abandon it — a send the caller gave up on must not reach the peer.
+        let write_stage = async {
+            match outcome.recv().await {
+                Some(Outcome::Written { sequence_number }) => Ok(sequence_number),
+                // Unreachable: no response is ever routed to an unregistered request.
+                Some(Outcome::ResponseReady) => Ok(sequence_number),
+                Some(Outcome::Failed(error)) => Err(error),
+                None => Err(closed_without_outcome(&cell)),
+            }
+        };
+
+        RequestFutureGuard::new(
+            &self.client.inner.actions,
+            request_id,
+            cell.clone(),
+            write_stage,
+        )
+        .await
     }
 
     /// Sends a [`BroadcastSm`] command to the server without waiting for the response.
@@ -1032,41 +1249,139 @@ impl<'a, T: Timeout> RawRegisteredRequestBuilder<'a, T> {
         pdu: impl Into<Pdu>,
     ) -> impl Future<Output = Result<(u32, impl Future<Output = Result<Command, Error>>), Error>>
     {
-        let sequence_number = self.client.inner.next_sequence_number();
-
-        let command = Command::builder()
-            .status(self.status)
-            .sequence_number(sequence_number)
-            .pdu(pdu.into());
-
-        let id = command.id();
-
-        let future = self
-            .client
-            .inner
-            .send_registered(command)
-            .and_then(move |response| futures::future::ok((sequence_number, response)));
+        let pdu = pdu.into();
 
         async move {
-            let (sequence_number, response) =
-                RequestFutureGuard::new(&self.client.inner.actions, sequence_number, future)
-                    .await?;
+            let sequence_number = self.client.inner.next_sequence_number();
 
-            let future = self
+            let command = Command::builder()
+                .status(self.status)
+                .sequence_number(sequence_number)
+                .pdu(pdu.clone());
+
+            let id = command.id();
+
+            let request_id = self.client.inner.next_request_id();
+            let (request, mut outcome) = RegisteredRequest::new(request_id, command);
+            let cell = request.cell.clone();
+
+            if self
                 .client
                 .inner
-                .await_response(response, sequence_number, self.response_timeout)
-                .and_then(move |command| async move {
-                    // XXX: it is ok to match against responses only, as this is a registered request
-                    // If the request does not have a matching response, the user should not be awaiting it here anyway
-                    command
-                        .ok_and_matches(id.matching_response())
-                        .map_err(Error::unexpected_response)
-                });
+                .actions
+                .send(Action::registered_request(request))
+                .is_err()
+            {
+                // Nothing was queued and nothing was written: a definite "not sent".
+                return Err(Error::not_sent(NotSentReason::ConnectionClosed));
+            }
+
+            // The write stage: it resolves once the request is with the transport, or
+            // earlier when the response arrives first — the peer has confirmed the request
+            // either way, and a response already decoded is never discarded by a later
+            // failure or teardown.
+            //
+            // The response itself stays in the request's cell across the two stages: the
+            // stage only marks it as available (its sequence number), and the response
+            // future consumes it from the cell — so a caller that drops the returned
+            // future routes the unconsumed response late through the cell's own drop path
+            // instead of losing it with the future.
+            let write_stage = async {
+                loop {
+                    match outcome.recv().await {
+                        Some(Outcome::Written { sequence_number }) => {
+                            return Ok((sequence_number, None));
+                        }
+                        Some(Outcome::ResponseReady) => {
+                            if let Some(sequence_number) = cell.stored_response_sequence_number() {
+                                return Ok((sequence_number, Some(sequence_number)));
+                            }
+                            // Defensive: the notification and the stored response are
+                            // written together, under the cell's lock; nothing else can
+                            // take it before this stage resolves.
+                        }
+                        Some(Outcome::Failed(error)) => return Err(error),
+                        None => return Err(closed_without_outcome(&cell)),
+                    }
+                }
+            };
+
+            let (sequence_number, confirmed) = RequestFutureGuard::new(
+                &self.client.inner.actions,
+                request_id,
+                cell.clone(),
+                write_stage,
+            )
+            .await?;
+
+            let timeout_cell = cell.clone();
+            let guard_cell = cell.clone();
+            let response_timeout = self.response_timeout;
+
+            let response = async move {
+                let command = match confirmed {
+                    // The write stage saw the response stored in the cell: consume it from
+                    // there. (Nothing else can have taken it: the timeout arm below runs
+                    // only after this stage, and the cell's drop path only when the whole
+                    // future is dropped, which skips this code entirely.)
+                    Some(_) => match cell.take_response() {
+                        Some(command) => command,
+                        None => return Err(closed_without_outcome(&cell)),
+                    },
+                    None => await_terminal(&mut outcome, &cell).await?,
+                };
+
+                // XXX: it is ok to match against responses only, as this is a registered request
+                // If the request does not have a matching response, the user should not be awaiting it here anyway
+                command
+                    .ok_and_matches(id.matching_response())
+                    .map_err(Error::unexpected_response)
+            };
+
+            let future = async move {
+                match response_timeout {
+                    None => response.await,
+                    Some(timeout) => match T::timeout(timeout, response).await {
+                        Some(result) => result,
+                        None => {
+                            // The atomic settlement: a response committed to the cell
+                            // before this decision wins — the caller gets it, never a
+                            // timeout for a request the peer already answered. Only when
+                            // nothing is stored does the timeout abandon the request, and
+                            // every later commit goes to the late path instead.
+                            match timeout_cell.settle_timeout() {
+                                // A response committed before the settlement wins. It
+                                // takes the same validation as the response stage: a
+                                // command the server sent under our sequence number is
+                                // not automatically this request's answer.
+                                TimeoutSettlement::Response(command) => command
+                                    .ok_and_matches(id.matching_response())
+                                    .map_err(Error::unexpected_response),
+                                TimeoutSettlement::Abandoned(abandoned) => {
+                                    let _ =
+                                        self.client.inner.actions.send(Action::Cancel(request_id));
+
+                                    Err(match abandoned {
+                                        AbandonOutcome::Written { sequence_number } => {
+                                            Error::response_timeout(sequence_number, timeout)
+                                        }
+                                        // Unreachable: the write stage resolved with the
+                                        // acknowledgement, so the gate had already claimed
+                                        // the request.
+                                        AbandonOutcome::NotWritten => {
+                                            Error::not_sent(NotSentReason::Timeout)
+                                        }
+                                    })
+                                }
+                            }
+                        }
+                    },
+                }
+            };
 
             Ok((
                 sequence_number,
-                RequestFutureGuard::new(&self.client.inner.actions, sequence_number, future),
+                RequestFutureGuard::new(&self.client.inner.actions, request_id, guard_cell, future),
             ))
         }
     }

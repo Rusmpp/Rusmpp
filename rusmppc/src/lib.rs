@@ -134,7 +134,10 @@ pub mod builder {
 }
 
 mod request;
-pub(crate) use request::{CloseRequest, RegisteredRequest, Request, UnregisteredRequest};
+pub(crate) use request::{
+    AbandonOutcome, CloseRequest, Outcome, OutcomeReceiver, RegisteredRequest, Request,
+    RequestCell, RequestId, TimeoutSettlement, UnregisteredRequest,
+};
 
 mod timer;
 pub(crate) use timer::Timer;
