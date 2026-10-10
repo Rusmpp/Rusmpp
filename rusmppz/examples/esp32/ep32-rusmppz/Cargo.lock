@@ -741,12 +741,9 @@ dependencies = [
 name = "esp32-rusmppz"
 version = "0.1.0"
 dependencies = [
- "critical-section",
  "embassy-executor",
  "embassy-net",
  "embassy-time 0.4.0",
- "embedded-io",
- "embedded-io-async",
  "esp-alloc",
  "esp-bootloader-esp-idf",
  "esp-hal",
