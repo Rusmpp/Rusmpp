@@ -18,8 +18,6 @@ pub mod concatenation;
 
 pub mod encoding;
 
-pub mod fallback;
-
 mod sealed;
 use sealed::Sealed;
 

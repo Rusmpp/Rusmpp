@@ -93,9 +93,12 @@ mod impl_owned {
     impl Encoder for Ucs2Encoder {
         type Error = Ucs2EncodeError;
 
-        fn encode(&self, message: &str) -> Result<(Vec<u8>, DataCoding), Self::Error> {
+        fn data_coding(&self) -> DataCoding {
+            self.data_coding()
+        }
+
+        fn encode(&self, message: &str) -> Result<Vec<u8>, Self::Error> {
             self.encode_to_vec(message)
-                .map(|vec| (vec, self.data_coding()))
         }
     }
 

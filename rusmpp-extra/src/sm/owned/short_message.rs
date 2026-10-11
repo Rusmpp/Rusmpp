@@ -1,12 +1,10 @@
 use alloc::vec;
 use alloc::vec::Vec;
-use rusmpp_core::udhs::{
-    owned::{Udh, UdhElement, UdhValue},
-    values::NationalLanguageIndicator,
-};
+use rusmpp_core::udhs::owned::{Udh, UdhElement, UdhValue};
 
 use crate::{
     concatenation::{MultipartError, owned::Concatenator},
+    encoding::owned::Encoder,
     sm::owned::Sm,
 };
 
@@ -28,16 +26,12 @@ impl<S, E> ShortMessageBuilder<S, E> {
         self
     }
 
-    fn _push_udh_element(&mut self, element: UdhElement) {
-        if let Some(ref mut udh) = self.udh {
-            udh.push_element(element);
-        } else {
-            self.udh = Some(Udh::new(vec![element]));
-        }
-    }
-
     pub fn push_udh_element(mut self, element: UdhElement) -> Self {
-        self._push_udh_element(element);
+        match self.udh {
+            Some(ref mut udh) => udh.push_element(element),
+            None => self.udh = Some(Udh::new(vec![element])),
+        }
+
         self
     }
 
@@ -58,23 +52,37 @@ impl<S, E> ShortMessageBuilder<S, E> {
 
 impl<S, E> ShortMessageBuilder<S, E> {
     /// Adds UDH elements for national language locking shift and single shift indicators if they exist in the encoder.
-    ///
-    /// This method must be called once before consuming the builder.
-    ///
-    /// Successive calls to this method will add duplicate UDH elements.
-    fn add_udh_alphabet_indicators(&mut self)
+    fn add_udh_alphabet_indicators(&self) -> Option<Udh>
     where
-        E: Concatenator,
+        E: Encoder,
     {
-        if let Some(lang) = self.encoder.national_language_locking_shift() {
-            self._push_udh_element(UdhElement::new(UdhValue::NationalLanguageLockingShift(
-                lang,
-            )));
+        let mut udh = self.udh.clone();
+
+        if let Some(element) = self
+            .encoder
+            .national_language_locking_shift()
+            .map(UdhValue::NationalLanguageLockingShift)
+            .map(UdhElement::new)
+        {
+            match udh {
+                Some(ref mut udh) => udh.push_element(element),
+                None => udh = Some(Udh::new(vec![element])),
+            }
         }
 
-        if let Some(lang) = self.encoder.national_language_single_shift() {
-            self._push_udh_element(UdhElement::new(UdhValue::NationalLanguageSingleShift(lang)));
+        if let Some(element) = self
+            .encoder
+            .national_language_single_shift()
+            .map(UdhValue::NationalLanguageSingleShift)
+            .map(UdhElement::new)
+        {
+            match udh {
+                Some(ref mut udh) => udh.push_element(element),
+                None => udh = Some(Udh::new(vec![element])),
+            }
         }
+
+        udh
     }
 }
 
@@ -90,13 +98,13 @@ pub struct ShortMessageUdhMultipartBuilder<S, E> {
 
 impl<S: Sm, E> ShortMessageUdhMultipartBuilder<S, E> {
     pub fn build(
-        mut self,
+        &self,
         short_message: &str,
     ) -> Result<Vec<S>, MultipartError<<E as Concatenator>::Error>>
     where
         E: Concatenator,
     {
-        self.builder.add_udh_alphabet_indicators();
+        let udh = self.builder.add_udh_alphabet_indicators();
 
         todo!()
     }
@@ -109,13 +117,13 @@ pub struct ShortMessageSarMultipartBuilder<S, E> {
 
 impl<S: Sm, E> ShortMessageSarMultipartBuilder<S, E> {
     pub fn build(
-        mut self,
+        &self,
         short_message: &str,
     ) -> Result<Vec<S>, MultipartError<<E as Concatenator>::Error>>
     where
         E: Concatenator,
     {
-        self.builder.add_udh_alphabet_indicators();
+        let udh = self.builder.add_udh_alphabet_indicators();
 
         todo!()
     }

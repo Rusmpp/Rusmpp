@@ -319,9 +319,20 @@ mod impl_owned {
     impl Encoder for Gsm7BitPackedEncoder {
         type Error = Gsm7BitEncodeError;
 
-        fn encode(&self, message: &str) -> Result<(Vec<u8>, DataCoding), Self::Error> {
+        fn data_coding(&self) -> DataCoding {
+            self.data_coding()
+        }
+
+        fn encode(&self, message: &str) -> Result<Vec<u8>, Self::Error> {
             self.encode_to_vec(message)
-                .map(|vec| (vec, self.data_coding()))
+        }
+
+        fn national_language_locking_shift(&self) -> Option<NationalLanguageIndicator> {
+            self.national_language_locking_shift()
+        }
+
+        fn national_language_single_shift(&self) -> Option<NationalLanguageIndicator> {
+            self.national_language_single_shift()
         }
     }
 
