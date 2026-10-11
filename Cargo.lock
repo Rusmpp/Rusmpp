@@ -2822,7 +2822,6 @@ dependencies = [
  "hickory-resolver",
  "mockall",
  "native-tls",
- "pin-project",
  "pin-project-lite",
  "rusmpp",
  "rustls",
