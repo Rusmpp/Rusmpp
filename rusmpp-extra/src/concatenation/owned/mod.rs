@@ -9,5 +9,3 @@ pub use concatenator::Concatenator;
 // TODO: re-enable
 // mod multipart;
 // pub use multipart::{Multipart, SarMultipartBuilder, UdhMultipartBuilder};
-
-mod fallback;

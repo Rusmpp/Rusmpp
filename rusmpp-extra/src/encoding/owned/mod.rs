@@ -9,5 +9,3 @@ pub use decoder::{Decoder, SupportedDecodeError, SupportedDecoder};
 // TODO: restore
 // mod traits;
 // pub use traits::{Encoded, EncodedBuilder};
-
-mod fallback;

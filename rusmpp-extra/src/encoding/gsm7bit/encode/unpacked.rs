@@ -125,10 +125,12 @@ mod impl_owned {
 
     impl Encoder for Gsm7BitUnpackedEncoder {
         type Error = Gsm7BitEncodeError;
+        fn data_coding(&self) -> DataCoding {
+            self.data_coding()
+        }
 
-        fn encode(&self, message: &str) -> Result<(Vec<u8>, DataCoding), Self::Error> {
+        fn encode(&self, message: &str) -> Result<Vec<u8>, Self::Error> {
             self.encode_to_vec(message)
-                .map(|vec| (vec, self.data_coding()))
         }
 
         fn national_language_locking_shift(&self) -> Option<NationalLanguageIndicator> {
