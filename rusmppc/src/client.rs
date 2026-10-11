@@ -370,6 +370,14 @@ impl<T: Timeout> ClientInner<T> {
         }
     }
 
+    fn check_interface_version(&self, interface_version: InterfaceVersion) -> Result<(), Error> {
+        if self.check_interface_version && !matches!(interface_version, InterfaceVersion::Smpp5_0) {
+            return Err(Error::unsupported_interface_version(interface_version));
+        }
+
+        Ok(())
+    }
+
     fn next_sequence_number(&self) -> u32 {
         self.sequence_number.fetch_add(2, Ordering::Relaxed)
     }
@@ -710,13 +718,7 @@ impl<'a, T: Timeout> RegisteredRequestBuilder<'a, T> {
     }
 
     fn check_interface_version(&self, interface_version: InterfaceVersion) -> Result<(), Error> {
-        if self.client.inner.check_interface_version
-            && !matches!(interface_version, InterfaceVersion::Smpp5_0)
-        {
-            return Err(Error::unsupported_interface_version(interface_version));
-        }
-
-        Ok(())
+        self.client.inner.check_interface_version(interface_version)
     }
 
     fn request(&self, pdu: impl Into<Pdu>) -> impl Future<Output = Result<Command, Error>> {
@@ -986,6 +988,18 @@ impl<'a, T: Timeout> NoWaitRequestBuilder<'a, T> {
 /// Builder for creating a raw registered requests.
 ///
 /// Raw registered requests are requests that expect a response from the server, but do not poll the response automatically.
+///
+/// This builder is used to split sending a request and awaiting the response into two separate steps.
+///
+/// Use the [`send`](RawRegisteredRequestBuilder::send) method to send an arbitrary [`Pdu`] to the server and receive a future resolving to the response [`Command`].
+/// It is the caller's responsibility to await the response future and handle the response [`Command`] appropriately.
+///
+/// Use the type safe methods such as [`bind_transmitter`](RawRegisteredRequestBuilder::bind_transmitter) or [`submit_sm`](RawRegisteredRequestBuilder::submit_sm) to send a request and receive a future resolving to the type safe response [`Pdu`].
+///
+/// # Note
+///
+/// For every method in this builder, the response timeout is started when the response future is awaited.
+// XXX: for operations that do not have a response like `GenericNack` or responses like `DeliverSmResp` it does not make sense to use this builder. That is why they are not implemented.
 #[derive(Debug)]
 pub struct RawRegisteredRequestBuilder<'a, T> {
     client: &'a Client<T>,
@@ -1000,6 +1014,10 @@ impl<'a, T: Timeout> RawRegisteredRequestBuilder<'a, T> {
             status,
             response_timeout: client.inner.response_timeout,
         }
+    }
+
+    fn check_interface_version(&self, interface_version: InterfaceVersion) -> Result<(), Error> {
+        self.client.inner.check_interface_version(interface_version)
     }
 
     /// Sets the command status for the next request.
@@ -1025,8 +1043,8 @@ impl<'a, T: Timeout> RawRegisteredRequestBuilder<'a, T> {
     /// # Notes
     ///
     /// - If the sent command is not an operation expecting a response, and the response timeout is unset, the response future will never resolve and should be dropped.
-    /// - The response timeout is started when the response future is awaited.
     /// - No interface version check is performed.
+    /// - It is the caller's responsibility to check for the correct response [`Command`] and handle it appropriately.
     pub fn send(
         self,
         pdu: impl Into<Pdu>,
@@ -1069,5 +1087,189 @@ impl<'a, T: Timeout> RawRegisteredRequestBuilder<'a, T> {
                 RequestFutureGuard::new(&self.client.inner.actions, sequence_number, future),
             ))
         }
+    }
+
+    /// Sends a raw [`Pdu`] to the server using [`Self::send`] and returns the sent `sequence number` and a future resolving to a type safe successful response [`Pdu`].
+    fn send_extract<R: 'static>(
+        self,
+        pdu: impl Into<Pdu>,
+        extract: fn(Pdu) -> Result<R, Pdu>,
+    ) -> impl Future<Output = Result<(u32, impl Future<Output = Result<R, Error>>), Error>> {
+        self.send(pdu).map_ok(move |(sequence_number, response)| {
+            let response = async move {
+                response
+                    .map_ok(Command::into_parts)
+                    .map_ok(CommandParts::raw)
+                    .map_ok(|(id, status, sequence_number, pdu)| {
+                        pdu.ok_or(CommandParts::new(id, status, sequence_number, None))
+                            .and_then(|pdu| {
+                                extract(pdu).map_err(|pdu| {
+                                    CommandParts::new(id, status, sequence_number, Some(pdu))
+                                })
+                            })
+                            .map_err(Command::from_parts)
+                    })
+                    .await?
+                    .map_err(Error::unexpected_response)
+            };
+
+            (sequence_number, response)
+        })
+    }
+
+    /// Sends a raw [`Pdu`] to the server and returns the sent `sequence number` and a future resolving to a successful erased response.
+    ///
+    /// This is used for commands that do not have a response, such as [`CancelBroadcastSm`](Pdu::CancelBroadcastSm) or [`CancelSm`](Pdu::CancelSm).
+    ///
+    /// [`send`](RawRegisteredRequestBuilder::send) takes care of checking if the response matches the sent command using [`CommandId::matching_response`](CommandId::matching_response).
+    fn send_extract_unit(
+        self,
+        pdu: impl Into<Pdu>,
+    ) -> impl Future<Output = Result<(u32, impl Future<Output = Result<(), Error>>), Error>> {
+        self.send_extract(pdu, |_| Ok(()))
+    }
+
+    /// Sends a [`BindTransmitter`] command to the server and returns the sent `sequence number` and a future resolving to a successful [`BindTransmitterResp`].
+    pub async fn bind_transmitter(
+        self,
+        bind: impl Into<BindTransmitter>,
+    ) -> Result<
+        (
+            u32,
+            impl Future<Output = Result<BindTransmitterResp, Error>>,
+        ),
+        Error,
+    > {
+        let bind: BindTransmitter = bind.into();
+
+        self.check_interface_version(bind.interface_version)?;
+
+        self.send_extract(bind, extract!(BindTransmitterResp)).await
+    }
+
+    /// Sends a [`BindReceiver`] command to the server and returns the sent `sequence number` and a future resolving to a successful [`BindReceiverResp`].
+    pub async fn bind_receiver(
+        self,
+        bind: impl Into<BindReceiver>,
+    ) -> Result<(u32, impl Future<Output = Result<BindReceiverResp, Error>>), Error> {
+        let bind: BindReceiver = bind.into();
+
+        self.check_interface_version(bind.interface_version)?;
+
+        self.send_extract(bind, extract!(BindReceiverResp)).await
+    }
+
+    /// Sends a [`BindTransceiver`] command to the server and returns the sent `sequence number` and a future resolving to a successful [`BindTransceiverResp`].
+    pub async fn bind_transceiver(
+        self,
+        bind: impl Into<BindTransceiver>,
+    ) -> Result<
+        (
+            u32,
+            impl Future<Output = Result<BindTransceiverResp, Error>>,
+        ),
+        Error,
+    > {
+        let bind: BindTransceiver = bind.into();
+
+        self.check_interface_version(bind.interface_version)?;
+
+        self.send_extract(bind, extract!(BindTransceiverResp)).await
+    }
+
+    /// Sends a [`BroadcastSm`] command to the server and returns the sent `sequence number` and a future resolving to a successful [`BroadcastSmResp`].
+    pub async fn broadcast_sm(
+        self,
+        broadcast_sm: impl Into<BroadcastSm>,
+    ) -> Result<(u32, impl Future<Output = Result<BroadcastSmResp, Error>>), Error> {
+        self.send_extract(broadcast_sm.into(), extract!(BroadcastSmResp))
+            .await
+    }
+
+    /// Sends a [`CancelBroadcastSm`] command to the server and returns the sent `sequence number` and a future resolving to a successful [`CancelBroadcastSmResp`](Pdu::CancelBroadcastSmResp).
+    pub async fn cancel_broadcast_sm(
+        self,
+        cancel_broadcast_sm: impl Into<CancelBroadcastSm>,
+    ) -> Result<(u32, impl Future<Output = Result<(), Error>>), Error> {
+        self.send_extract_unit(cancel_broadcast_sm.into()).await
+    }
+
+    /// Sends a [`CancelSm`] command to the server and returns the sent `sequence number` and a future resolving to a successful [`CancelSmResp`](Pdu::CancelSmResp).
+    pub async fn cancel_sm(
+        self,
+        cancel_sm: impl Into<CancelSm>,
+    ) -> Result<(u32, impl Future<Output = Result<(), Error>>), Error> {
+        self.send_extract_unit(cancel_sm.into()).await
+    }
+
+    /// Sends a [`DataSm`] command to the server and returns the sent `sequence number` and a future resolving to a successful [`DataSmResp`].
+    pub async fn data_sm(
+        self,
+        data_sm: impl Into<DataSm>,
+    ) -> Result<(u32, impl Future<Output = Result<DataSmResp, Error>>), Error> {
+        self.send_extract(data_sm.into(), extract!(DataSmResp))
+            .await
+    }
+
+    /// Sends a [`QueryBroadcastSm`] command to the server and returns the sent `sequence number` and a future resolving to a successful [`QueryBroadcastSmResp`].
+    pub async fn query_broadcast_sm(
+        self,
+        query_broadcast_sm: impl Into<QueryBroadcastSm>,
+    ) -> Result<
+        (
+            u32,
+            impl Future<Output = Result<QueryBroadcastSmResp, Error>>,
+        ),
+        Error,
+    > {
+        self.send_extract(query_broadcast_sm.into(), extract!(QueryBroadcastSmResp))
+            .await
+    }
+
+    /// Sends a [`QuerySm`] command to the server and returns the sent `sequence number` and a future resolving to a successful [`QuerySmResp`].
+    pub async fn query_sm(
+        self,
+        query_sm: impl Into<QuerySm>,
+    ) -> Result<(u32, impl Future<Output = Result<QuerySmResp, Error>>), Error> {
+        self.send_extract(query_sm.into(), extract!(QuerySmResp))
+            .await
+    }
+
+    /// Sends a [`ReplaceSm`] command to the server and returns the sent `sequence number` and a future resolving to a successful [`ReplaceSmResp`](Pdu::ReplaceSmResp).
+    pub async fn replace_sm(
+        self,
+        replace_sm: impl Into<ReplaceSm>,
+    ) -> Result<(u32, impl Future<Output = Result<(), Error>>), Error> {
+        self.send_extract_unit(replace_sm.into()).await
+    }
+
+    /// Sends a [`SubmitMulti`] command to the server and returns the sent `sequence number` and a future resolving to a successful [`SubmitMultiResp`].
+    pub async fn submit_multi(
+        self,
+        submit_multi: impl Into<SubmitMulti>,
+    ) -> Result<(u32, impl Future<Output = Result<SubmitMultiResp, Error>>), Error> {
+        self.send_extract(submit_multi.into(), extract!(SubmitMultiResp))
+            .await
+    }
+
+    /// Sends a [`SubmitSm`] command to the server and returns the sent `sequence number` and a future resolving to a successful [`SubmitSmResp`].
+    pub async fn submit_sm(
+        self,
+        submit_sm: impl Into<SubmitSm>,
+    ) -> Result<(u32, impl Future<Output = Result<SubmitSmResp, Error>>), Error> {
+        self.send_extract(submit_sm.into(), extract!(SubmitSmResp))
+            .await
+    }
+
+    /// Sends an [`Unbind`](Pdu::Unbind) command to the server and returns the sent `sequence number` and a future resolving to a successful [`UnbindResp`](Pdu::UnbindResp).
+    pub async fn unbind(self) -> Result<(u32, impl Future<Output = Result<(), Error>>), Error> {
+        self.send_extract_unit(Pdu::Unbind).await
+    }
+
+    /// Sends an [`EnquireLink`](Pdu::EnquireLink) command to the server and returns the sent `sequence number` and a future resolving to a successful [`EnquireLinkResp`](Pdu::EnquireLinkResp).
+    pub async fn enquire_link(
+        self,
+    ) -> Result<(u32, impl Future<Output = Result<(), Error>>), Error> {
+        self.send_extract_unit(Pdu::EnquireLink).await
     }
 }
