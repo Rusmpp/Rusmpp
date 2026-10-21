@@ -116,7 +116,7 @@ const INITIAL_CLIENT_SEQUENCE_NUMBER: u32 = 1;
 /// The [`Connection`](crate::connection::Connection)'s sequence number is therefore always `even`.
 const INITIAL_CONNECTION_SEQUENCE_NUMBER: u32 = 2;
 
-/// How we increment the sequence numbers in [`Client`] and [`Connection`](crate::connection::Connection).
+This describes how we increment the sequence numbers in [`Client`] and [`Connection`](crate::connection::Connection).
 const SEQUENCE_NUMBER_INCREMENT: u32 = 2;
 
 /// The minimum sequence number must be at least [`SEQUENCE_NUMBER_INCREMENT`],
