@@ -624,28 +624,24 @@ where
                             }
 
                             // Enquire link responses not matching the last sent enquire link are ignored and must be passed to the client. (The client sent an enquire link manually)
-                            if let CommandId::EnquireLinkResp = command.id() {
-                                if let Some(last_sequence_number) =
+                            if let CommandId::EnquireLinkResp = command.id()
+                                && let Some(last_sequence_number) =
                                     self.last_enquire_link_sequence_number
-                                {
-                                    if let CommandStatus::EsmeRok = command.status() {
-                                        if last_sequence_number == sequence_number {
-                                            self.as_mut().unset_last_enquire_link_sequence_number();
-                                            self.as_mut().deactivate_enquire_link_response_timer();
-                                            self.as_mut().activate_enquire_link_timer();
+                                && let CommandStatus::EsmeRok = command.status()
+                                && last_sequence_number == sequence_number
+                            {
+                                self.as_mut().unset_last_enquire_link_sequence_number();
+                                self.as_mut().deactivate_enquire_link_response_timer();
+                                self.as_mut().activate_enquire_link_timer();
 
-                                            // Poll the enquire_link_timer again to register the waker
-                                            let _ =
-                                                self.as_mut().project().enquire_link_timer.poll(cx);
+                                // Poll the enquire_link_timer again to register the waker
+                                let _ = self.as_mut().project().enquire_link_timer.poll(cx);
 
-                                            let _ = self.as_mut().events.send_insight(
-                                                Insight::ReceivedEnquireLinkResp(sequence_number),
-                                            );
+                                let _ = self.as_mut().events.send_insight(
+                                    Insight::ReceivedEnquireLinkResp(sequence_number),
+                                );
 
-                                            continue 'stream;
-                                        }
-                                    }
-                                }
+                                continue 'stream;
                             }
 
                             if id.is_response() {

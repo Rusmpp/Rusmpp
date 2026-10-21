@@ -645,16 +645,16 @@ async fn server_unbinds_and_closes_connection_should_close_connection() {
     let (client, mut events) = ConnectionBuilder::new().connected(client);
 
     while let Some(event) = events.next().await {
-        if let Event::Incoming(command) = event {
-            if command.id() == CommandId::Unbind {
-                let error = client
-                    .status(CommandStatus::EsmeRok)
-                    .unbind_resp(command.sequence_number())
-                    .await
-                    .unwrap_err();
+        if let Event::Incoming(command) = event
+            && command.id() == CommandId::Unbind
+        {
+            let error = client
+                .status(CommandStatus::EsmeRok)
+                .unbind_resp(command.sequence_number())
+                .await
+                .unwrap_err();
 
-                assert!(matches!(error, Error::ConnectionClosed));
-            }
+            assert!(matches!(error, Error::ConnectionClosed));
         }
     }
 

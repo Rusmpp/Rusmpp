@@ -942,22 +942,15 @@ trait TypeExt {
 impl TypeExt for &syn::Type {
     fn flatten(&self) -> &syn::Type {
         {
-            if let syn::Type::Path(type_path) = self {
-                if type_path.qself.is_none() {
-                    if let Some(last_segment) = type_path.path.segments.last() {
-                        if last_segment.ident == "Option" || last_segment.ident == "Vec" {
-                            if let syn::PathArguments::AngleBracketed(args) =
-                                &last_segment.arguments
-                            {
-                                if args.args.len() == 1 {
-                                    if let syn::GenericArgument::Type(inner_ty) = &args.args[0] {
-                                        return inner_ty;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+            if let syn::Type::Path(type_path) = self
+                && type_path.qself.is_none()
+                && let Some(last_segment) = type_path.path.segments.last()
+                && (last_segment.ident == "Option" || last_segment.ident == "Vec")
+                && let syn::PathArguments::AngleBracketed(args) = &last_segment.arguments
+                && args.args.len() == 1
+                && let syn::GenericArgument::Type(inner_ty) = &args.args[0]
+            {
+                return inner_ty;
             }
 
             self

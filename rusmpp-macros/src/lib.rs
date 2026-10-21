@@ -1,7 +1,3 @@
-// Do not break MSRV 1.85.1
-#![allow(clippy::collapsible_if)]
-#![allow(clippy::collapsible_match)]
-
 use proc_macro::TokenStream;
 use syn::{DeriveInput, parse_macro_input};
 
