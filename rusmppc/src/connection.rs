@@ -49,6 +49,7 @@ pin_project! {
     pub struct Connection<F, E, D: Delay> {
         state: State,
         sequence_number: u32,
+        max_sequence_number: u32,
         requests: VecDeque<Request>,
         // This is a request that has been written to the sink using start_send, but not yet flushed.
         pending_request: Option<Request>,
@@ -73,6 +74,7 @@ pin_project! {
 
 impl<E: EventChannel, D: Delay> Connection<(), E, D> {
     pub fn new(
+        max_sequence_number: u32,
         enquire_link_interval: Option<Duration>,
         enquire_link_response_timeout: Duration,
         auto_enquire_link_response: bool,
@@ -91,7 +93,8 @@ impl<E: EventChannel, D: Delay> Connection<(), E, D> {
         (
             Self {
                 state: State::Active,
-                sequence_number: 2,
+                sequence_number: crate::INITIAL_CONNECTION_SEQUENCE_NUMBER,
+                max_sequence_number,
                 requests: VecDeque::new(),
                 pending_request: None,
                 responses: BTreeMap::new(),
@@ -118,6 +121,7 @@ impl<E: EventChannel, D: Delay> Connection<(), E, D> {
         Connection {
             state: self.state,
             sequence_number: self.sequence_number,
+            max_sequence_number: self.max_sequence_number,
             requests: self.requests,
             pending_request: self.pending_request,
             responses: self.responses,
@@ -215,16 +219,37 @@ where
         tracing::trace!(target: TIMER, ?delay, "Activated enquire_link_response_timer");
     }
 
-    /// [`Self::sequence_number`] is incremented by 2 after each call.
+    /// Increments [`Self::sequence_number`] by 2 wrapping around to 2 if it reaches [`Self::max_sequence_number`], returning the old value.
+    ///
+    /// [`Self::sequence_number`] starts from 2 and ist incremented by 2 after each call.
     ///
     /// The clients also hold an atomic sequence number, which is incremented by 2 for each request, starting from 1.
     ///
     /// This is done to ensure that commands sent by the connection [`EnquireLink`](Pdu::EnquireLink) are differentiated from the commands sent by the client,
     /// without the use of atomic operations in the connection.
     fn sequence_number_fetch_and_increment(self: Pin<&mut Self>) -> u32 {
+        debug_assert!(
+            self.max_sequence_number >= crate::MIN_SEQUENCE_NUMBER,
+            "max_sequence_number must be at least {}, got {}",
+            crate::MIN_SEQUENCE_NUMBER,
+            self.max_sequence_number
+        );
+
+        debug_assert!(
+            self.max_sequence_number <= crate::MAX_SEQUENCE_NUMBER,
+            "max_sequence_number must be at most {}, got {}",
+            crate::MAX_SEQUENCE_NUMBER,
+            self.max_sequence_number
+        );
+
         let sequence_number = self.sequence_number;
 
-        *(self.project().sequence_number) += 2;
+        *(self.project().sequence_number) =
+            if sequence_number > self.max_sequence_number - crate::SEQUENCE_NUMBER_INCREMENT {
+                crate::INITIAL_CONNECTION_SEQUENCE_NUMBER
+            } else {
+                sequence_number + crate::SEQUENCE_NUMBER_INCREMENT
+            };
 
         sequence_number
     }
@@ -692,8 +717,34 @@ where
 }
 
 impl<E: EventChannel, R: Delay + Timeout> NoSpawnConnectionBuilder<E, R> {
-    /// Consumes the builder and creates a new [`Client`] along with the connection future and event stream (from raw parts).
-    pub(crate) fn raw<F>(
+    /// Consumes `self` and creates a new [`Client`] along with the connection and event stream.
+    pub(crate) fn connection(
+        self,
+    ) -> (
+        Client<R>,
+        impl Stream<Item = E::Event> + Unpin + 'static,
+        Connection<(), E, R>,
+    ) {
+        let (connection, watch, actions, events) = Connection::<_, E, R>::new(
+            self.builder.max_sequence_number,
+            self.builder.enquire_link_interval,
+            self.builder.enquire_link_response_timeout,
+            self.builder.auto_enquire_link_response,
+        );
+
+        let client = Client::new(
+            actions,
+            self.builder.response_timeout,
+            self.builder.max_sequence_number,
+            self.builder.check_interface_version,
+            watch,
+        );
+
+        (client, events, connection)
+    }
+
+    /// Consumes `self` and creates a new [`Client`] along with the fused connection future and event stream (from raw parts).
+    pub(crate) fn fused<F>(
         self,
         framed: F,
     ) -> (
@@ -705,18 +756,7 @@ impl<E: EventChannel, R: Delay + Timeout> NoSpawnConnectionBuilder<E, R> {
         F: Stream<Item = Result<Command, DecodeError>>
             + for<'a> Sink<&'a Command, Error = EncodeError>,
     {
-        let (connection, watch, actions, events) = Connection::<_, E, R>::new(
-            self.builder.enquire_link_interval,
-            self.builder.enquire_link_response_timeout,
-            self.builder.auto_enquire_link_response,
-        );
-
-        let client = Client::new(
-            actions,
-            self.builder.response_timeout,
-            self.builder.check_interface_version,
-            watch,
-        );
+        let (client, events, connection) = self.connection();
 
         (client, events, async move {
             let mut framed = std::pin::pin!(framed);
@@ -732,6 +772,22 @@ impl<E: EventChannel, R: Delay + Timeout> NoSpawnConnectionBuilder<E, R> {
                 tracing::error!(target: "rusmppc::connection::tcp", ?err, "Failed to shutdown stream");
             }
         })
+    }
+}
+
+#[cfg(test)]
+impl<F, E, D: Delay> Connection<F, E, D> {
+    pub(crate) fn pub_sequence_number_fetch_and_increment(self: Pin<&mut Self>) -> u32
+    where
+        F: Stream<Item = Result<Command, DecodeError>>
+            + for<'a> Sink<&'a Command, Error = EncodeError>,
+        E: EventChannel,
+    {
+        self.sequence_number_fetch_and_increment()
+    }
+
+    pub(crate) fn max_sequence_number(&self) -> u32 {
+        self.max_sequence_number
     }
 }
 

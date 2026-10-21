@@ -78,7 +78,7 @@ async fn server_ddos_client_should_still_send_requests_and_connection_should_sti
         // Wait for 5 polls for the enquire link response
         .enquire_link_response_timeout(Duration::from_millis(5))
         .no_spawn()
-        .raw(framed);
+        .fused(framed);
 
     tokio::spawn(future);
 
@@ -152,7 +152,7 @@ async fn client_ddos_and_server_ddos_connection_should_still_respond_to_enquire_
         .mock_delay()
         .no_enquire_link_interval()
         .no_spawn()
-        .raw(framed);
+        .fused(framed);
 
     tokio::spawn(PollTraceFuture::new(future));
 
@@ -240,7 +240,7 @@ async fn client_ddos_and_server_ddos_connection_should_still_respond_to_enquire_
         .mock_delay()
         .no_enquire_link_interval()
         .no_spawn()
-        .raw(framed);
+        .fused(framed);
 
     tokio::spawn(PollTraceFuture::new(future));
 
@@ -300,7 +300,7 @@ async fn sink_first_poll_ready_pending_pending_request_should_be_sent() {
         .mock_delay()
         .no_enquire_link_interval()
         .no_spawn()
-        .raw(framed);
+        .fused(framed);
 
     tokio::spawn(PollTraceFuture::new(future));
 
@@ -356,7 +356,7 @@ async fn sink_first_poll_flush_pending_pending_request_should_be_sent() {
         .mock_delay()
         .no_enquire_link_interval()
         .no_spawn()
-        .raw(framed);
+        .fused(framed);
 
     tokio::spawn(PollTraceFuture::new(future));
 
