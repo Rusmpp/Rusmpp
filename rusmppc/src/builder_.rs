@@ -263,17 +263,11 @@ impl<E, R> ConnectionBuilder<E, R> {
     /// - If the maximum sequence number is less than `2`, it will be set to `2`.
     /// - If the maximum sequence number is greater than `0x7FFFFFFF = 2147483647`, it will be set to `0x7FFFFFFF = 2147483647`.
     pub const fn max_sequence_number(mut self, max_sequence_number: u32) -> Self {
-        let max_sequence_number = if max_sequence_number < crate::MIN_SEQUENCE_NUMBER {
-            crate::MIN_SEQUENCE_NUMBER
-        } else {
-            max_sequence_number
-        };
-
-        let max_sequence_number = if max_sequence_number > crate::MAX_SEQUENCE_NUMBER {
-            crate::MAX_SEQUENCE_NUMBER
-        } else {
-            max_sequence_number
-        };
+        let max_sequence_number = crate::cmp::u32_clamp(
+            max_sequence_number,
+            crate::MIN_SEQUENCE_NUMBER,
+            crate::MAX_SEQUENCE_NUMBER,
+        );
 
         self.max_sequence_number = max_sequence_number;
         self

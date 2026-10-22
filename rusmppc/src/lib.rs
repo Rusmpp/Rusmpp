@@ -194,6 +194,8 @@ pub mod runtime {
     pub use super::runtime_::{tokio::Tokio, wasm::Wasm};
 }
 
+mod cmp;
+
 #[cfg(test)]
 mod tests;
 
