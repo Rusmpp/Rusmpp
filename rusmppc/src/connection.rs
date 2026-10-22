@@ -2,7 +2,7 @@ use std::{
     collections::{BTreeMap, VecDeque},
     pin::Pin,
     task::{Context, Poll},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use crate::{
@@ -483,23 +483,25 @@ where
 
                     match self.as_mut().requests_pop_front() {
                         Some(request) => {
-                            if !request.active() {
-                                tracing::debug!(target: CONN,
-                                    sequence_number=request.command().sequence_number(),
-                                    status=?request.command().status(),
-                                    id=?request.command().id(),
-                                    "Request not active, ignoring"
-                                );
+                            let sequence_number = request.command().sequence_number();
+                            let status = request.command().status();
+                            let id = request.command().id();
+
+                            if let Some(deadline) = request.deadline()
+                                && Instant::now() > deadline
+                            {
+                                tracing::debug!(target: CONN, sequence_number, ?status, ?id, "Request timed out before sending");
+
+                                // XXX: the client does not receive the ack and will eventually timeout the request and return with an error.
+
+                                // If the future was dropped, the user has no way to know that the request was never sent.
+                                // should we send it to the client anyway, and if not there we send it as an insight?
 
                                 continue 'sink;
-                            }
+                            };
 
                             match Sink::<&Command>::poll_ready(self.as_mut().project().framed, cx) {
                                 Poll::Ready(Ok(())) => {
-                                    let sequence_number = request.command().sequence_number();
-                                    let status = request.command().status();
-                                    let id = request.command().id();
-
                                     tracing::debug!(target: CONN, sequence_number, ?status, ?id, "Writing command");
 
                                     if let Err(err) =
@@ -733,6 +735,7 @@ impl<E: EventChannel, R: Delay + Timeout> NoSpawnConnectionBuilder<E, R> {
 
         let client = Client::new(
             actions,
+            self.builder.request_timeout,
             self.builder.response_timeout,
             self.builder.max_sequence_number,
             self.builder.check_interface_version,

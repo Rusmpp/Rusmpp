@@ -8,7 +8,7 @@ use std::{
         Arc,
         atomic::{AtomicU32, Ordering},
     },
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use futures::TryFutureExt;
@@ -83,6 +83,7 @@ impl Client<Wasm> {
 impl<T: Timeout> Client<T> {
     pub(crate) fn new(
         actions: UnboundedSender<Action>,
+        request_timeout: Option<Duration>,
         response_timeout: Option<Duration>,
         max_sequence_number: u32,
         check_interface_version: bool,
@@ -91,6 +92,7 @@ impl<T: Timeout> Client<T> {
         Self {
             inner: Arc::new(ClientInner::new(
                 actions,
+                request_timeout,
                 response_timeout,
                 max_sequence_number,
                 check_interface_version,
@@ -348,6 +350,7 @@ impl<T: Timeout> Client<T> {
 #[derive(Debug)]
 struct ClientInner<T = Tokio> {
     actions: UnboundedSender<Action>,
+    request_timeout: Option<Duration>,
     response_timeout: Option<Duration>,
     sequence_number: AtomicU32,
     max_sequence_number: u32,
@@ -359,6 +362,7 @@ struct ClientInner<T = Tokio> {
 impl<T: Timeout> ClientInner<T> {
     const fn new(
         actions: UnboundedSender<Action>,
+        request_timeout: Option<Duration>,
         response_timeout: Option<Duration>,
         max_sequence_number: u32,
         check_interface_version: bool,
@@ -366,6 +370,7 @@ impl<T: Timeout> ClientInner<T> {
     ) -> Self {
         Self {
             actions,
+            request_timeout,
             response_timeout,
             sequence_number: AtomicU32::new(crate::INITIAL_CLIENT_SEQUENCE_NUMBER),
             max_sequence_number,
@@ -418,7 +423,8 @@ impl<T: Timeout> ClientInner<T> {
 
         tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Sending request");
 
-        let (request, ack, response) = RegisteredRequest::new(command);
+        let deadline = self.request_timeout.map(|timeout| Instant::now() + timeout);
+        let (request, ack, response) = RegisteredRequest::new(command, deadline);
 
         self.actions
             .send(Action::registered_request(request))
@@ -426,7 +432,13 @@ impl<T: Timeout> ClientInner<T> {
 
         tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Waiting for ack");
 
-        ack.await.map_err(|_| Error::ConnectionClosed)??;
+        match self.request_timeout {
+            None => ack.await.map_err(|_| Error::ConnectionClosed)??,
+            Some(timeout) => T::timeout(timeout, ack)
+                .await
+                .ok_or_else(|| Error::request_timeout(sequence_number, timeout))?
+                .map_err(|_| Error::ConnectionClosed)??,
+        };
 
         Ok(response)
     }
@@ -535,7 +547,13 @@ impl<'a, T: Timeout> UnregisteredRequestBuilder<'a, T> {
 
         tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Sending request");
 
-        let (request, ack) = UnregisteredRequest::new(command);
+        let deadline = self
+            .client
+            .inner
+            .request_timeout
+            .map(|timeout| Instant::now() + timeout);
+
+        let (request, ack) = UnregisteredRequest::new(command, deadline);
 
         self.client
             .inner
@@ -545,8 +563,15 @@ impl<'a, T: Timeout> UnregisteredRequestBuilder<'a, T> {
 
         tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Waiting for ack");
 
-        // No need to timeout here, since we are not waiting for a response from the server.
-        ack.await.map_err(|_| Error::ConnectionClosed)?
+        match self.client.inner.request_timeout {
+            None => ack.await.map_err(|_| Error::ConnectionClosed)?,
+            Some(timeout) => T::timeout(timeout, ack)
+                .await
+                .ok_or_else(|| Error::request_timeout(sequence_number, timeout))?
+                .map_err(|_| Error::ConnectionClosed)?,
+        }
+
+        // No need to timeout for a response here, since we are not waiting for a response from the server.
     }
 
     /// Sends a [`DataSmResp`] command to the server.
