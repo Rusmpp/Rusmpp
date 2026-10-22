@@ -393,12 +393,13 @@ impl<T: Timeout> ClientInner<T> {
 
         // XXX: We start from 1 and increment by 2 to not overlap with the connection's sequence number that starts from 2 and is incremented by 2.
         self.sequence_number
-            .update(Ordering::Relaxed, Ordering::Relaxed, |current| {
-                if current > self.max_sequence_number - crate::SEQUENCE_NUMBER_INCREMENT {
-                    crate::INITIAL_CLIENT_SEQUENCE_NUMBER
-                } else {
-                    current + crate::SEQUENCE_NUMBER_INCREMENT
-                }
+            .update(Ordering::Relaxed, Ordering::Relaxed, |sequence_number| {
+                crate::u32::u32_wrapping_increment(
+                    sequence_number,
+                    crate::SEQUENCE_NUMBER_INCREMENT,
+                    self.max_sequence_number,
+                    crate::INITIAL_CLIENT_SEQUENCE_NUMBER,
+                )
             })
     }
 

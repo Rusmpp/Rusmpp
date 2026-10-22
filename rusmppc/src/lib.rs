@@ -194,7 +194,7 @@ pub mod runtime {
     pub use super::runtime_::{tokio::Tokio, wasm::Wasm};
 }
 
-mod cmp;
+mod u32;
 
 mod assertion;
 
