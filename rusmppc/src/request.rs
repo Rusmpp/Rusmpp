@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use rusmpp::Command;
 use tokio::sync::oneshot;
 
@@ -36,14 +38,11 @@ impl Request {
         }
     }
 
-    /// Checks whether the request is still active, i.e. whether the sender is still waiting for an acknowledgment.
-    ///
-    /// If this function returns `false`, the request must not be sent and it should be ignored.
-    pub fn active(&self) -> bool {
+    pub fn deadline(&self) -> Option<Instant> {
         match self {
-            Request::Registered(request) => request.active(),
-            Request::Unregistered(request) => request.active(),
-            Request::Obligated(_) => true,
+            Request::Registered(request) => request.deadline,
+            Request::Unregistered(request) => request.deadline,
+            Request::Obligated(_) => None,
         }
     }
 }
@@ -58,11 +57,13 @@ pub struct RegisteredRequest {
     /// The background connection can only pass commands from the server with a matching sequence number without any validation.
     /// It's the client's responsibility to handle error commands.
     pub response: oneshot::Sender<Command>,
+    pub deadline: Option<Instant>,
 }
 
 impl RegisteredRequest {
     pub fn new(
         command: Command,
+        deadline: Option<Instant>,
     ) -> (
         Self,
         oneshot::Receiver<Result<(), Error>>,
@@ -76,14 +77,11 @@ impl RegisteredRequest {
                 command,
                 ack,
                 response,
+                deadline,
             },
             ack_rx,
             response_rx,
         )
-    }
-
-    fn active(&self) -> bool {
-        !self.ack.is_closed()
     }
 }
 
@@ -92,17 +90,24 @@ pub struct UnregisteredRequest {
     pub command: Command,
     /// ack result means that the command was sent, or could not be sent.
     pub ack: oneshot::Sender<Result<(), Error>>,
+    pub deadline: Option<Instant>,
 }
 
 impl UnregisteredRequest {
-    pub fn new(command: Command) -> (Self, oneshot::Receiver<Result<(), Error>>) {
+    pub fn new(
+        command: Command,
+        deadline: Option<Instant>,
+    ) -> (Self, oneshot::Receiver<Result<(), Error>>) {
         let (ack, rx) = oneshot::channel();
 
-        (Self { command, ack }, rx)
-    }
-
-    fn active(&self) -> bool {
-        !self.ack.is_closed()
+        (
+            Self {
+                command,
+                ack,
+                deadline,
+            },
+            rx,
+        )
     }
 }
 

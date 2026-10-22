@@ -27,6 +27,8 @@ pub struct ConnectionBuilder<E, R> {
     pub(crate) enquire_link_response_timeout: Duration,
     /// Whether to automatically respond to enquire link requests from the server.
     pub(crate) auto_enquire_link_response: bool,
+    /// Timeout for waiting for a command to be sent to the server.
+    pub(crate) request_timeout: Option<Duration>,
     /// Timeout for waiting for a response from the server.
     pub(crate) response_timeout: Option<Duration>,
     pub(crate) check_interface_version: bool,
@@ -55,6 +57,7 @@ impl DefaultTokioConnectionBuilder {
     /// - `enquire_link_interval`: 30 seconds
     /// - `enquire_link_response_timeout`: 5 seconds
     /// - `auto_enquire_link_response`: true
+    /// - `request_timeout`: None
     /// - `response_timeout`: 5 seconds
     /// - `check_interface_version`: true
     /// - `rustls_config`: default configuration will be used if TLS is enabled. See [`rustls_config`](Self::rustls_config) for more details.
@@ -66,6 +69,7 @@ impl DefaultTokioConnectionBuilder {
             enquire_link_interval: Some(Duration::from_secs(30)),
             enquire_link_response_timeout: Duration::from_secs(5),
             auto_enquire_link_response: true,
+            request_timeout: None,
             response_timeout: Some(Duration::from_secs(5)),
             check_interface_version: true,
             #[cfg(all(feature = "tokio", feature = "rustls"))]
@@ -100,6 +104,7 @@ impl DefaultWasmConnectionBuilder {
     /// - `enquire_link_interval`: 30 seconds
     /// - `enquire_link_response_timeout`: 5 seconds
     /// - `auto_enquire_link_response`: true
+    /// - `request_timeout`: None
     /// - `response_timeout`: 5 seconds
     /// - `check_interface_version`: true
     pub fn new_wasm() -> Self {
@@ -109,6 +114,7 @@ impl DefaultWasmConnectionBuilder {
             enquire_link_interval: Some(Duration::from_secs(30)),
             enquire_link_response_timeout: Duration::from_secs(5),
             auto_enquire_link_response: true,
+            request_timeout: None,
             response_timeout: Some(Duration::from_secs(5)),
             check_interface_version: true,
             #[cfg(all(feature = "tokio", feature = "rustls"))]
@@ -336,6 +342,30 @@ impl<E, R> ConnectionBuilder<E, R> {
         self
     }
 
+    /// Sets the request timeout.
+    ///
+    /// TODO: docs
+    pub fn request_timeout(mut self, request_timeout: Duration) -> Self {
+        self.request_timeout = Some(request_timeout);
+        self
+    }
+
+    /// Disables the request timeout.
+    ///
+    /// TODO: docs
+    pub fn no_request_timeout(mut self) -> Self {
+        self.request_timeout = None;
+        self
+    }
+
+    /// Sets the request timeout.
+    ///
+    /// TODO: docs
+    pub fn with_request_timeout(mut self, request_timeout: Option<Duration>) -> Self {
+        self.request_timeout = request_timeout;
+        self
+    }
+
     /// Sets the response timeout.
     ///
     /// This timeout is used to determine how long the client should wait for a response from the server.
@@ -431,6 +461,7 @@ impl<E, R> ConnectionBuilder<E, R> {
             enquire_link_interval: self.enquire_link_interval,
             enquire_link_response_timeout: self.enquire_link_response_timeout,
             auto_enquire_link_response: self.auto_enquire_link_response,
+            request_timeout: self.request_timeout,
             response_timeout: self.response_timeout,
             check_interface_version: self.check_interface_version,
             #[cfg(all(feature = "tokio", feature = "rustls"))]
@@ -450,6 +481,7 @@ impl<E, R> ConnectionBuilder<E, R> {
             enquire_link_interval: self.enquire_link_interval,
             enquire_link_response_timeout: self.enquire_link_response_timeout,
             auto_enquire_link_response: self.auto_enquire_link_response,
+            request_timeout: self.request_timeout,
             response_timeout: self.response_timeout,
             check_interface_version: self.check_interface_version,
             #[cfg(all(feature = "tokio", feature = "rustls"))]
@@ -642,6 +674,7 @@ impl<E, R> EventsConnectionBuilder<E, R> {
             enquire_link_interval: self.builder.enquire_link_interval,
             enquire_link_response_timeout: self.builder.enquire_link_response_timeout,
             auto_enquire_link_response: self.builder.auto_enquire_link_response,
+            request_timeout: self.builder.request_timeout,
             response_timeout: self.builder.response_timeout,
             check_interface_version: self.builder.check_interface_version,
             #[cfg(all(feature = "tokio", feature = "rustls"))]
@@ -661,6 +694,7 @@ impl<E, R> EventsConnectionBuilder<E, R> {
             enquire_link_interval: self.builder.enquire_link_interval,
             enquire_link_response_timeout: self.builder.enquire_link_response_timeout,
             auto_enquire_link_response: self.builder.auto_enquire_link_response,
+            request_timeout: self.builder.request_timeout,
             response_timeout: self.builder.response_timeout,
             check_interface_version: self.builder.check_interface_version,
             #[cfg(all(feature = "tokio", feature = "rustls"))]
@@ -685,6 +719,7 @@ impl<E, R> ConnectionBuilder<E, R> {
             enquire_link_interval: self.enquire_link_interval,
             enquire_link_response_timeout: self.enquire_link_response_timeout,
             auto_enquire_link_response: self.auto_enquire_link_response,
+            request_timeout: self.request_timeout,
             response_timeout: self.response_timeout,
             check_interface_version: self.check_interface_version,
             #[cfg(all(feature = "tokio", feature = "rustls"))]

@@ -70,6 +70,14 @@ pub enum Error {
         /// The timeout duration.
         timeout: Duration,
     },
+    /// TODO: docs
+    #[error("Request timed out: sequence number: {sequence_number}, timeout: {timeout:?}")]
+    RequestTimeout {
+        /// The sequence number of the request that timed out.
+        sequence_number: u32,
+        /// The timeout duration.
+        timeout: Duration,
+    },
     /// The `SMPP` operation timed out.
     ///
     /// The server did not respond to the request within the specified timeout.
@@ -117,6 +125,13 @@ impl Error {
         Self::UnsupportedInterfaceVersion {
             version,
             supported_version: InterfaceVersion::Smpp5_0,
+        }
+    }
+
+    pub(crate) const fn request_timeout(sequence_number: u32, timeout: Duration) -> Self {
+        Self::RequestTimeout {
+            sequence_number,
+            timeout,
         }
     }
 

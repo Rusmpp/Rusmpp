@@ -7,6 +7,7 @@ use tokio::sync::mpsc::UnboundedSender;
 
 use crate::Action;
 
+// TODO: this must be called `ResponseFutureGuard` instead of `RequestFutureGuard`
 pin_project_lite::pin_project! {
     /// The [`RequestFutureGuard`] is used to wrap a pending request future and remove its corresponding sequence number
     /// from the pending responses if the future got dropped.
