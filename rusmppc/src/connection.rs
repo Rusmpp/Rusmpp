@@ -228,18 +228,10 @@ where
     /// This is done to ensure that commands sent by the connection [`EnquireLink`](Pdu::EnquireLink) are differentiated from the commands sent by the client,
     /// without the use of atomic operations in the connection.
     fn sequence_number_fetch_and_increment(self: Pin<&mut Self>) -> u32 {
-        debug_assert!(
-            self.max_sequence_number >= crate::MIN_SEQUENCE_NUMBER,
-            "max_sequence_number must be at least {}, got {}",
+        crate::assertion::debug_assert_max_sequence_number!(
+            self.max_sequence_number,
             crate::MIN_SEQUENCE_NUMBER,
-            self.max_sequence_number
-        );
-
-        debug_assert!(
-            self.max_sequence_number <= crate::MAX_SEQUENCE_NUMBER,
-            "max_sequence_number must be at most {}, got {}",
-            crate::MAX_SEQUENCE_NUMBER,
-            self.max_sequence_number
+            crate::MAX_SEQUENCE_NUMBER
         );
 
         let sequence_number = self.sequence_number;

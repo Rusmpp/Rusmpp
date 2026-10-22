@@ -377,18 +377,10 @@ impl<T: Timeout> ClientInner<T> {
 
     /// Increments [`Self::sequence_number`] by 2 wrapping around to 1 if it exceeds [`Self::max_sequence_number`], returning the old value.
     fn next_sequence_number(&self) -> u32 {
-        debug_assert!(
-            self.max_sequence_number >= crate::MIN_SEQUENCE_NUMBER,
-            "max_sequence_number must be at least {}, got {}",
+        crate::assertion::debug_assert_max_sequence_number!(
+            self.max_sequence_number,
             crate::MIN_SEQUENCE_NUMBER,
-            self.max_sequence_number
-        );
-
-        debug_assert!(
-            self.max_sequence_number <= crate::MAX_SEQUENCE_NUMBER,
-            "max_sequence_number must be at most {}, got {}",
-            crate::MAX_SEQUENCE_NUMBER,
-            self.max_sequence_number
+            crate::MAX_SEQUENCE_NUMBER
         );
 
         // XXX: We start from 1 and increment by 2 to not overlap with the connection's sequence number that starts from 2 and is incremented by 2.

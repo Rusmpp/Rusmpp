@@ -196,6 +196,8 @@ pub mod runtime {
 
 mod cmp;
 
+mod assertion;
+
 #[cfg(test)]
 mod tests;
 
