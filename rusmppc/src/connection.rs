@@ -236,12 +236,12 @@ where
 
         let sequence_number = self.sequence_number;
 
-        *(self.project().sequence_number) =
-            if sequence_number > self.max_sequence_number - crate::SEQUENCE_NUMBER_INCREMENT {
-                crate::INITIAL_CONNECTION_SEQUENCE_NUMBER
-            } else {
-                sequence_number + crate::SEQUENCE_NUMBER_INCREMENT
-            };
+        *(self.project().sequence_number) = crate::u32::u32_wrapping_increment(
+            sequence_number,
+            crate::SEQUENCE_NUMBER_INCREMENT,
+            self.max_sequence_number,
+            crate::INITIAL_CONNECTION_SEQUENCE_NUMBER,
+        );
 
         sequence_number
     }
