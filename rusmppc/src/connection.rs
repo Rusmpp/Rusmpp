@@ -491,6 +491,17 @@ where
 
                     match self.as_mut().requests_pop_front() {
                         Some(request) => {
+                            if !request.active() {
+                                tracing::debug!(target: CONN,
+                                    sequence_number=request.command().sequence_number(),
+                                    status=?request.command().status(),
+                                    id=?request.command().id(),
+                                    "Request not active, ignoring"
+                                );
+
+                                continue 'sink;
+                            }
+
                             match Sink::<&Command>::poll_ready(self.as_mut().project().framed, cx) {
                                 Poll::Ready(Ok(())) => {
                                     let sequence_number = request.command().sequence_number();

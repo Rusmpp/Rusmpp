@@ -35,6 +35,17 @@ impl Request {
             Request::Obligated(_) => Ok(()),
         }
     }
+
+    /// Checks whether the request is still active, i.e. whether the sender is still waiting for an acknowledgment.
+    ///
+    /// If this function returns `false`, the request must not be sent and it should be ignored.
+    pub fn active(&self) -> bool {
+        match self {
+            Request::Registered(request) => request.active(),
+            Request::Unregistered(request) => request.active(),
+            Request::Obligated(_) => true,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -70,6 +81,10 @@ impl RegisteredRequest {
             response_rx,
         )
     }
+
+    fn active(&self) -> bool {
+        !self.ack.is_closed()
+    }
 }
 
 #[derive(Debug)]
@@ -84,6 +99,10 @@ impl UnregisteredRequest {
         let (ack, rx) = oneshot::channel();
 
         (Self { command, ack }, rx)
+    }
+
+    fn active(&self) -> bool {
+        !self.ack.is_closed()
     }
 }
 
