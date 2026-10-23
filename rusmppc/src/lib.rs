@@ -137,6 +137,8 @@ pub(crate) use action::Action;
 
 mod connection;
 
+mod connection2;
+
 mod builder_;
 pub use builder_::{
     ConnectionBuilder, DefaultTokioConnectionBuilder, DefaultWasmConnectionBuilder,
@@ -197,6 +199,9 @@ pub mod runtime {
 mod u32;
 
 mod assertion;
+
+mod sequence;
+use sequence::SequenceNumber;
 
 #[cfg(test)]
 mod tests;
