@@ -919,8 +919,8 @@ async fn sent_enquire_link_and_received_enquire_link_response_should_be_sent_thr
         .connected(client);
 
     let expected_events = vec![
-        Insight::SentEnquireLink(2),
-        Insight::ReceivedEnquireLinkResp(2),
+        Insight::SentEnquireLink(1),
+        Insight::ReceivedEnquireLinkResp(1),
     ];
 
     let mut collected_events = Vec::new();
