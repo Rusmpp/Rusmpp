@@ -87,3 +87,14 @@ where
         self.project().stream.poll_close(cx)
     }
 }
+
+pub trait FairStreamExt {
+    fn fair(self, polls: usize) -> FairStream<Self>
+    where
+        Self: Sized,
+    {
+        FairStream::new(self, polls)
+    }
+}
+
+impl<T: Stream + ?Sized> FairStreamExt for T {}

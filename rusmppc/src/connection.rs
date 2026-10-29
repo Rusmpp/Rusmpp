@@ -19,7 +19,7 @@ use tokio::sync::{
 use tokio_stream::wrappers::{ReceiverStream, UnboundedReceiverStream};
 
 use crate::{
-    Action, FairStream, SequenceNumber, Timer, UrgentAction, error::Error, event::Insight,
+    Action, FairStreamExt, SequenceNumber, Timer, UrgentAction, error::Error, event::Insight,
     event_::EventChannel, runtime_::Delay,
 };
 
@@ -118,8 +118,8 @@ where
 {
     #[allow(clippy::collapsible_if)]
     pub async fn run(mut self) {
-        let mut actions = pin!(FairStream::new(self.actions, 5));
-        let mut framed = pin!(FairStream::new(self.framed, 5));
+        let mut actions = pin!(self.actions.fair(5));
+        let mut framed = pin!(self.framed.fair(5));
         let mut enquire_link_timer = pin!(self.enquire_link_timer);
         let mut enquire_link_response_timer = pin!(self.enquire_link_response_timer);
 

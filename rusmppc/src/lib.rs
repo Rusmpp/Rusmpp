@@ -163,7 +163,7 @@ mod futures;
 pub(crate) use futures::RequestFutureGuard;
 
 mod streams;
-pub(crate) use streams::FairStream;
+pub(crate) use streams::FairStreamExt;
 
 mod response;
 pub(crate) use response::PendingResponses;
