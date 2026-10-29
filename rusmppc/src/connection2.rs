@@ -27,7 +27,7 @@ const CONNECTION_SMPP: &str = "rusmppc::connection::smpp";
 const CONNECTION_TCP: &str = "rusmppc::connection::tcp";
 const TIMER: &str = "rusmppc::connection::smpp::timer";
 
-struct Connection2<F, E, D: Delay> {
+pub struct Connection2<F, E, D: Delay> {
     sequence_number: SequenceNumber,
     framed: F,
     urgent_actions: UnboundedReceiverStream<UrgentAction>,
@@ -93,30 +93,50 @@ impl<F, E: EventChannel, D: Delay> Connection2<F, E, D> {
             UnboundedReceiverStream::new(events_rx),
         )
     }
+
+    pub fn with_framed<Fr>(self, framed: Fr) -> Connection2<Fr, E, D> {
+        Connection2 {
+            sequence_number: self.sequence_number,
+            framed,
+            urgent_actions: self.urgent_actions,
+            actions: self.actions,
+            events: self.events,
+            responses: self.responses,
+            enquire_link_interval: self.enquire_link_interval,
+            enquire_link_response_timeout: self.enquire_link_response_timeout,
+            enquire_link_timer: self.enquire_link_timer,
+            enquire_link_response_timer: self.enquire_link_response_timer,
+            auto_enquire_link_response: self.auto_enquire_link_response,
+            _watch: self._watch,
+        }
+    }
 }
 
 impl<F, E: EventChannel, D: Delay> Connection2<F, E, D>
 where
-    F: Stream<Item = Result<Command, DecodeError>>
-        + for<'a> Sink<&'a Command, Error = EncodeError>
-        + Unpin,
+    F: Stream<Item = Result<Command, DecodeError>> + for<'a> Sink<&'a Command, Error = EncodeError>,
 {
     #[allow(clippy::collapsible_if)]
-    async fn run(mut self) {
+    pub async fn run(mut self) {
+        let mut framed = pin!(self.framed);
         let mut enquire_link_timer = pin!(self.enquire_link_timer);
         let mut enquire_link_response_timer = pin!(self.enquire_link_response_timer);
 
         loop {
+            tracing::trace!(target: CONNECTION_SMPP, "Polling for events");
+
             match ready(
                 enquire_link_timer.as_mut(),
                 enquire_link_response_timer.as_mut(),
                 &mut self.urgent_actions,
                 &mut self.actions,
-                &mut self.framed,
+                framed.as_mut(),
             )
             .await
             {
                 Ready::EnquireLinkTimer => {
+                    tracing::debug!(target: TIMER, "Enquire link timer fired");
+
                     let sequence_number = self.sequence_number.next();
 
                     let command = Command::builder()
@@ -124,7 +144,7 @@ where
                         .sequence_number(sequence_number)
                         .pdu(Pdu::EnquireLink);
 
-                    if let Err(err) = self.framed.send(&command).await {
+                    if let Err(err) = framed.send(&command).await {
                         let _ = self.events.send_error(Error::from(err));
 
                         break;
@@ -139,11 +159,15 @@ where
                         .as_mut()
                         .activate(self.enquire_link_response_timeout);
 
+                    enquire_link_timer.as_mut().deactivate();
+
                     let _ = self
                         .events
                         .send_insight(Insight::SentEnquireLink(sequence_number));
                 }
                 Ready::EnquireLinkResponseTimer => {
+                    tracing::debug!(target: TIMER, "Enquire link response timer fired");
+
                     let timeout = self.enquire_link_response_timeout;
 
                     let _ = self
@@ -152,7 +176,6 @@ where
 
                     break;
                 }
-
                 Ready::UrgentAction(action) => {
                     let action = match action {
                         Some(action) => action,
@@ -172,6 +195,10 @@ where
                         UrgentAction::Close(close) => {
                             tracing::debug!(target: CONNECTION_SMPP, "Received close request");
 
+                            self.urgent_actions.close();
+
+                            self.actions.close();
+
                             let _ = close.ack.send(());
 
                             break;
@@ -189,7 +216,6 @@ where
                     };
 
                     match action {
-                        Action::Ping => {}
                         Action::Request(request) => {
                             let sequence_number = request.command.sequence_number();
                             let status = request.command.status();
@@ -205,7 +231,7 @@ where
 
                             tracing::debug!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Sending request");
 
-                            match self.framed.send(&request.command).await {
+                            match framed.send(&request.command).await {
                                 Ok(_) => {
                                     tracing::debug!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Sent request");
 
@@ -260,7 +286,7 @@ where
 
                     // reset the enquire link timer since the connection is active
                     if let Some(delay) = self.enquire_link_interval {
-                        enquire_link_timer.as_mut().activate(delay);
+                        enquire_link_timer.as_mut().reactivate(delay);
                     }
 
                     if let CommandId::EnquireLink = command.id()
@@ -275,7 +301,7 @@ where
                             .sequence_number(sequence_number)
                             .pdu(Pdu::EnquireLinkResp);
 
-                        match self.framed.send(&response).await {
+                        match framed.send(&response).await {
                             Ok(_) => {
                                 let _ = self
                                     .events
@@ -311,6 +337,10 @@ where
                                     {
                                         enquire_link_response_timer.as_mut().deactivate();
 
+                                        if let Some(delay) = self.enquire_link_interval {
+                                            enquire_link_timer.as_mut().activate(delay);
+                                        }
+
                                         let _ = self.events.send_insight(
                                             Insight::ReceivedEnquireLinkResp(sequence_number),
                                         );
@@ -331,13 +361,9 @@ where
             };
         }
 
-        self.urgent_actions.close();
-
-        self.actions.close();
-
         tracing::debug!(target: CONNECTION_TCP, "Shutting down stream");
 
-        if let Err(err) = self.framed.close().await {
+        if let Err(err) = framed.close().await {
             tracing::error!(target: CONNECTION_TCP, ?err, "Failed to shutdown stream");
         }
 
@@ -370,12 +396,10 @@ async fn ready<F, U, A, D>(
     mut enquire_link_response_timer: Pin<&mut Timer<D>>,
     urgent_actions: &mut U,
     actions: &mut A,
-    framed: &mut F,
+    mut framed: Pin<&mut F>,
 ) -> Ready
 where
-    F: Stream<Item = Result<Command, DecodeError>>
-        + for<'a> Sink<&'a Command, Error = EncodeError>
-        + Unpin,
+    F: Stream<Item = Result<Command, DecodeError>> + for<'a> Sink<&'a Command, Error = EncodeError>,
     U: Stream<Item = UrgentAction> + Unpin,
     A: Stream<Item = Action> + Unpin,
     D: Delay,

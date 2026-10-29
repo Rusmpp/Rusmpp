@@ -5,7 +5,6 @@
 //! For more in depth tests, see `connection/tests.rs`.
 
 use std::{
-    pin::pin,
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
@@ -30,7 +29,7 @@ use crate::{
     ConnectionBuilder,
     error::Error,
     event::{Event, Insight, InsightEvent},
-    mock::{framed::MockFramed, io::MockIo},
+    mock::io::MockIo,
 };
 
 #[derive(Debug)]
@@ -193,6 +192,7 @@ impl UnbindServer {
 pub fn init_tracing() {
     _ = tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        // .with_env_filter(tracing_subscriber::EnvFilter::new("rusmppc=trace"))
         .with_line_number(true)
         .with_ansi(false)
         .try_init();
@@ -819,6 +819,8 @@ async fn client_sends_enquire_link_connection_should_pass_response_to_client() {
     });
 
     let (client, events) = ConnectionBuilder::new()
+        .events()
+        .insights()
         .enquire_link_interval(Duration::from_millis(10))
         .connected(client);
 
@@ -1110,84 +1112,4 @@ async fn raw_awaiting_a_response_for_an_operation_that_does_not_require_a_respon
     client.close().await.expect("Failed to close connection");
 
     client.closed().await;
-}
-
-#[tokio::test]
-async fn client_sequence_numbers_are_always_odd_and_never_greater_than_max_sequence_number() {
-    init_tracing();
-
-    let (client, _, _) = ConnectionBuilder::new()
-        .max_sequence_number(10)
-        .no_spawn()
-        .connected(tokio::io::duplex(1).0);
-
-    for _ in 0..20 {
-        let sequence_number = client.pub_next_sequence_number();
-
-        assert!(sequence_number % 2 == 1);
-
-        assert!(sequence_number <= 10);
-    }
-}
-
-#[tokio::test]
-async fn client_sequence_numbers_are_always_in_bounds() {
-    init_tracing();
-
-    let (client, _, _) = ConnectionBuilder::new()
-        .max_sequence_number(crate::MIN_SEQUENCE_NUMBER - 1)
-        .no_spawn()
-        .connected(tokio::io::duplex(1).0);
-
-    assert!(client.max_sequence_number() >= crate::MIN_SEQUENCE_NUMBER);
-
-    let (client, _, _) = ConnectionBuilder::new()
-        .max_sequence_number(crate::MAX_SEQUENCE_NUMBER + 1)
-        .no_spawn()
-        .connected(tokio::io::duplex(1).0);
-
-    assert!(client.max_sequence_number() <= crate::MAX_SEQUENCE_NUMBER);
-}
-
-#[tokio::test]
-async fn connection_sequence_numbers_are_always_even_and_never_greater_than_max_sequence_number() {
-    init_tracing();
-
-    let (_, _, connection) = ConnectionBuilder::new()
-        .max_sequence_number(10)
-        .no_spawn()
-        .connection();
-
-    let connection = connection.with_framed(MockFramed::new());
-
-    let mut connection = pin!(connection);
-
-    for _ in 0..20 {
-        let sequence_number = connection
-            .as_mut()
-            .pub_sequence_number_fetch_and_increment();
-
-        assert!(sequence_number % 2 == 0);
-
-        assert!(sequence_number <= 10);
-    }
-}
-
-#[tokio::test]
-async fn connection_sequence_numbers_are_always_in_bounds() {
-    init_tracing();
-
-    let (_, _, connection) = ConnectionBuilder::new()
-        .max_sequence_number(crate::MIN_SEQUENCE_NUMBER - 1)
-        .no_spawn()
-        .connection();
-
-    assert!(connection.max_sequence_number() >= crate::MIN_SEQUENCE_NUMBER);
-
-    let (_, _, connection) = ConnectionBuilder::new()
-        .max_sequence_number(crate::MAX_SEQUENCE_NUMBER + 1)
-        .no_spawn()
-        .connection();
-
-    assert!(connection.max_sequence_number() <= crate::MAX_SEQUENCE_NUMBER);
 }

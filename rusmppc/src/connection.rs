@@ -717,65 +717,65 @@ where
     }
 }
 
-impl<E: EventChannel, R: Delay + Timeout> NoSpawnConnectionBuilder<E, R> {
-    /// Consumes `self` and creates a new [`Client`] along with the connection and event stream.
-    pub(crate) fn connection(
-        self,
-    ) -> (
-        Client<R>,
-        impl Stream<Item = E::Event> + Unpin + 'static,
-        Connection<(), E, R>,
-    ) {
-        let (connection, watch, actions, events) = Connection::<_, E, R>::new(
-            self.builder.max_sequence_number,
-            self.builder.enquire_link_interval,
-            self.builder.enquire_link_response_timeout,
-            self.builder.auto_enquire_link_response,
-        );
+// impl<E: EventChannel, R: Delay + Timeout> NoSpawnConnectionBuilder<E, R> {
+//     /// Consumes `self` and creates a new [`Client`] along with the connection and event stream.
+//     pub(crate) fn connection(
+//         self,
+//     ) -> (
+//         Client<R>,
+//         impl Stream<Item = E::Event> + Unpin + 'static,
+//         Connection<(), E, R>,
+//     ) {
+//         let (connection, watch, actions, events) = Connection::<_, E, R>::new(
+//             self.builder.max_sequence_number,
+//             self.builder.enquire_link_interval,
+//             self.builder.enquire_link_response_timeout,
+//             self.builder.auto_enquire_link_response,
+//         );
 
-        let client = Client::new(
-            actions,
-            self.builder.request_timeout,
-            self.builder.response_timeout,
-            self.builder.max_sequence_number,
-            self.builder.check_interface_version,
-            watch,
-        );
+//         let client = Client::new(
+//             actions,
+//             self.builder.request_timeout,
+//             self.builder.response_timeout,
+//             self.builder.max_sequence_number,
+//             self.builder.check_interface_version,
+//             watch,
+//         );
 
-        (client, events, connection)
-    }
+//         (client, events, connection)
+//     }
 
-    /// Consumes `self` and creates a new [`Client`] along with the fused connection future and event stream (from raw parts).
-    pub(crate) fn fused<F>(
-        self,
-        framed: F,
-    ) -> (
-        Client<R>,
-        impl Stream<Item = E::Event> + Unpin + 'static,
-        impl Future<Output = ()>,
-    )
-    where
-        F: Stream<Item = Result<Command, DecodeError>>
-            + for<'a> Sink<&'a Command, Error = EncodeError>,
-    {
-        let (client, events, connection) = self.connection();
+//     /// Consumes `self` and creates a new [`Client`] along with the fused connection future and event stream (from raw parts).
+//     pub(crate) fn fused<F>(
+//         self,
+//         framed: F,
+//     ) -> (
+//         Client<R>,
+//         impl Stream<Item = E::Event> + Unpin + 'static,
+//         impl Future<Output = ()>,
+//     )
+//     where
+//         F: Stream<Item = Result<Command, DecodeError>>
+//             + for<'a> Sink<&'a Command, Error = EncodeError>,
+//     {
+//         let (client, events, connection) = self.connection();
 
-        (client, events, async move {
-            let mut framed = std::pin::pin!(framed);
+//         (client, events, async move {
+//             let mut framed = std::pin::pin!(framed);
 
-            let connection = connection.with_framed(&mut framed);
+//             let connection = connection.with_framed(&mut framed);
 
-            // See comments on Connection struct to understand why we fuse the connection future.
-            connection.fuse().await;
+//             // See comments on Connection struct to understand why we fuse the connection future.
+//             connection.fuse().await;
 
-            tracing::debug!(target: "rusmppc::connection::tcp", "Shutting down stream");
+//             tracing::debug!(target: "rusmppc::connection::tcp", "Shutting down stream");
 
-            if let Err(err) = framed.close().await {
-                tracing::error!(target: "rusmppc::connection::tcp", ?err, "Failed to shutdown stream");
-            }
-        })
-    }
-}
+//             if let Err(err) = framed.close().await {
+//                 tracing::error!(target: "rusmppc::connection::tcp", ?err, "Failed to shutdown stream");
+//             }
+//         })
+//     }
+// }
 
 #[cfg(test)]
 impl<F, E, D: Delay> Connection<F, E, D> {

@@ -6,10 +6,6 @@ use crate::{CloseRequest, PendingResponses, Request};
 pub enum Action {
     /// A request issued by the [`Client`](crate::Client) to the [`Connection`].
     Request(Request),
-    /// Sent from the [`Client`](crate::Client) to the [`Connection`] to check if the connection is closed or not.
-    ///
-    /// The [`Client`](crate::Client) would fail to send this action through the channel if the connection is closed.
-    Ping,
     /// Retrieves pending responses from the connection.
     PendingResponses(PendingResponses),
 }

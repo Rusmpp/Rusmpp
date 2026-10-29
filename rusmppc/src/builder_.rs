@@ -6,7 +6,8 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::codec::Framed;
 
 use crate::{
-    Client,
+    Client, SequenceNumber,
+    connection2::Connection2,
     event_::{DefaultEventChannel, DiscardEventChannel, EventChannel, InsightEventChannel},
     runtime_::{Delay, Timeout, tokio::Tokio, wasm::Wasm},
 };
@@ -659,7 +660,43 @@ impl<E: EventChannel, R: Delay + Timeout> NoSpawnConnectionBuilder<E, R> {
             CommandCodec::new().with_max_length(self.builder.max_command_length),
         );
 
-        self.fused(framed)
+        let (client, events, connection) = self.connection();
+
+        (client, events, connection.with_framed(framed).run())
+    }
+
+    /// Consumes `self` and creates a new [`Client`] along with the connection and event stream.
+    pub(crate) fn connection(
+        self,
+    ) -> (
+        Client<R>,
+        impl Stream<Item = E::Event> + Unpin + 'static,
+        Connection2<(), E, R>,
+    ) {
+        let sequence_number = SequenceNumber::new(
+            self.builder.min_sequence_number,
+            self.builder.max_sequence_number,
+        );
+
+        let (connection, watch, urgent_actions, actions, events) = Connection2::<(), E, R>::new(
+            sequence_number.clone(),
+            (),
+            self.builder.enquire_link_interval,
+            self.builder.enquire_link_response_timeout,
+            self.builder.auto_enquire_link_response,
+        );
+
+        let client = Client::new(
+            sequence_number,
+            urgent_actions,
+            actions,
+            self.builder.request_timeout,
+            self.builder.response_timeout,
+            self.builder.check_interface_version,
+            watch,
+        );
+
+        (client, events, connection)
     }
 }
 

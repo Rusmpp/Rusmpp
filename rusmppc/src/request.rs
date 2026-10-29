@@ -25,6 +25,7 @@ pub struct Request {
 }
 
 impl Request {
+    #[allow(clippy::type_complexity)]
     pub fn registered(
         command: Command,
     ) -> (

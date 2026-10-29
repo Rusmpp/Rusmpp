@@ -240,7 +240,6 @@ impl<T: Timeout> Client<T> {
     /// Closes the connection.
     ///
     /// This method completes, when the connection has registered the close request.
-    /// The connection will stop reading from the server, stop time keeping, close the requests channel, flush pending requests and terminate.
     ///
     /// After calling this method, clients can no longer send requests to the server.
     pub async fn close(&self) -> Result<(), Error> {
@@ -248,13 +247,6 @@ impl<T: Timeout> Client<T> {
     }
 
     /// Checks if the connection is closed.
-    ///
-    /// # Note
-    ///
-    /// If the connection is not closed, this does not mean that it is active.
-    /// The connection may be in the process of closing.
-    ///
-    /// To check if the connection is active, use [`Client::is_active()`].
     pub fn is_closed(&self) -> bool {
         self.inner.watch.is_closed()
     }
@@ -278,17 +270,8 @@ impl<T: Timeout> Client<T> {
     ///  - [`Client::close()`] was never called.
     ///  - The connection did not encounter an error.
     ///  - The connection can receive requests form the client.
-    ///
-    /// # Note
-    ///
-    /// If the connection is not active, this does not mean that it is closed.
-    /// The connection may be in the process of closing.
-    ///
-    /// To check if the connection is closed, use [`Client::is_closed()`].
     pub fn is_active(&self) -> bool {
-        // If the connection is not active, closing or errored,
-        // it will close the actions channel and stop receiving actions, this call would fail.
-        !self.inner.actions.is_closed()
+        !self.is_closed()
     }
 
     /// Returns a vector of pending responses.
