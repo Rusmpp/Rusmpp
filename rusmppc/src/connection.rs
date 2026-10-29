@@ -19,7 +19,7 @@ use tokio::sync::{
 use tokio_stream::wrappers::{ReceiverStream, UnboundedReceiverStream};
 
 use crate::{
-    Action, SequenceNumber, Timer, UrgentAction, error::Error, event::Insight,
+    Action, FairStream, SequenceNumber, Timer, UrgentAction, error::Error, event::Insight,
     event_::EventChannel, runtime_::Delay,
 };
 
@@ -118,7 +118,8 @@ where
 {
     #[allow(clippy::collapsible_if)]
     pub async fn run(mut self) {
-        let mut framed = pin!(self.framed);
+        let mut actions = pin!(FairStream::new(self.actions, 5));
+        let mut framed = pin!(FairStream::new(self.framed, 5));
         let mut enquire_link_timer = pin!(self.enquire_link_timer);
         let mut enquire_link_response_timer = pin!(self.enquire_link_response_timer);
 
@@ -129,7 +130,7 @@ where
                 enquire_link_timer.as_mut(),
                 enquire_link_response_timer.as_mut(),
                 &mut self.urgent_actions,
-                &mut self.actions,
+                actions.as_mut(),
                 framed.as_mut(),
             )
             .await
@@ -201,7 +202,7 @@ where
 
                             self.urgent_actions.close();
 
-                            self.actions.close();
+                            actions.inner_mut().close();
 
                             let _ = close.ack.send(());
 
@@ -294,6 +295,8 @@ where
 
                     // reset the enquire link timer since the connection is active
                     if let Some(delay) = self.enquire_link_interval {
+                        tracing::trace!(target: TIMER, "Resetting enquire link timer");
+
                         enquire_link_timer.as_mut().reactivate(delay);
                     }
 
@@ -404,7 +407,7 @@ async fn ready<F, U, A, D>(
     mut enquire_link_timer: Pin<&mut Timer<D>>,
     mut enquire_link_response_timer: Pin<&mut Timer<D>>,
     urgent_actions: &mut U,
-    actions: &mut A,
+    mut actions: Pin<&mut A>,
     mut framed: Pin<&mut F>,
 ) -> Ready
 where

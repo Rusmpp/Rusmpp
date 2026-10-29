@@ -162,6 +162,9 @@ pub(crate) use command::CommandExt;
 mod futures;
 pub(crate) use futures::RequestFutureGuard;
 
+mod streams;
+pub(crate) use streams::FairStream;
+
 mod response;
 pub(crate) use response::PendingResponses;
 

@@ -5,6 +5,7 @@
 //! For more in depth tests, see `connection/tests.rs`.
 
 use std::{
+    assert_matches,
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
@@ -192,7 +193,9 @@ impl UnbindServer {
 pub fn init_tracing() {
     _ = tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
-        // .with_env_filter(tracing_subscriber::EnvFilter::new("rusmppc=trace"))
+        // .with_env_filter(tracing_subscriber::EnvFilter::new(
+        //     "rusmppc=trace,rusmppc::client=off",
+        // ))
         .with_line_number(true)
         .with_ansi(false)
         .try_init();
@@ -559,8 +562,6 @@ async fn enquire_link_timeout_busy_concurrent_should_close_connection() {
         .enquire_link_response_timeout(Duration::from_secs(1))
         .connected(client);
 
-    let now = Instant::now();
-
     loop {
         if !client.is_active() {
             break;
@@ -576,13 +577,11 @@ async fn enquire_link_timeout_busy_concurrent_should_close_connection() {
         tokio::time::sleep(Duration::from_nanos(1)).await;
     }
 
-    let _ = events.count().await;
+    let events = events.collect::<Vec<Event>>().await;
 
-    let elapsed = now.elapsed();
-
-    assert!(
-        elapsed.as_secs() == 3,
-        "Enquire link timeout did not occur as expected"
+    assert_matches!(
+        events.last(),
+        Some(Event::Error(Error::EnquireLinkTimeout { .. }))
     );
 }
 
