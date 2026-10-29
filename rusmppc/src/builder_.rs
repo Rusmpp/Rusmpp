@@ -7,7 +7,7 @@ use tokio_util::codec::Framed;
 
 use crate::{
     Client, SequenceNumber,
-    connection2::Connection2,
+    connection::Connection,
     event_::{DefaultEventChannel, DiscardEventChannel, EventChannel, InsightEventChannel},
     runtime_::{Delay, Timeout, tokio::Tokio, wasm::Wasm},
 };
@@ -671,14 +671,14 @@ impl<E: EventChannel, R: Delay + Timeout> NoSpawnConnectionBuilder<E, R> {
     ) -> (
         Client<R>,
         impl Stream<Item = E::Event> + Unpin + 'static,
-        Connection2<(), E, R>,
+        Connection<(), E, R>,
     ) {
         let sequence_number = SequenceNumber::new(
             self.builder.min_sequence_number,
             self.builder.max_sequence_number,
         );
 
-        let (connection, watch, urgent_actions, actions, events) = Connection2::<(), E, R>::new(
+        let (connection, watch, urgent_actions, actions, events) = Connection::<(), E, R>::new(
             sequence_number.clone(),
             (),
             self.builder.enquire_link_interval,

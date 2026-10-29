@@ -117,9 +117,7 @@ const DEFAULT_MAX_SEQUENCE_NUMBER: u32 = 0x7FFFFFFF;
 mod action;
 pub(crate) use action::{Action, UrgentAction};
 
-// mod connection;
-
-mod connection2;
+mod connection;
 
 mod builder_;
 pub use builder_::{
