@@ -135,7 +135,7 @@ where
             .await
             {
                 Ready::EnquireLinkTimer => {
-                    tracing::debug!(target: TIMER, "Enquire link timer fired");
+                    tracing::trace!(target: TIMER, "Enquire link timer fired");
 
                     let sequence_number = self.sequence_number.next();
 
@@ -144,7 +144,11 @@ where
                         .sequence_number(sequence_number)
                         .pdu(Pdu::EnquireLink);
 
+                    tracing::debug!(target: CONNECTION_SMPP, sequence_number, "Sending enquire link");
+
                     if let Err(err) = framed.send(&command).await {
+                        tracing::error!(target: CONNECTION_SMPP, sequence_number, ?err, "Error sending enquire link");
+
                         let _ = self.events.send_error(Error::from(err));
 
                         break;
@@ -166,7 +170,7 @@ where
                         .send_insight(Insight::SentEnquireLink(sequence_number));
                 }
                 Ready::EnquireLinkResponseTimer => {
-                    tracing::debug!(target: TIMER, "Enquire link response timer fired");
+                    tracing::trace!(target: TIMER, "Enquire link response timer fired");
 
                     let timeout = self.enquire_link_response_timeout;
 
@@ -229,22 +233,24 @@ where
                                 continue;
                             }
 
-                            tracing::debug!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Sending request");
+                            tracing::debug!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Sending command");
 
                             match framed.send(&request.command).await {
                                 Ok(_) => {
-                                    tracing::debug!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Sent request");
+                                    tracing::debug!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Sent command");
 
                                     if let Some(response) = request.response {
                                         self.responses
                                             .insert(sequence_number, Response::Client(response));
 
-                                        tracing::debug!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Registered");
+                                        tracing::debug!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Registered response");
                                     }
 
                                     let _ = request.sent.send(Ok(()));
                                 }
                                 Err(err) => {
+                                    tracing::error!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, ?err, "Error sending command");
+
                                     if let Err(Err(err)) = request.sent.send(Err(Error::from(err)))
                                     {
                                         tracing::trace!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Client not waiting");
@@ -267,6 +273,8 @@ where
                     let command = match command {
                         Some(Ok(command)) => command,
                         Some(Err(err)) => {
+                            tracing::error!(target: CONNECTION_SMPP, ?err, "Error reading from stream");
+
                             let _ = self.events.send_error(Error::from(err));
 
                             break;
@@ -301,18 +309,19 @@ where
                             .sequence_number(sequence_number)
                             .pdu(Pdu::EnquireLinkResp);
 
-                        match framed.send(&response).await {
-                            Ok(_) => {
-                                let _ = self
-                                    .events
-                                    .send_insight(Insight::SentEnquireLinkResp(sequence_number));
-                            }
-                            Err(err) => {
-                                let _ = self.events.send_error(Error::from(err));
+                        tracing::debug!(target: CONNECTION_SMPP, sequence_number, "Sending enquire link response");
 
-                                break;
-                            }
+                        if let Err(err) = framed.send(&response).await {
+                            tracing::error!(target: CONNECTION_SMPP, sequence_number, ?err, "Error sending enquire link response");
+
+                            let _ = self.events.send_error(Error::from(err));
+
+                            break;
                         }
+
+                        let _ = self
+                            .events
+                            .send_insight(Insight::SentEnquireLinkResp(sequence_number));
 
                         continue;
                     }
