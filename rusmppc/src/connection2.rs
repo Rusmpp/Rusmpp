@@ -19,9 +19,13 @@ use tokio::sync::{
 use tokio_stream::wrappers::{ReceiverStream, UnboundedReceiverStream};
 
 use crate::{
-    CloseRequest, PendingResponses, SequenceNumber, Timer, error::Error, event_::EventChannel,
-    runtime_::Delay,
+    CloseRequest, PendingResponses, SequenceNumber, Timer, error::Error, event::Insight,
+    event_::EventChannel, runtime_::Delay,
 };
+
+const CONNECTION_SMPP: &str = "rusmppc::connection::smpp";
+const CONNECTION_TCP: &str = "rusmppc::connection::tcp";
+const TIMER: &str = "rusmppc::connection::smpp::timer";
 
 struct Connection2<F, E, D: Delay> {
     sequence_number: SequenceNumber,
@@ -121,6 +125,8 @@ where
                         .pdu(Pdu::EnquireLink);
 
                     if let Err(err) = self.framed.send(&command).await {
+                        let _ = self.events.send_error(Error::from(err));
+
                         break;
                     }
 
@@ -132,21 +138,129 @@ where
                     enquire_link_response_timer
                         .as_mut()
                         .activate(self.enquire_link_response_timeout);
+
+                    let _ = self
+                        .events
+                        .send_insight(Insight::SentEnquireLink(sequence_number));
                 }
                 Ready::EnquireLinkResponseTimer => {
-                    // the response to our enquire link has not been received in time, so we can close the connection
+                    let timeout = self.enquire_link_response_timeout;
+
+                    let _ = self
+                        .events
+                        .send_error(Error::EnquireLinkTimeout { timeout });
+
                     break;
+                }
+
+                Ready::UrgentAction(action) => {
+                    let action = match action {
+                        Some(action) => action,
+                        None => {
+                            tracing::debug!(target: CONNECTION_SMPP, "Urgent action channel closed");
+
+                            break;
+                        }
+                    };
+
+                    match action {
+                        UrgentAction::RemoveResponse(sequence_number) => {
+                            tracing::debug!(target: CONNECTION_SMPP, sequence_number, "Received remove response");
+
+                            self.responses.remove(&sequence_number);
+                        }
+                        UrgentAction::Close(close) => {
+                            tracing::debug!(target: CONNECTION_SMPP, "Received close request");
+
+                            self.urgent_actions.close();
+
+                            self.actions.close();
+
+                            let _ = close.ack.send(());
+
+                            break;
+                        }
+                    }
+                }
+                Ready::Action(action) => {
+                    let action = match action {
+                        Some(action) => action,
+                        None => {
+                            tracing::debug!(target: CONNECTION_SMPP, "Action channel closed");
+
+                            break;
+                        }
+                    };
+
+                    match action {
+                        Action::Ping => {}
+                        Action::Request(request) => {
+                            let sequence_number = request.command.sequence_number();
+                            let status = request.command.status();
+                            let id = request.command.id();
+
+                            tracing::debug!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Received request");
+
+                            if request.start_send.send(()).is_err() {
+                                tracing::debug!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Request was dropped. Ignoring request");
+
+                                continue;
+                            }
+
+                            tracing::debug!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Sending request");
+
+                            match self.framed.send(&request.command).await {
+                                Ok(_) => {
+                                    tracing::debug!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Sent request");
+
+                                    if let Some(response) = request.response {
+                                        self.responses
+                                            .insert(sequence_number, Response::Client(response));
+
+                                        tracing::debug!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Registered");
+                                    }
+
+                                    let _ = request.sent.send(Ok(()));
+                                }
+                                Err(err) => {
+                                    if let Err(Err(err)) = request.sent.send(Err(Error::from(err)))
+                                    {
+                                        tracing::trace!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Client not waiting");
+
+                                        let _ = self.events.send_error(err);
+                                    }
+
+                                    break;
+                                }
+                            }
+                        }
+                        Action::PendingResponses(responses) => {
+                            let pending = self.responses.keys().copied().collect();
+
+                            let _ = responses.ack.send(Ok(pending));
+                        }
+                    }
                 }
                 Ready::Framed(command) => {
                     let command = match command {
                         Some(Ok(command)) => command,
                         Some(Err(err)) => {
+                            let _ = self.events.send_error(Error::from(err));
+
                             break;
                         }
                         None => {
+                            let _ = self.events.send_error(Error::UnexpectedEndOfStream);
+
                             break;
                         }
                     };
+
+                    let sequence_number = command.sequence_number();
+                    let status = command.status();
+                    let id = command.id();
+
+                    tracing::debug!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Received command");
 
                     // reset the enquire link timer since the connection is active
                     if let Some(delay) = self.enquire_link_interval {
@@ -156,110 +270,78 @@ where
                     if let CommandId::EnquireLink = command.id()
                         && self.auto_enquire_link_response
                     {
+                        let _ = self
+                            .events
+                            .send_insight(Insight::ReceivedEnquireLink(sequence_number));
+
                         let response = Command::builder()
                             .status(CommandStatus::EsmeRok)
-                            .sequence_number(command.sequence_number())
+                            .sequence_number(sequence_number)
                             .pdu(Pdu::EnquireLinkResp);
 
-                        if let Err(err) = self.framed.send(&response).await {
-                            break;
+                        match self.framed.send(&response).await {
+                            Ok(_) => {
+                                let _ = self
+                                    .events
+                                    .send_insight(Insight::SentEnquireLinkResp(sequence_number));
+                            }
+                            Err(err) => {
+                                let _ = self.events.send_error(Error::from(err));
+
+                                break;
+                            }
                         }
 
                         continue;
                     }
 
-                    if command.id().is_response()
-                        && let Some(response) = self.responses.remove(&command.sequence_number)
-                    {
-                        match response {
-                            Response::Client(sender) => {
-                                let _ = sender.send(command);
-                                // send through events if fails
+                    if id.is_response() {
+                        tracing::trace!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Command is a response");
 
-                                continue;
-                            }
-                            Response::Connection(ConnectionCommandId::EnquireLink) => {
-                                if let CommandId::EnquireLinkResp = command.id()
-                                    && let CommandStatus::EsmeRok = command.status()
-                                {
-                                    enquire_link_response_timer.as_mut().deactivate();
+                        if let Some(response) = self.responses.remove(&sequence_number) {
+                            tracing::trace!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Found matching response");
+
+                            match response {
+                                Response::Client(sender) => {
+                                    if let Err(command) = sender.send(command) {
+                                        tracing::trace!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Client not waiting");
+
+                                        let _ = self.events.send_incoming(command);
+                                    }
                                 }
+                                Response::Connection(ConnectionCommandId::EnquireLink) => {
+                                    if let CommandId::EnquireLinkResp = id
+                                        && let CommandStatus::EsmeRok = status
+                                    {
+                                        enquire_link_response_timer.as_mut().deactivate();
 
-                                continue;
+                                        let _ = self.events.send_insight(
+                                            Insight::ReceivedEnquireLinkResp(sequence_number),
+                                        );
+                                    }
+                                }
                             }
+                        } else {
+                            tracing::trace!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "No matching response found");
+
+                            let _ = self.events.send_incoming(command);
                         }
-                    }
+                    } else {
+                        tracing::trace!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Command is a request");
 
-                    // maybe a response without a matching request, or a request from the server
-                    let _ = self.events.send_incoming(command);
-                }
-                Ready::UrgentAction(action) => {
-                    let action = match action {
-                        Some(action) => action,
-                        None => {
-                            break;
-                        }
-                    };
-
-                    match action {
-                        UrgentAction::RemoveResponse(number) => {
-                            self.responses.remove(&number);
-                        }
-                    }
-                }
-                Ready::Action(action) => {
-                    let action = match action {
-                        Some(action) => action,
-                        None => {
-                            break;
-                        }
-                    };
-
-                    match action {
-                        Action::Ping => {}
-                        Action::Request(request) => {
-                            if request.start_send.send(()).is_err() {
-                                // the request has been dropped, so we can ignore it
-                                continue;
-                            }
-
-                            if let Err(err) = self.framed.send(&request.command).await {
-                                break;
-                            }
-
-                            if let Some(response) = request.response {
-                                self.responses.insert(
-                                    request.command.sequence_number,
-                                    Response::Client(response),
-                                );
-                            }
-
-                            let _ = request.sent.send(Ok(()));
-                        }
-                        Action::Close(close) => {
-                            self.urgent_actions.close();
-
-                            self.actions.close();
-
-                            let _ = close.ack.send(());
-
-                            break;
-                        }
-                        Action::PendingResponses(responses) => {
-                            let pending = self.responses.keys().copied().collect();
-
-                            let _ = responses.ack.send(Ok(pending));
-                        }
+                        let _ = self.events.send_incoming(command);
                     }
                 }
             };
         }
 
-        tracing::debug!(target: "rusmppc::connection::tcp", "Shutting down stream");
+        tracing::debug!(target: CONNECTION_TCP, "Shutting down stream");
 
         if let Err(err) = self.framed.close().await {
-            tracing::error!(target: "rusmppc::connection::tcp", ?err, "Failed to shutdown stream");
+            tracing::error!(target: CONNECTION_TCP, ?err, "Failed to shutdown stream");
         }
+
+        tracing::debug!(target: CONNECTION_SMPP, "Connection closed");
     }
 }
 
@@ -277,8 +359,6 @@ enum Ready {
 pub enum Action {
     /// A request issued by the [`Client`](crate::Client) to the [`Connection`].
     Request(Request),
-    /// After receiving the [`CloseRequest`] the [`Connection`] will terminate immediately.
-    Close(CloseRequest),
     /// Sent from the [`Client`](crate::Client) to the [`Connection`] to check if the connection is closed or not.
     ///
     /// The [`Client`](crate::Client) would fail to send this action through the channel if the connection is closed.
@@ -294,6 +374,8 @@ pub enum UrgentAction {
     ///
     /// See [`RequestFutureGuard`](crate::futures::RequestFutureGuard).
     RemoveResponse(u32),
+    /// After receiving the [`CloseRequest`] the [`Connection`] will close its channels and shutdown the connection and terminate.
+    Close(CloseRequest),
 }
 
 /// A request issued by the [`Client`](crate::Client) to the [`Connection`].
