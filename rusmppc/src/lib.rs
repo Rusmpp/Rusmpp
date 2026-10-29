@@ -102,38 +102,20 @@
 #![deny(missing_debug_implementations)]
 #![deny(missing_docs)]
 
-/// The initial sequence number of [`Client`].
+/// The default minimum sequence number.
 ///
-/// This value is incremented by [`SEQUENCE_NUMBER_INCREMENT`] wrapping back to [`INITIAL_CLIENT_SEQUENCE_NUMBER`] if it exceeds [`MAX_SEQUENCE_NUMBER`].
-///
-/// The [`Client`]'s sequence number is therefore always `odd`.
-const INITIAL_CLIENT_SEQUENCE_NUMBER: u32 = 1;
+/// See [`4.7.24 sequence_number`](https://smpp.org/SMPP_v5.pdf)
+const DEFAULT_MIN_SEQUENCE_NUMBER: u32 = 1;
 
-/// The initial sequence number of [`Connection`](crate::connection::Connection).
-///
-/// This value is incremented by [`SEQUENCE_NUMBER_INCREMENT`] wrapping back to [`INITIAL_CLIENT_SEQUENCE_NUMBER`] if it exceeds [`MAX_SEQUENCE_NUMBER`].
-///
-/// The [`Connection`](crate::connection::Connection)'s sequence number is therefore always `even`.
-const INITIAL_CONNECTION_SEQUENCE_NUMBER: u32 = 2;
-
-/// This describes how we increment the sequence numbers in [`Client`] and [`Connection`](crate::connection::Connection).
-const SEQUENCE_NUMBER_INCREMENT: u32 = 2;
-
-/// The minimum sequence number must be at least [`SEQUENCE_NUMBER_INCREMENT`],
-/// because we subtract [`SEQUENCE_NUMBER_INCREMENT`] from [`INITIAL_CLIENT_SEQUENCE_NUMBER`] or [`INITIAL_CONNECTION_SEQUENCE_NUMBER`] and then compare it to [`MAX_SEQUENCE_NUMBER`].
-///
-/// The subtraction must not underflow.
-const MIN_SEQUENCE_NUMBER: u32 = SEQUENCE_NUMBER_INCREMENT;
-
-/// The maximum sequence number.
+/// The default maximum sequence number.
 ///
 /// Sequence numbers must not exceed this value.
 ///
 /// See [`4.7.24 sequence_number`](https://smpp.org/SMPP_v5.pdf)
-const MAX_SEQUENCE_NUMBER: u32 = 0x7FFFFFFF;
+const DEFAULT_MAX_SEQUENCE_NUMBER: u32 = 0x7FFFFFFF;
 
 mod action;
-pub(crate) use action::Action;
+pub(crate) use action::{Action, UrgentAction};
 
 mod connection;
 
@@ -166,7 +148,7 @@ pub mod builder {
 }
 
 mod request;
-pub(crate) use request::{CloseRequest, RegisteredRequest, Request, UnregisteredRequest};
+pub(crate) use request::{CloseRequest, Request};
 
 mod timer;
 pub(crate) use timer::Timer;
@@ -201,7 +183,7 @@ mod u32;
 mod assertion;
 
 mod sequence;
-use sequence::SequenceNumber;
+pub(crate) use sequence::SequenceNumber;
 
 #[cfg(test)]
 mod tests;

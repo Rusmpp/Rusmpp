@@ -2,14 +2,7 @@
 // This warning is triggered on `extract` macro that extracts a specific `Pdu` variant from a generic `Pdu`.
 // The `Ok` variant is the specific `Pdu` variant, while the `Err` variant is the generic `Pdu` that can be large.
 
-use std::{
-    fmt::Debug,
-    sync::{
-        Arc,
-        atomic::{AtomicU32, Ordering},
-    },
-    time::{Duration, Instant},
-};
+use std::{fmt::Debug, sync::Arc, time::Duration};
 
 use futures::TryFutureExt;
 use rusmpp::{
@@ -23,11 +16,14 @@ use rusmpp::{
     },
     values::InterfaceVersion,
 };
-use tokio::sync::{mpsc::UnboundedSender, oneshot, watch};
+use tokio::sync::{
+    mpsc::{Sender, UnboundedSender},
+    oneshot, watch,
+};
 
 use crate::{
     Action, CloseRequest, CommandExt, DefaultTokioConnectionBuilder, DefaultWasmConnectionBuilder,
-    PendingResponses, RegisteredRequest, RequestFutureGuard, UnregisteredRequest,
+    PendingResponses, Request, RequestFutureGuard, SequenceNumber, UrgentAction,
     error::Error,
     runtime_::{Timeout, tokio::Tokio, wasm::Wasm},
 };
@@ -82,19 +78,21 @@ impl Client<Wasm> {
 
 impl<T: Timeout> Client<T> {
     pub(crate) fn new(
-        actions: UnboundedSender<Action>,
+        sequence_number: SequenceNumber,
+        urgent_actions: UnboundedSender<UrgentAction>,
+        actions: Sender<Action>,
         request_timeout: Option<Duration>,
         response_timeout: Option<Duration>,
-        max_sequence_number: u32,
         check_interface_version: bool,
         watch: watch::Sender<()>,
     ) -> Self {
         Self {
             inner: Arc::new(ClientInner::new(
+                sequence_number,
+                urgent_actions,
                 actions,
                 request_timeout,
                 response_timeout,
-                max_sequence_number,
                 check_interface_version,
                 watch,
             )),
@@ -290,7 +288,7 @@ impl<T: Timeout> Client<T> {
     pub fn is_active(&self) -> bool {
         // If the connection is not active, closing or errored,
         // it will close the actions channel and stop receiving actions, this call would fail.
-        self.inner.actions.send(Action::Ping).is_ok()
+        !self.inner.actions.is_closed()
     }
 
     /// Returns a vector of pending responses.
@@ -300,6 +298,7 @@ impl<T: Timeout> Client<T> {
         self.inner
             .actions
             .send(Action::PendingResponses(pending_responses))
+            .await
             .map_err(|_| Error::ConnectionClosed)?;
 
         ack.await.map_err(|_| Error::ConnectionClosed)?
@@ -349,11 +348,11 @@ impl<T: Timeout> Client<T> {
 
 #[derive(Debug)]
 struct ClientInner<T = Tokio> {
-    actions: UnboundedSender<Action>,
+    sequence_number: SequenceNumber,
+    urgent_actions: UnboundedSender<UrgentAction>,
+    actions: Sender<Action>,
     request_timeout: Option<Duration>,
     response_timeout: Option<Duration>,
-    sequence_number: AtomicU32,
-    max_sequence_number: u32,
     check_interface_version: bool,
     watch: watch::Sender<()>,
     _t: std::marker::PhantomData<T>,
@@ -361,19 +360,20 @@ struct ClientInner<T = Tokio> {
 
 impl<T: Timeout> ClientInner<T> {
     const fn new(
-        actions: UnboundedSender<Action>,
+        sequence_number: SequenceNumber,
+        urgent_actions: UnboundedSender<UrgentAction>,
+        actions: Sender<Action>,
         request_timeout: Option<Duration>,
         response_timeout: Option<Duration>,
-        max_sequence_number: u32,
         check_interface_version: bool,
         watch: watch::Sender<()>,
     ) -> Self {
         Self {
+            sequence_number,
+            urgent_actions,
             actions,
             request_timeout,
             response_timeout,
-            sequence_number: AtomicU32::new(crate::INITIAL_CLIENT_SEQUENCE_NUMBER),
-            max_sequence_number,
             check_interface_version,
             watch,
             _t: std::marker::PhantomData,
@@ -411,8 +411,8 @@ impl<T: Timeout> ClientInner<T> {
     async fn close(&self) -> Result<(), Error> {
         let (request, ack) = CloseRequest::new();
 
-        self.actions
-            .send(Action::Close(request))
+        self.urgent_actions
+            .send(UrgentAction::Close(request))
             .map_err(|_| Error::ConnectionClosed)?;
 
         ack.await.map_err(|_| Error::ConnectionClosed)
@@ -431,22 +431,26 @@ impl<T: Timeout> ClientInner<T> {
 
         tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Sending request");
 
-        let deadline = self.request_timeout.map(|timeout| Instant::now() + timeout);
-        let (request, ack, response) = RegisteredRequest::new(command, deadline);
+        let (request, start_send, sent, response) = Request::registered(command);
 
         self.actions
-            .send(Action::registered_request(request))
+            .send(Action::request(request))
+            .await
             .map_err(|_| Error::ConnectionClosed)?;
 
-        tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Waiting for ack");
+        tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Waiting for connection to start sending request");
 
         match self.request_timeout {
-            None => ack.await.map_err(|_| Error::ConnectionClosed)??,
-            Some(timeout) => T::timeout(timeout, ack)
+            None => start_send.await.map_err(|_| Error::ConnectionClosed)?,
+            Some(timeout) => T::timeout(timeout, start_send)
                 .await
                 .ok_or_else(|| Error::request_timeout(sequence_number, timeout))?
-                .map_err(|_| Error::ConnectionClosed)??,
+                .map_err(|_| Error::ConnectionClosed)?,
         };
+
+        tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Waiting for connection to finish sending request");
+
+        sent.await.map_err(|_| Error::ConnectionClosed)??;
 
         Ok(response)
     }
@@ -469,7 +473,9 @@ impl<T: Timeout> ClientInner<T> {
             Some(timeout) => T::timeout(timeout, response)
                 .await
                 .ok_or_else(|| {
-                    self.actions.send(Action::Remove(sequence_number)).ok();
+                    self.urgent_actions
+                        .send(UrgentAction::RemoveResponse(sequence_number))
+                        .ok();
 
                     Error::response_timeout(sequence_number, timeout)
                 })?
@@ -555,31 +561,32 @@ impl<'a, T: Timeout> UnregisteredRequestBuilder<'a, T> {
 
         tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Sending request");
 
-        let deadline = self
-            .client
-            .inner
-            .request_timeout
-            .map(|timeout| Instant::now() + timeout);
-
-        let (request, ack) = UnregisteredRequest::new(command, deadline);
+        let (request, start_send, sent) = Request::unregistered(command);
 
         self.client
             .inner
             .actions
-            .send(Action::unregistered_request(request))
+            .send(Action::request(request))
+            .await
             .map_err(|_| Error::ConnectionClosed)?;
 
-        tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Waiting for ack");
+        tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Waiting for connection to start sending request");
 
         match self.client.inner.request_timeout {
-            None => ack.await.map_err(|_| Error::ConnectionClosed)?,
-            Some(timeout) => T::timeout(timeout, ack)
+            None => start_send.await.map_err(|_| Error::ConnectionClosed)?,
+            Some(timeout) => T::timeout(timeout, start_send)
                 .await
                 .ok_or_else(|| Error::request_timeout(sequence_number, timeout))?
                 .map_err(|_| Error::ConnectionClosed)?,
-        }
+        };
+
+        tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Waiting for connection to finish sending request");
+
+        sent.await.map_err(|_| Error::ConnectionClosed)??;
 
         // No need to timeout for a response here, since we are not waiting for a response from the server.
+
+        Ok(())
     }
 
     /// Sends a [`DataSmResp`] command to the server.
@@ -768,7 +775,7 @@ impl<'a, T: Timeout> RegisteredRequestBuilder<'a, T> {
     }
 
     fn request(&self, pdu: impl Into<Pdu>) -> impl Future<Output = Result<Command, Error>> {
-        let sequence_number = self.client.inner.next_sequence_number();
+        let sequence_number = self.client.inner.sequence_number.next();
 
         let command = Command::builder()
             .status(self.status)
@@ -780,7 +787,7 @@ impl<'a, T: Timeout> RegisteredRequestBuilder<'a, T> {
             .inner
             .send_registered_and_await_response(command, self.response_timeout);
 
-        RequestFutureGuard::new(&self.client.inner.actions, sequence_number, future)
+        RequestFutureGuard::new(&self.client.inner.urgent_actions, sequence_number, future)
     }
 
     async fn request_extract<R>(
@@ -960,7 +967,7 @@ impl<'a, T: Timeout> NoWaitRequestBuilder<'a, T> {
 
     /// Sends a [`Pdu`] to the server without waiting for the response.
     async fn send(&self, pdu: impl Into<Pdu>) -> Result<u32, Error> {
-        let sequence_number = self.client.inner.next_sequence_number();
+        let sequence_number = self.client.inner.sequence_number.next();
 
         self.unregistered_request()
             .unregistered_request(pdu.into(), sequence_number)
@@ -1096,7 +1103,7 @@ impl<'a, T: Timeout> RawRegisteredRequestBuilder<'a, T> {
         pdu: impl Into<Pdu>,
     ) -> impl Future<Output = Result<(u32, impl Future<Output = Result<Command, Error>>), Error>>
     {
-        let sequence_number = self.client.inner.next_sequence_number();
+        let sequence_number = self.client.inner.sequence_number.next();
 
         let command = Command::builder()
             .status(self.status)
@@ -1113,7 +1120,7 @@ impl<'a, T: Timeout> RawRegisteredRequestBuilder<'a, T> {
 
         async move {
             let (sequence_number, response) =
-                RequestFutureGuard::new(&self.client.inner.actions, sequence_number, future)
+                RequestFutureGuard::new(&self.client.inner.urgent_actions, sequence_number, future)
                     .await?;
 
             let future = self
@@ -1130,7 +1137,7 @@ impl<'a, T: Timeout> RawRegisteredRequestBuilder<'a, T> {
 
             Ok((
                 sequence_number,
-                RequestFutureGuard::new(&self.client.inner.actions, sequence_number, future),
+                RequestFutureGuard::new(&self.client.inner.urgent_actions, sequence_number, future),
             ))
         }
     }

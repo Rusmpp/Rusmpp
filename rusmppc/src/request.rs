@@ -1,124 +1,75 @@
-use std::time::Instant;
-
 use rusmpp::Command;
 use tokio::sync::oneshot;
 
 use crate::error::Error;
 
+/// A request issued by the [`Client`](crate::Client) to the [`Connection`].
+///
+/// If the [`Client`](crate::Client) want to wait for a matching response from the server, [`Request::response`] should be set to `Some`.
+///
+/// In this case, the [`Connection`] will store the response in the pending responses map, and will send the response to the [`Client`](crate::Client) when a matching response is received.
 #[derive(Debug)]
-pub enum Request {
-    /// Requests for which we are waiting for a response from the server.
+pub struct Request {
+    /// The command to be sent to the server.
+    pub command: Command,
+    /// The request is being sent to the server.
+    pub start_send: oneshot::Sender<()>,
+    /// The request has been sent to the server.
+    pub sent: oneshot::Sender<Result<(), Error>>,
+    /// Response is a command sent from the server with a sequence number matching this command's sequence number.
     ///
-    /// These requests are stored in the connection's pending requests map.
-    Registered(RegisteredRequest),
-    /// Requests for which we are `not` waiting for a response from the server.
+    /// The [`Connection`] can only pass responses from the server with a matching sequence number without any validation.
     ///
-    /// These requests are `not` stored in the connection's pending requests map.
-    Unregistered(UnregisteredRequest),
-    /// Request issued by the connection itself to send a command to the server.
-    ///
-    /// These requests are `not` stored in the connection's pending requests map and are not acknowledged.
-    Obligated(ObligatedRequest),
+    /// It's the [`Client`](crate::Client)'s responsibility to handle unexpected responses.
+    pub response: Option<oneshot::Sender<Command>>,
 }
 
 impl Request {
-    pub fn command(&self) -> &Command {
-        match self {
-            Request::Registered(request) => &request.command,
-            Request::Unregistered(request) => &request.command,
-            Request::Obligated(request) => &request.command,
-        }
-    }
-
-    pub fn send_ack(self, ack: Result<(), Error>) -> Result<(), Result<(), Error>> {
-        match self {
-            Request::Registered(request) => request.ack.send(ack),
-            Request::Unregistered(request) => request.ack.send(ack),
-            Request::Obligated(_) => Ok(()),
-        }
-    }
-
-    pub fn deadline(&self) -> Option<Instant> {
-        match self {
-            Request::Registered(request) => request.deadline,
-            Request::Unregistered(request) => request.deadline,
-            Request::Obligated(_) => None,
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct RegisteredRequest {
-    pub command: Command,
-    /// ack result means that the command was sent, or could not be sent.
-    pub ack: oneshot::Sender<Result<(), Error>>,
-    /// response is a command sent from the server with a sequence number matching this command's sequence number.
-    ///
-    /// The background connection can only pass commands from the server with a matching sequence number without any validation.
-    /// It's the client's responsibility to handle error commands.
-    pub response: oneshot::Sender<Command>,
-    pub deadline: Option<Instant>,
-}
-
-impl RegisteredRequest {
-    pub fn new(
+    pub fn registered(
         command: Command,
-        deadline: Option<Instant>,
     ) -> (
         Self,
+        oneshot::Receiver<()>,
         oneshot::Receiver<Result<(), Error>>,
         oneshot::Receiver<Command>,
     ) {
-        let (ack, ack_rx) = oneshot::channel();
+        let (start_send, start_send_rx) = oneshot::channel();
+        let (sent, sent_rx) = oneshot::channel();
         let (response, response_rx) = oneshot::channel();
 
         (
             Self {
                 command,
-                ack,
-                response,
-                deadline,
+                start_send,
+                sent,
+                response: Some(response),
             },
-            ack_rx,
+            start_send_rx,
+            sent_rx,
             response_rx,
         )
     }
-}
 
-#[derive(Debug)]
-pub struct UnregisteredRequest {
-    pub command: Command,
-    /// ack result means that the command was sent, or could not be sent.
-    pub ack: oneshot::Sender<Result<(), Error>>,
-    pub deadline: Option<Instant>,
-}
-
-impl UnregisteredRequest {
-    pub fn new(
+    pub fn unregistered(
         command: Command,
-        deadline: Option<Instant>,
-    ) -> (Self, oneshot::Receiver<Result<(), Error>>) {
-        let (ack, rx) = oneshot::channel();
+    ) -> (
+        Self,
+        oneshot::Receiver<()>,
+        oneshot::Receiver<Result<(), Error>>,
+    ) {
+        let (start_send, start_send_rx) = oneshot::channel();
+        let (sent, sent_rx) = oneshot::channel();
 
         (
             Self {
                 command,
-                ack,
-                deadline,
+                start_send,
+                sent,
+                response: None,
             },
-            rx,
+            start_send_rx,
+            sent_rx,
         )
-    }
-}
-
-#[derive(Debug)]
-pub struct ObligatedRequest {
-    pub command: Command,
-}
-
-impl ObligatedRequest {
-    pub const fn new(command: Command) -> Self {
-        Self { command }
     }
 }
 

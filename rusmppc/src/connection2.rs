@@ -19,7 +19,7 @@ use tokio::sync::{
 use tokio_stream::wrappers::{ReceiverStream, UnboundedReceiverStream};
 
 use crate::{
-    CloseRequest, PendingResponses, SequenceNumber, Timer, error::Error, event::Insight,
+    Action, SequenceNumber, Timer, UrgentAction, error::Error, event::Insight,
     event_::EventChannel, runtime_::Delay,
 };
 
@@ -45,7 +45,7 @@ struct Connection2<F, E, D: Delay> {
 
 impl<F, E: EventChannel, D: Delay> Connection2<F, E, D> {
     #[allow(clippy::type_complexity)]
-    fn new(
+    pub fn new(
         sequence_number: SequenceNumber,
         framed: F,
         enquire_link_interval: Option<Duration>,
@@ -171,10 +171,6 @@ where
                         }
                         UrgentAction::Close(close) => {
                             tracing::debug!(target: CONNECTION_SMPP, "Received close request");
-
-                            self.urgent_actions.close();
-
-                            self.actions.close();
 
                             let _ = close.ack.send(());
 
@@ -335,6 +331,10 @@ where
             };
         }
 
+        self.urgent_actions.close();
+
+        self.actions.close();
+
         tracing::debug!(target: CONNECTION_TCP, "Shutting down stream");
 
         if let Err(err) = self.framed.close().await {
@@ -351,52 +351,6 @@ enum Ready {
     UrgentAction(Option<UrgentAction>),
     Action(Option<Action>),
     Framed(Option<Result<Command, DecodeError>>),
-}
-
-/// An [`Action`] is sent from the [`Client`](crate::Client) to the [`Connection`] to perform an action.
-#[allow(clippy::large_enum_variant)]
-#[derive(Debug)]
-pub enum Action {
-    /// A request issued by the [`Client`](crate::Client) to the [`Connection`].
-    Request(Request),
-    /// Sent from the [`Client`](crate::Client) to the [`Connection`] to check if the connection is closed or not.
-    ///
-    /// The [`Client`](crate::Client) would fail to send this action through the channel if the connection is closed.
-    Ping,
-    /// Retrieves pending responses from the connection.
-    PendingResponses(PendingResponses),
-}
-
-/// An [`UrgentAction`] is sent from the [`Client`](crate::Client) to the [`Connection`] through a separate channel to perform an urgent action.
-#[derive(Debug)]
-pub enum UrgentAction {
-    /// Removes a pending response from the [`Connection`]'s pending responses map.
-    ///
-    /// See [`RequestFutureGuard`](crate::futures::RequestFutureGuard).
-    RemoveResponse(u32),
-    /// After receiving the [`CloseRequest`] the [`Connection`] will close its channels and shutdown the connection and terminate.
-    Close(CloseRequest),
-}
-
-/// A request issued by the [`Client`](crate::Client) to the [`Connection`].
-///
-/// If the [`Client`](crate::Client) want to wait for a matching response from the server, [`Request::response`] should be set to `Some`.
-///
-/// In this case, the [`Connection`] will store the response in the pending responses map, and will send the response to the [`Client`](crate::Client) when a matching response is received.
-#[derive(Debug)]
-pub struct Request {
-    /// The command to be sent to the server.
-    command: Command,
-    /// The request is being sent to the server.
-    start_send: oneshot::Sender<()>,
-    /// The request has been sent to the server.
-    sent: oneshot::Sender<Result<(), Error>>,
-    /// Response is a command sent from the server with a sequence number matching this command's sequence number.
-    ///
-    /// The [`Connection`] can only pass responses from the server with a matching sequence number without any validation.
-    ///
-    /// It's the [`Client`](crate::Client)'s responsibility to handle unexpected responses.
-    response: Option<oneshot::Sender<Command>>,
 }
 
 enum Response {

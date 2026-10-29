@@ -5,7 +5,7 @@ use std::{
 
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::Action;
+use crate::UrgentAction;
 
 // TODO: this must be called `ResponseFutureGuard` instead of `RequestFutureGuard`
 pin_project_lite::pin_project! {
@@ -22,7 +22,7 @@ pin_project_lite::pin_project! {
     pub struct RequestFutureGuard<'a, F> {
         done: bool,
         sequence_number: u32,
-        actions: &'a UnboundedSender<Action>,
+        actions: &'a UnboundedSender<UrgentAction>,
         #[pin]
         fut: F,
     }
@@ -33,14 +33,14 @@ pin_project_lite::pin_project! {
 
             if !*this.done {
                 let _ = this.actions
-                    .send(Action::Remove(*this.sequence_number));
+                    .send(UrgentAction::RemoveResponse(*this.sequence_number));
             }
         }
     }
 }
 
 impl<'a, F> RequestFutureGuard<'a, F> {
-    pub fn new(actions: &'a UnboundedSender<Action>, sequence_number: u32, fut: F) -> Self {
+    pub fn new(actions: &'a UnboundedSender<UrgentAction>, sequence_number: u32, fut: F) -> Self {
         Self {
             done: false,
             sequence_number,

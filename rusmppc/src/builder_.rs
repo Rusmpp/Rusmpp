@@ -21,6 +21,7 @@ pub type DefaultWasmConnectionBuilder = ConnectionBuilder<DefaultEventChannel, W
 #[derive(Debug, Clone)]
 pub struct ConnectionBuilder<E, R> {
     pub(crate) max_command_length: usize,
+    pub(crate) min_sequence_number: u32,
     pub(crate) max_sequence_number: u32,
     pub(crate) enquire_link_interval: Option<Duration>,
     /// Timeout for waiting for a an enquire link response from the server.
@@ -53,6 +54,7 @@ impl DefaultTokioConnectionBuilder {
     ///
     /// # Defaults
     /// - `max_command_length`: 4096 bytes
+    /// - `min_sequence_number`: 1
     /// - `max_sequence_number`: 0x7FFFFFFF = 2147483647
     /// - `enquire_link_interval`: 30 seconds
     /// - `enquire_link_response_timeout`: 5 seconds
@@ -65,7 +67,8 @@ impl DefaultTokioConnectionBuilder {
     pub fn new() -> Self {
         Self {
             max_command_length: 4096,
-            max_sequence_number: crate::MAX_SEQUENCE_NUMBER,
+            min_sequence_number: crate::DEFAULT_MIN_SEQUENCE_NUMBER,
+            max_sequence_number: crate::DEFAULT_MAX_SEQUENCE_NUMBER,
             enquire_link_interval: Some(Duration::from_secs(30)),
             enquire_link_response_timeout: Duration::from_secs(5),
             auto_enquire_link_response: true,
@@ -100,6 +103,7 @@ impl DefaultWasmConnectionBuilder {
     ///
     /// # Defaults
     /// - `max_command_length`: 4096 bytes
+    /// - `min_sequence_number`: 1
     /// - `max_sequence_number`: 0x7FFFFFFF = 2147483647
     /// - `enquire_link_interval`: 30 seconds
     /// - `enquire_link_response_timeout`: 5 seconds
@@ -110,7 +114,8 @@ impl DefaultWasmConnectionBuilder {
     pub fn new_wasm() -> Self {
         Self {
             max_command_length: 4096,
-            max_sequence_number: crate::MAX_SEQUENCE_NUMBER,
+            min_sequence_number: crate::DEFAULT_MIN_SEQUENCE_NUMBER,
+            max_sequence_number: crate::DEFAULT_MAX_SEQUENCE_NUMBER,
             enquire_link_interval: Some(Duration::from_secs(30)),
             enquire_link_response_timeout: Duration::from_secs(5),
             auto_enquire_link_response: true,
@@ -264,17 +269,14 @@ impl<E, R> ConnectionBuilder<E, R> {
         self
     }
 
-    /// Sets the maximum sequence number for outgoing commands.
-    ///
-    /// - If the maximum sequence number is less than `2`, it will be set to `2`.
-    /// - If the maximum sequence number is greater than `0x7FFFFFFF = 2147483647`, it will be set to `0x7FFFFFFF = 2147483647`.
-    pub const fn max_sequence_number(mut self, max_sequence_number: u32) -> Self {
-        let max_sequence_number = crate::u32::u32_clamp(
-            max_sequence_number,
-            crate::MIN_SEQUENCE_NUMBER,
-            crate::MAX_SEQUENCE_NUMBER,
-        );
+    /// Sets the minimum sequence number for outgoing commands.
+    pub const fn min_sequence_number(mut self, min_sequence_number: u32) -> Self {
+        self.min_sequence_number = min_sequence_number;
+        self
+    }
 
+    /// Sets the maximum sequence number for outgoing commands.
+    pub const fn max_sequence_number(mut self, max_sequence_number: u32) -> Self {
         self.max_sequence_number = max_sequence_number;
         self
     }
@@ -457,6 +459,7 @@ impl<E, R> ConnectionBuilder<E, R> {
     pub fn tokio(self) -> ConnectionBuilder<E, Tokio> {
         ConnectionBuilder {
             max_command_length: self.max_command_length,
+            min_sequence_number: self.min_sequence_number,
             max_sequence_number: self.max_sequence_number,
             enquire_link_interval: self.enquire_link_interval,
             enquire_link_response_timeout: self.enquire_link_response_timeout,
@@ -477,6 +480,7 @@ impl<E, R> ConnectionBuilder<E, R> {
     pub fn wasm(self) -> ConnectionBuilder<E, Wasm> {
         ConnectionBuilder {
             max_command_length: self.max_command_length,
+            min_sequence_number: self.min_sequence_number,
             max_sequence_number: self.max_sequence_number,
             enquire_link_interval: self.enquire_link_interval,
             enquire_link_response_timeout: self.enquire_link_response_timeout,
@@ -670,6 +674,7 @@ impl<E, R> EventsConnectionBuilder<E, R> {
     pub fn discard(self) -> ConnectionBuilder<DiscardEventChannel, R> {
         ConnectionBuilder {
             max_command_length: self.builder.max_command_length,
+            min_sequence_number: self.builder.min_sequence_number,
             max_sequence_number: self.builder.max_sequence_number,
             enquire_link_interval: self.builder.enquire_link_interval,
             enquire_link_response_timeout: self.builder.enquire_link_response_timeout,
@@ -690,6 +695,7 @@ impl<E, R> EventsConnectionBuilder<E, R> {
     pub fn insights(self) -> ConnectionBuilder<InsightEventChannel, R> {
         ConnectionBuilder {
             max_command_length: self.builder.max_command_length,
+            min_sequence_number: self.builder.min_sequence_number,
             max_sequence_number: self.builder.max_sequence_number,
             enquire_link_interval: self.builder.enquire_link_interval,
             enquire_link_response_timeout: self.builder.enquire_link_response_timeout,
@@ -715,6 +721,7 @@ impl<E, R> ConnectionBuilder<E, R> {
     {
         ConnectionBuilder {
             max_command_length: self.max_command_length,
+            min_sequence_number: self.min_sequence_number,
             max_sequence_number: self.max_sequence_number,
             enquire_link_interval: self.enquire_link_interval,
             enquire_link_response_timeout: self.enquire_link_response_timeout,
