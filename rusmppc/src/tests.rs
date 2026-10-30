@@ -356,92 +356,6 @@ async fn response_timeout_should_remove_pending_response() {
     let _ = events.count().await;
 }
 
-/// The connection is blocked writing its own enquire link (the duplex buffer is smaller than one PDU
-/// and the server is not reading), so the submit sm can not be sent before the request timeout fires.
-///
-/// Once the server starts reading, it should only receive the enquire link and never the submit sm,
-/// since the client dropped the request.
-#[tokio::test]
-async fn request_timeout_should_not_send_request() {
-    init_tracing();
-
-    // Smaller than an enquire link (16 bytes) so the connection gets stuck writing it
-    let (server, client) = tokio::io::duplex(8);
-
-    let server = tokio::spawn(async move {
-        // Do not read anything until the submit sm has timed out
-        tokio::time::sleep(Duration::from_secs(1)).await;
-
-        let mut framed = Framed::new(server, CommandCodec::new());
-
-        let mut received = Vec::new();
-
-        // Never respond, just record what the connection sent
-        while let Some(Ok(command)) = framed.next().await {
-            received.push(command.id());
-        }
-
-        received
-    });
-
-    let (client, events) = ConnectionBuilder::new()
-        .enquire_link_interval(Duration::from_millis(10))
-        // Long enough to not interfere with the test
-        .enquire_link_response_timeout(Duration::from_secs(5))
-        .request_timeout(Duration::from_millis(500))
-        .events()
-        .insights()
-        .connected(client);
-
-    // Let the connection start writing the enquire link and get stuck
-    tokio::time::sleep(Duration::from_millis(100)).await;
-
-    let error = client.submit_sm(SubmitSm::default()).await.unwrap_err();
-
-    assert_matches!(error, Error::RequestTimeout { .. });
-
-    let mut pending_responses = client
-        .pending_responses()
-        .await
-        .expect("Failed to get pending responses");
-
-    // Give the server time to start reading so the connection can flush whatever it still has
-    tokio::time::sleep(Duration::from_secs(1)).await;
-
-    client.close().await.expect("Failed to close connection");
-
-    client.closed().await;
-
-    let events = events.collect::<Vec<_>>().await;
-    let sent_enquire_links = events
-        .into_iter()
-        .filter_map(|event| match event {
-            InsightEvent::Insight(Insight::SentEnquireLink(number)) => Some(number),
-            _ => None,
-        })
-        .collect::<Vec<_>>();
-
-    let received = server.await.expect("Failed to await server");
-
-    // filter out pending response that were sent by the connection itself
-    pending_responses.retain(|&n| !sent_enquire_links.contains(&n));
-
-    assert!(
-        pending_responses.is_empty(),
-        "Dropped request should not have a pending response"
-    );
-
-    assert!(
-        received.contains(&CommandId::EnquireLink),
-        "Server should have received the enquire link"
-    );
-
-    assert!(
-        !received.contains(&CommandId::SubmitSm),
-        "Connection sent the submit sm even though the request timed out"
-    );
-}
-
 #[tokio::test]
 async fn no_wait_request_should_pipe_response_through_events() {
     init_tracing();
@@ -515,29 +429,6 @@ async fn drop_events_should_not_close_connection() {
     client.close().await.expect("Failed to close connection");
 
     client.closed().await;
-}
-
-#[tokio::test]
-async fn request_after_closing_connection_should_fail() {
-    init_tracing();
-
-    let (server, client) = tokio::io::duplex(1024);
-
-    tokio::spawn(async move {
-        Server::new().run(server).await;
-    });
-
-    let (client, events) = ConnectionBuilder::new().connected(client);
-
-    client.close().await.expect("Failed to close connection");
-
-    let error = client.submit_sm(SubmitSm::default()).await.unwrap_err();
-
-    assert!(matches!(error, Error::ConnectionClosed));
-
-    client.closed().await;
-
-    let _ = events.count().await;
 }
 
 #[tokio::test]
@@ -1267,4 +1158,164 @@ async fn raw_awaiting_a_response_for_an_operation_that_does_not_require_a_respon
     client.close().await.expect("Failed to close connection");
 
     client.closed().await;
+}
+
+mod request {
+    use tokio::{io::DuplexStream, task::JoinHandle};
+
+    use crate::{Client, DefaultTokioConnectionBuilder};
+
+    use super::*;
+
+    /// Smaller than an enquire link (16 bytes) so the connection gets stuck writing it.
+    const DUPLEX_BUFFER_SIZE: usize = 8;
+
+    /// How long the server waits before it starts reading.
+    ///
+    /// Must be longer than [`GIVE_UP_AFTER`] so the request is given up on while the connection is still stuck.
+    const SERVER_READ_DELAY: Duration = Duration::from_secs(1);
+
+    /// How long the caller waits for the request before giving up on it (timeout or drop).
+    const GIVE_UP_AFTER: Duration = Duration::from_millis(500);
+
+    /// Base builder shared by the tests.
+    fn builder() -> DefaultTokioConnectionBuilder {
+        ConnectionBuilder::new()
+            .enquire_link_interval(Duration::from_millis(10))
+            // Long enough to not interfere with the test
+            .enquire_link_response_timeout(Duration::from_secs(5))
+    }
+
+    /// Spawns a server that does not read anything for [`SERVER_READ_DELAY`],
+    /// then never responds and just records what the connection sent.
+    fn spawn_recording_server(server: DuplexStream) -> JoinHandle<Vec<CommandId>> {
+        tokio::spawn(async move {
+            tokio::time::sleep(SERVER_READ_DELAY).await;
+
+            let mut framed = Framed::new(server, CommandCodec::new());
+
+            let mut received = Vec::new();
+
+            while let Some(Ok(command)) = framed.next().await {
+                received.push(command.id());
+            }
+
+            received
+        })
+    }
+
+    /// The connection is blocked writing its own enquire link (the duplex buffer is smaller than one PDU
+    /// and the server is not reading), so the submit sm can not be sent before `give_up` gives up on it.
+    ///
+    /// Once the server starts reading, it should only receive the enquire link and never the submit sm,
+    /// and the given up request should not have a pending response.
+    async fn assert_given_up_request_not_sent(
+        builder: DefaultTokioConnectionBuilder,
+        give_up: impl AsyncFnOnce(&Client),
+    ) {
+        init_tracing();
+
+        let (server, client) = tokio::io::duplex(DUPLEX_BUFFER_SIZE);
+
+        let server = spawn_recording_server(server);
+
+        let (client, events) = builder.events().insights().connected(client);
+
+        // Let the connection start writing the enquire link and get stuck
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        give_up(&client).await;
+
+        let mut pending_responses = client
+            .pending_responses()
+            .await
+            .expect("Failed to get pending responses");
+
+        // Give the server time to start reading so the connection can flush whatever it still has
+        tokio::time::sleep(SERVER_READ_DELAY).await;
+
+        client.close().await.expect("Failed to close connection");
+
+        client.closed().await;
+
+        let events = events.collect::<Vec<_>>().await;
+        let sent_enquire_links = events
+            .into_iter()
+            .filter_map(|event| match event {
+                InsightEvent::Insight(Insight::SentEnquireLink(number)) => Some(number),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+
+        let received = server.await.expect("Failed to await server");
+
+        // filter out pending response that were sent by the connection itself
+        pending_responses.retain(|&n| !sent_enquire_links.contains(&n));
+
+        assert!(
+            pending_responses.is_empty(),
+            "Given up request should not have a pending response"
+        );
+
+        assert!(
+            received.contains(&CommandId::EnquireLink),
+            "Server should have received the enquire link"
+        );
+
+        assert!(
+            !received.contains(&CommandId::SubmitSm),
+            "Connection sent the submit sm even though the request was given up on"
+        );
+    }
+
+    /// The request timeout fires before the submit sm can be sent.
+    #[tokio::test]
+    async fn timeout_should_not_send_request() {
+        assert_given_up_request_not_sent(
+            builder().request_timeout(GIVE_UP_AFTER),
+            async |client| {
+                let error = client.submit_sm(SubmitSm::default()).await.unwrap_err();
+
+                assert_matches!(error, Error::RequestTimeout { .. });
+            },
+        )
+        .await;
+    }
+
+    /// The caller drops the request future (via `tokio::select!`) before the submit sm can be sent.
+    #[tokio::test]
+    async fn dropped_should_not_send_request() {
+        assert_given_up_request_not_sent(builder(), async |client| {
+            tokio::select! {
+                result = client.submit_sm(SubmitSm::default()) => {
+                    panic!("Submit sm should not have completed, got: {result:?}");
+                }
+                _ = tokio::time::sleep(GIVE_UP_AFTER) => {}
+            }
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn send_after_closing_connection_should_fail() {
+        init_tracing();
+
+        let (server, client) = tokio::io::duplex(1024);
+
+        tokio::spawn(async move {
+            Server::new().run(server).await;
+        });
+
+        let (client, events) = ConnectionBuilder::new().connected(client);
+
+        client.close().await.expect("Failed to close connection");
+
+        let error = client.submit_sm(SubmitSm::default()).await.unwrap_err();
+
+        assert!(matches!(error, Error::ConnectionClosed));
+
+        client.closed().await;
+
+        let _ = events.count().await;
+    }
 }
