@@ -164,19 +164,16 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
                     println!("{}", decoder.peek());
                 }
 
-                if segment.is_last() {
-                    if let Some(decoder) = state.remove(&segment.reference) {
-                        let decoded = decoder.finish()?;
+                if segment.is_last()
+                    && let Some(decoder) = state.remove(&segment.reference)
+                {
+                    let decoded = decoder.finish()?;
 
-                        println!(
-                            "Decoded multipart message: data coding = {:?}, reference = {}, total_parts = {}, part_number = {}:",
-                            sm.data_coding,
-                            segment.reference,
-                            segment.total_parts,
-                            segment.part_number
-                        );
-                        println!("{decoded}");
-                    }
+                    println!(
+                        "Decoded multipart message: data coding = {:?}, reference = {}, total_parts = {}, part_number = {}:",
+                        sm.data_coding, segment.reference, segment.total_parts, segment.part_number
+                    );
+                    println!("{decoded}");
                 }
             }
             None => {

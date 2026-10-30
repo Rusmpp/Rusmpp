@@ -47,23 +47,23 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
         while let Some(event) = events.next().await {
             tracing::info!(?event, "Event");
 
-            if let Event::Incoming(command) = event {
-                if let Some(Pdu::DeliverSm(deliver_sm)) = command.pdu() {
-                    tracing::info!("Received DeliverSm");
+            if let Event::Incoming(command) = event
+                && let Some(Pdu::DeliverSm(deliver_sm)) = command.pdu()
+            {
+                tracing::info!("Received DeliverSm");
 
-                    let deliver_sm_resp = DeliverSmResp::builder()
-                        .message_id(
-                            deliver_sm
-                                .receipted_message_id()
-                                .cloned()
-                                .unwrap_or(COctetString::empty()),
-                        )
-                        .build();
+                let deliver_sm_resp = DeliverSmResp::builder()
+                    .message_id(
+                        deliver_sm
+                            .receipted_message_id()
+                            .cloned()
+                            .unwrap_or(COctetString::empty()),
+                    )
+                    .build();
 
-                    let _ = client_clone
-                        .deliver_sm_resp(command.sequence_number(), deliver_sm_resp)
-                        .await;
-                }
+                let _ = client_clone
+                    .deliver_sm_resp(command.sequence_number(), deliver_sm_resp)
+                    .await;
             }
         }
 
