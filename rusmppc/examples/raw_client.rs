@@ -11,7 +11,11 @@
 use std::{str::FromStr, time::Duration};
 
 use futures::StreamExt;
-use rusmpp::{CommandStatus, Pdu, pdus::BindTransceiver, types::COctetString};
+use rusmpp::{
+    Command, CommandStatus, Pdu,
+    pdus::{BindTransceiver, SubmitSm, SubmitSmResp},
+    types::COctetString,
+};
 use rusmppc::ConnectionBuilder;
 
 #[tokio::main]
@@ -49,7 +53,14 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
     tracing::info!(?sequence_number, "Sent BindTransceiver successfully");
 
     // Manually await the response.
-    let response = response.await?;
+    let response: Command = response.await?;
+
+    // It is your responsibility to check for the correct response command and handle it appropriately.
+    let Some(Pdu::BindTransceiverResp(_)) = response.pdu() else {
+        tracing::error!(?response, "Unexpected response");
+
+        return Err("Unexpected response".into());
+    };
 
     tracing::info!(?response, "Bound successfully");
 
@@ -61,6 +72,20 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
         .await?;
 
     tracing::info!(?sequence_number, "Sent GenericNack successfully");
+
+    // Or you can use a type safe method that sends a request and returns a future resolving to the type safe response PDU.
+    let (sequence_number, response) = client.raw().submit_sm(SubmitSm::builder().build()).await?;
+
+    tracing::info!(?sequence_number, "Sent SubmitSm successfully");
+
+    // Unlike the `send` method, the type safe methods will check the appropriate response PDU.
+    let response: SubmitSmResp = response.await?;
+
+    tracing::info!(
+        ?sequence_number,
+        ?response,
+        "Received a successful SubmitSmResp response"
+    );
 
     // Wait a little bit to see the incoming events.
 
