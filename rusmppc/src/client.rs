@@ -23,7 +23,7 @@ use tokio::sync::{
 
 use crate::{
     Action, CloseRequest, CommandExt, DefaultTokioConnectionBuilder, DefaultWasmConnectionBuilder,
-    PendingResponses, Request, RequestFutureGuard, SequenceNumber, UrgentAction,
+    PendingResponses, Request, ResponseFutureGuard, SequenceNumber, UrgentAction,
     error::Error,
     runtime_::{Timeout, tokio::Tokio, wasm::Wasm},
 };
@@ -395,7 +395,7 @@ impl<T: Timeout> ClientInner<T> {
     ///
     /// # Note
     ///
-    /// This function does not use the [`RequestFutureGuard`] to remove the pending response on drop.
+    /// This function does not use the [`ResponseFutureGuard`] to remove the pending response on drop.
     /// The caller is responsible for handling that.
     async fn send_registered(&self, command: Command) -> Result<oneshot::Receiver<Command>, Error> {
         let sequence_number = command.sequence_number();
@@ -784,7 +784,7 @@ impl<'a, T: Timeout> RegisteredRequestBuilder<'a, T> {
             .inner
             .send_registered_and_await_response(command, self.response_timeout);
 
-        RequestFutureGuard::new(&self.client.inner.urgent_actions, sequence_number, future)
+        ResponseFutureGuard::new(&self.client.inner.urgent_actions, sequence_number, future)
     }
 
     async fn request_extract<R>(
@@ -1130,9 +1130,12 @@ impl<'a, T: Timeout> RawRegisteredRequestBuilder<'a, T> {
             .and_then(move |response| futures::future::ok((sequence_number, response)));
 
         async move {
-            let (sequence_number, response) =
-                RequestFutureGuard::new(&self.client.inner.urgent_actions, sequence_number, future)
-                    .await?;
+            let (sequence_number, response) = ResponseFutureGuard::new(
+                &self.client.inner.urgent_actions,
+                sequence_number,
+                future,
+            )
+            .await?;
 
             let future = self
                 .client
@@ -1148,7 +1151,11 @@ impl<'a, T: Timeout> RawRegisteredRequestBuilder<'a, T> {
 
             Ok((
                 sequence_number,
-                RequestFutureGuard::new(&self.client.inner.urgent_actions, sequence_number, future),
+                ResponseFutureGuard::new(
+                    &self.client.inner.urgent_actions,
+                    sequence_number,
+                    future,
+                ),
             ))
         }
     }

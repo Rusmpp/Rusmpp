@@ -160,7 +160,7 @@ mod command;
 pub(crate) use command::CommandExt;
 
 mod futures;
-pub(crate) use futures::RequestFutureGuard;
+pub(crate) use futures::ResponseFutureGuard;
 
 mod streams;
 pub(crate) use streams::FairStreamExt;

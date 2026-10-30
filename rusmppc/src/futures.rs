@@ -7,9 +7,8 @@ use tokio::sync::mpsc::UnboundedSender;
 
 use crate::UrgentAction;
 
-// TODO: this must be called `ResponseFutureGuard` instead of `RequestFutureGuard`
 pin_project_lite::pin_project! {
-    /// The [`RequestFutureGuard`] is used to wrap a pending request future and remove its corresponding sequence number
+    /// The [`ResponseFutureGuard`] is used to wrap a pending response future and remove its corresponding sequence number
     /// from the pending responses if the future got dropped.
     ///
     /// Why is removing the pending response so important even though the connection will pipe responses to the event stream anyway
@@ -19,7 +18,7 @@ pin_project_lite::pin_project! {
     /// * Prevent memory leaks. If the client sends a request and then the waiting future is dropped (using [`tokio::select!`]) and the server never responds to the sent request.
     ///     The pending response will stay in the connection's pending responses map and never gets removed.
     /// (response is never removed manually or because the server did not respond: memory leak).
-    pub struct RequestFutureGuard<'a, F> {
+    pub struct ResponseFutureGuard<'a, F> {
         done: bool,
         sequence_number: u32,
         actions: &'a UnboundedSender<UrgentAction>,
@@ -27,7 +26,7 @@ pin_project_lite::pin_project! {
         fut: F,
     }
 
-    impl<F> PinnedDrop for RequestFutureGuard<'_, F> {
+    impl<F> PinnedDrop for ResponseFutureGuard<'_, F> {
         fn drop(this: Pin<&mut Self>) {
             let this = this.project();
 
@@ -39,7 +38,7 @@ pin_project_lite::pin_project! {
     }
 }
 
-impl<'a, F> RequestFutureGuard<'a, F> {
+impl<'a, F> ResponseFutureGuard<'a, F> {
     pub fn new(actions: &'a UnboundedSender<UrgentAction>, sequence_number: u32, fut: F) -> Self {
         Self {
             done: false,
@@ -50,7 +49,7 @@ impl<'a, F> RequestFutureGuard<'a, F> {
     }
 }
 
-impl<'a, F: Future> Future for RequestFutureGuard<'a, F> {
+impl<'a, F: Future> Future for ResponseFutureGuard<'a, F> {
     type Output = F::Output;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
