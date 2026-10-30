@@ -51,19 +51,20 @@ impl<F, E: EventChannel, D: Delay> Connection<F, E, D> {
         enquire_link_interval: Option<Duration>,
         enquire_link_response_timeout: Duration,
         auto_enquire_link_response: bool,
+        events_channel_capacity: usize,
+        actions_channel_capacity: usize,
     ) -> (
         Self,
         watch::Sender<()>,
         UnboundedSender<UrgentAction>,
         Sender<Action>,
-        UnboundedReceiverStream<E::Event>,
+        ReceiverStream<E::Event>,
     ) {
-        // TODO: make this bound
-        let (events_tx, events_rx) = unbounded_channel::<E::Event>();
+        let (events_tx, events_rx) = channel::<E::Event>(events_channel_capacity);
         let events = E::new(events_tx);
 
         let (urgent_actions_tx, urgent_actions_rx) = unbounded_channel::<UrgentAction>();
-        let (actions_tx, actions_rx) = channel::<Action>(100);
+        let (actions_tx, actions_rx) = channel::<Action>(actions_channel_capacity);
         let (watch_tx, watch_rx) = watch::channel(());
 
         let enquire_link_timer = enquire_link_interval
@@ -90,7 +91,7 @@ impl<F, E: EventChannel, D: Delay> Connection<F, E, D> {
             watch_tx,
             urgent_actions_tx,
             actions_tx,
-            UnboundedReceiverStream::new(events_rx),
+            ReceiverStream::new(events_rx),
         )
     }
 
@@ -150,7 +151,7 @@ where
                     if let Err(err) = framed.send(&command).await {
                         tracing::error!(target: CONNECTION_SMPP, sequence_number, ?err, "Error sending enquire link");
 
-                        let _ = self.events.send_error(Error::from(err));
+                        let _ = self.events.send_error(Error::from(err)).await;
 
                         break;
                     }
@@ -168,7 +169,8 @@ where
 
                     let _ = self
                         .events
-                        .send_insight(Insight::SentEnquireLink(sequence_number));
+                        .send_insight(Insight::SentEnquireLink(sequence_number))
+                        .await;
                 }
                 Ready::EnquireLinkResponseTimer => {
                     tracing::trace!(target: TIMER, "Enquire link response timer fired");
@@ -177,7 +179,8 @@ where
 
                     let _ = self
                         .events
-                        .send_error(Error::EnquireLinkTimeout { timeout });
+                        .send_error(Error::EnquireLinkTimeout { timeout })
+                        .await;
 
                     break;
                 }
@@ -256,7 +259,7 @@ where
                                     {
                                         tracing::trace!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Client not waiting");
 
-                                        let _ = self.events.send_error(err);
+                                        let _ = self.events.send_error(err).await;
                                     }
 
                                     break;
@@ -276,12 +279,12 @@ where
                         Some(Err(err)) => {
                             tracing::error!(target: CONNECTION_SMPP, ?err, "Error reading from stream");
 
-                            let _ = self.events.send_error(Error::from(err));
+                            let _ = self.events.send_error(Error::from(err)).await;
 
                             break;
                         }
                         None => {
-                            let _ = self.events.send_error(Error::UnexpectedEndOfStream);
+                            let _ = self.events.send_error(Error::UnexpectedEndOfStream).await;
 
                             break;
                         }
@@ -305,7 +308,8 @@ where
                     {
                         let _ = self
                             .events
-                            .send_insight(Insight::ReceivedEnquireLink(sequence_number));
+                            .send_insight(Insight::ReceivedEnquireLink(sequence_number))
+                            .await;
 
                         let response = Command::builder()
                             .status(CommandStatus::EsmeRok)
@@ -317,14 +321,15 @@ where
                         if let Err(err) = framed.send(&response).await {
                             tracing::error!(target: CONNECTION_SMPP, sequence_number, ?err, "Error sending enquire link response");
 
-                            let _ = self.events.send_error(Error::from(err));
+                            let _ = self.events.send_error(Error::from(err)).await;
 
                             break;
                         }
 
                         let _ = self
                             .events
-                            .send_insight(Insight::SentEnquireLinkResp(sequence_number));
+                            .send_insight(Insight::SentEnquireLinkResp(sequence_number))
+                            .await;
 
                         continue;
                     }
@@ -340,7 +345,7 @@ where
                                     if let Err(command) = sender.send(command) {
                                         tracing::trace!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Client not waiting");
 
-                                        let _ = self.events.send_incoming(command);
+                                        let _ = self.events.send_incoming(command).await;
                                     }
                                 }
                                 Response::Connection(ConnectionCommandId::EnquireLink) => {
@@ -353,21 +358,24 @@ where
                                             enquire_link_timer.as_mut().activate(delay);
                                         }
 
-                                        let _ = self.events.send_insight(
-                                            Insight::ReceivedEnquireLinkResp(sequence_number),
-                                        );
+                                        let _ = self
+                                            .events
+                                            .send_insight(Insight::ReceivedEnquireLinkResp(
+                                                sequence_number,
+                                            ))
+                                            .await;
                                     }
                                 }
                             }
                         } else {
                             tracing::trace!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "No matching response found");
 
-                            let _ = self.events.send_incoming(command);
+                            let _ = self.events.send_incoming(command).await;
                         }
                     } else {
                         tracing::trace!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Command is a request");
 
-                        let _ = self.events.send_incoming(command);
+                        let _ = self.events.send_incoming(command).await;
                     }
                 }
             };
