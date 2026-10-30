@@ -49,7 +49,7 @@ pub trait EventChannel: Send + 'static {
     type Event;
 
     /// Creates a new [`EventChannel`] instance.
-    fn new(sender: tokio::sync::mpsc::Sender<Self::Event>) -> Self
+    fn new(sender: crate::sync::Sender<Self::Event>) -> Self
     where
         Self: Sized;
 
@@ -75,7 +75,7 @@ pub trait EventChannel: Send + 'static {
 /// The default `EventChannel` implementation that sends [`Event`]s through the event stream.
 #[derive(Clone)]
 pub struct DefaultEventChannel {
-    sender: tokio::sync::mpsc::Sender<Event>,
+    sender: crate::sync::Sender<Event>,
 }
 
 impl Debug for DefaultEventChannel {
@@ -87,7 +87,7 @@ impl Debug for DefaultEventChannel {
 impl EventChannel for DefaultEventChannel {
     type Event = Event;
 
-    fn new(sender: tokio::sync::mpsc::Sender<Self::Event>) -> Self {
+    fn new(sender: crate::sync::Sender<Self::Event>) -> Self {
         Self { sender }
     }
 
@@ -111,7 +111,7 @@ impl EventChannel for DefaultEventChannel {
 pub struct DiscardEventChannel {
     // even if we don't use it, we should keep it alive to avoid closing the event stream
     // closing the event stream is associated with the connection being closed/dropped
-    _sender: tokio::sync::mpsc::Sender<()>,
+    _sender: crate::sync::Sender<()>,
 }
 
 impl Debug for DiscardEventChannel {
@@ -123,7 +123,7 @@ impl Debug for DiscardEventChannel {
 impl EventChannel for DiscardEventChannel {
     type Event = ();
 
-    fn new(sender: tokio::sync::mpsc::Sender<Self::Event>) -> Self {
+    fn new(sender: crate::sync::Sender<Self::Event>) -> Self {
         Self { _sender: sender }
     }
 
@@ -143,7 +143,7 @@ impl EventChannel for DiscardEventChannel {
 /// An `EventChannel` implementation that sends [`InsightEvent`]s through the event stream.
 #[derive(Clone)]
 pub struct InsightEventChannel {
-    sender: tokio::sync::mpsc::Sender<InsightEvent>,
+    sender: crate::sync::Sender<InsightEvent>,
 }
 
 impl Debug for InsightEventChannel {
@@ -155,7 +155,7 @@ impl Debug for InsightEventChannel {
 impl EventChannel for InsightEventChannel {
     type Event = InsightEvent;
 
-    fn new(sender: tokio::sync::mpsc::Sender<Self::Event>) -> Self {
+    fn new(sender: crate::sync::Sender<Self::Event>) -> Self {
         Self { sender }
     }
 

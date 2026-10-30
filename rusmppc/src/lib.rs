@@ -186,6 +186,8 @@ mod assertion;
 mod sequence;
 pub(crate) use sequence::SequenceNumber;
 
+pub(crate) mod sync;
+
 #[cfg(test)]
 mod tests;
 

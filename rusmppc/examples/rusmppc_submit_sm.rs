@@ -39,7 +39,12 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
         .channel_capacity(128)
         .events()
         // Set the capacity of the channel used to receive events from the connection task.
+        // The channel will be bounded and will block the connection task if it is full.
+        // Make sure to consume the events from the channel to avoid blocking the connection task.
         .channel_capacity(128)
+        // Remove the capacity limit of the channel used to receive events from the connection task.
+        // The channel will be unbounded and will never block the connection task.
+        .no_channel_capacity()
         // Use the default event channel that sends events through the event stream.
         .default()
         // connect to the SMPP server using plain TCP

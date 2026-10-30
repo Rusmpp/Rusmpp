@@ -35,9 +35,9 @@ pub struct ConnectionBuilder<E, R> {
     pub(crate) response_timeout: Option<Duration>,
     pub(crate) check_interface_version: bool,
     /// Capacity of the channel used to send events to the event stream.
-    pub(crate) events_channel_capacity: usize,
+    pub(crate) events_channel_capacity: Option<usize>,
     /// Capacity of the channel used to send actions to the connection task.
-    pub(crate) actions_channel_capacity: usize,
+    pub(crate) actions_channel_capacity: Option<usize>,
     /// TLS configurations provided by the user. If None, default configurations will be used.
     #[cfg(all(feature = "tokio", feature = "rustls"))]
     rustls_config: Option<rustls::ClientConfig>,
@@ -67,8 +67,8 @@ impl DefaultTokioConnectionBuilder {
     /// - `request_timeout`: None
     /// - `response_timeout`: 5 seconds
     /// - `check_interface_version`: true
-    /// - `events_channel_capacity`: 1024
-    /// - `actions_channel_capacity`: 1024
+    /// - `events_channel_capacity`: Some(1024)
+    /// - `actions_channel_capacity`: Some(1024)
     /// - `rustls_config`: default configuration will be used if TLS is enabled. See [`rustls_config`](Self::rustls_config) for more details.
     /// - `native_tls_connector`: default connector will be used if TLS is enabled. See [`native_tls_connector`](Self::native_tls_connector) for more details.
     pub fn new() -> Self {
@@ -82,8 +82,8 @@ impl DefaultTokioConnectionBuilder {
             request_timeout: None,
             response_timeout: Some(Duration::from_secs(5)),
             check_interface_version: true,
-            events_channel_capacity: 1024,
-            actions_channel_capacity: 1024,
+            events_channel_capacity: Some(1024),
+            actions_channel_capacity: Some(1024),
             #[cfg(all(feature = "tokio", feature = "rustls"))]
             rustls_config: None,
             #[cfg(all(feature = "tokio", feature = "native-tls"))]
@@ -120,8 +120,8 @@ impl DefaultWasmConnectionBuilder {
     /// - `request_timeout`: None
     /// - `response_timeout`: 5 seconds
     /// - `check_interface_version`: true
-    /// - `events_channel_capacity`: 1024
-    /// - `actions_channel_capacity`: 1024
+    /// - `events_channel_capacity`: Some(1024)
+    /// - `actions_channel_capacity`: Some(1024)
     pub fn new_wasm() -> Self {
         Self {
             max_command_length: 4096,
@@ -133,8 +133,8 @@ impl DefaultWasmConnectionBuilder {
             request_timeout: None,
             response_timeout: Some(Duration::from_secs(5)),
             check_interface_version: true,
-            events_channel_capacity: 1024,
-            actions_channel_capacity: 1024,
+            events_channel_capacity: Some(1024),
+            actions_channel_capacity: Some(1024),
             #[cfg(all(feature = "tokio", feature = "rustls"))]
             rustls_config: None,
             #[cfg(all(feature = "tokio", feature = "native-tls"))]
@@ -466,6 +466,30 @@ impl<E, R> ConnectionBuilder<E, R> {
     pub fn channel_capacity(mut self, capacity: usize) -> Self {
         assert!(capacity > 0, "Channel capacity must be greater than 0");
 
+        self.actions_channel_capacity = Some(capacity);
+        self
+    }
+
+    /// Removes the capacity of the channel used to send actions to the connection task.
+    ///
+    /// The channel will be unbounded.
+    pub fn no_channel_capacity(mut self) -> Self {
+        self.actions_channel_capacity = None;
+        self
+    }
+
+    /// Sets the capacity of the channel used to send actions to the connection task.
+    ///
+    /// If set to `None`, the channel will be unbounded.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `capacity` is `Some(0)`.
+    pub fn with_channel_capacity(mut self, capacity: Option<usize>) -> Self {
+        if let Some(capacity) = capacity {
+            assert!(capacity > 0, "Channel capacity must be greater than 0");
+        }
+
         self.actions_channel_capacity = capacity;
         self
     }
@@ -766,6 +790,30 @@ impl<E, R> EventsConnectionBuilder<E, R> {
     /// Panics if `capacity` is 0.
     pub fn channel_capacity(mut self, capacity: usize) -> Self {
         assert!(capacity > 0, "Channel capacity must be greater than 0");
+
+        self.builder.events_channel_capacity = Some(capacity);
+        self
+    }
+
+    /// Removes the capacity of the channel used to send events to the event stream.
+    ///
+    /// The channel will be unbounded.
+    pub fn no_channel_capacity(mut self) -> Self {
+        self.builder.events_channel_capacity = None;
+        self
+    }
+
+    /// Sets the capacity of the channel used to send events to the event stream.
+    ///
+    /// If set to `None`, the channel will be unbounded.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `capacity` is `Some(0)`.
+    pub fn with_channel_capacity(mut self, capacity: Option<usize>) -> Self {
+        if let Some(capacity) = capacity {
+            assert!(capacity > 0, "Channel capacity must be greater than 0");
+        }
 
         self.builder.events_channel_capacity = capacity;
         self

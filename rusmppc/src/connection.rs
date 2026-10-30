@@ -13,10 +13,10 @@ use rusmpp::{
     tokio_codec::{DecodeError, EncodeError},
 };
 use tokio::sync::{
-    mpsc::{Sender, UnboundedSender, channel, unbounded_channel},
+    mpsc::{UnboundedSender, unbounded_channel},
     oneshot, watch,
 };
-use tokio_stream::wrappers::{ReceiverStream, UnboundedReceiverStream};
+use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use crate::{
     Action, FairStreamExt, SequenceNumber, Timer, UrgentAction, error::Error, event::Insight,
@@ -31,7 +31,7 @@ pub struct Connection<F, E, D: Delay> {
     sequence_number: SequenceNumber,
     framed: F,
     urgent_actions: UnboundedReceiverStream<UrgentAction>,
-    actions: ReceiverStream<Action>,
+    actions: crate::sync::ReceiverStream<Action>,
     events: E,
     responses: BTreeMap<u32, Response>,
     enquire_link_interval: Option<Duration>,
@@ -51,20 +51,20 @@ impl<F, E: EventChannel, D: Delay> Connection<F, E, D> {
         enquire_link_interval: Option<Duration>,
         enquire_link_response_timeout: Duration,
         auto_enquire_link_response: bool,
-        events_channel_capacity: usize,
-        actions_channel_capacity: usize,
+        events_channel_capacity: Option<usize>,
+        actions_channel_capacity: Option<usize>,
     ) -> (
         Self,
         watch::Sender<()>,
         UnboundedSender<UrgentAction>,
-        Sender<Action>,
-        ReceiverStream<E::Event>,
+        crate::sync::Sender<Action>,
+        crate::sync::ReceiverStream<E::Event>,
     ) {
-        let (events_tx, events_rx) = channel::<E::Event>(events_channel_capacity);
+        let (events_tx, events_rx) = crate::sync::channel::<E::Event>(events_channel_capacity);
         let events = E::new(events_tx);
 
         let (urgent_actions_tx, urgent_actions_rx) = unbounded_channel::<UrgentAction>();
-        let (actions_tx, actions_rx) = channel::<Action>(actions_channel_capacity);
+        let (actions_tx, actions_rx) = crate::sync::channel::<Action>(actions_channel_capacity);
         let (watch_tx, watch_rx) = watch::channel(());
 
         let enquire_link_timer = enquire_link_interval
@@ -78,7 +78,7 @@ impl<F, E: EventChannel, D: Delay> Connection<F, E, D> {
                 sequence_number,
                 framed,
                 urgent_actions: UnboundedReceiverStream::new(urgent_actions_rx),
-                actions: ReceiverStream::new(actions_rx),
+                actions: actions_rx,
                 events,
                 responses: BTreeMap::new(),
                 enquire_link_interval,
@@ -91,7 +91,7 @@ impl<F, E: EventChannel, D: Delay> Connection<F, E, D> {
             watch_tx,
             urgent_actions_tx,
             actions_tx,
-            ReceiverStream::new(events_rx),
+            events_rx,
         )
     }
 

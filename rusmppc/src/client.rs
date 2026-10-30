@@ -16,10 +16,7 @@ use rusmpp::{
     },
     values::InterfaceVersion,
 };
-use tokio::sync::{
-    mpsc::{Sender, UnboundedSender},
-    oneshot, watch,
-};
+use tokio::sync::{mpsc::UnboundedSender, oneshot, watch};
 
 use crate::{
     Action, CloseRequest, CommandExt, DefaultTokioConnectionBuilder, DefaultWasmConnectionBuilder,
@@ -80,7 +77,7 @@ impl<T: Timeout> Client<T> {
     pub(crate) fn new(
         sequence_number: SequenceNumber,
         urgent_actions: UnboundedSender<UrgentAction>,
-        actions: Sender<Action>,
+        actions: crate::sync::Sender<Action>,
         request_timeout: Option<Duration>,
         response_timeout: Option<Duration>,
         check_interface_version: bool,
@@ -343,7 +340,7 @@ impl<T: Timeout> Client<T> {
 struct ClientInner<T = Tokio> {
     sequence_number: SequenceNumber,
     urgent_actions: UnboundedSender<UrgentAction>,
-    actions: Sender<Action>,
+    actions: crate::sync::Sender<Action>,
     request_timeout: Option<Duration>,
     response_timeout: Option<Duration>,
     check_interface_version: bool,
@@ -355,7 +352,7 @@ impl<T: Timeout> ClientInner<T> {
     const fn new(
         sequence_number: SequenceNumber,
         urgent_actions: UnboundedSender<UrgentAction>,
-        actions: Sender<Action>,
+        actions: crate::sync::Sender<Action>,
         request_timeout: Option<Duration>,
         response_timeout: Option<Duration>,
         check_interface_version: bool,
