@@ -292,6 +292,16 @@ impl<T: Timeout> Client<T> {
         self.unregistered_request().status(status)
     }
 
+    /// Sets the request timeout for the next request.
+    pub fn request_timeout(&'_ self, timeout: Duration) -> RegisteredRequestBuilder<'_, T> {
+        self.registered_request().request_timeout(timeout)
+    }
+
+    /// Disables the request timeout for the next request.
+    pub fn no_request_timeout(&'_ self) -> RegisteredRequestBuilder<'_, T> {
+        self.registered_request().no_request_timeout()
+    }
+
     /// Sets the response timeout for the next request.
     pub fn response_timeout(&'_ self, timeout: Duration) -> RegisteredRequestBuilder<'_, T> {
         self.registered_request().response_timeout(timeout)
@@ -513,6 +523,16 @@ impl<'a, T: Timeout> UnregisteredRequestBuilder<'a, T> {
         self
     }
 
+    /// Sets the request timeout for the next request.
+    pub fn request_timeout(&'_ self, timeout: Duration) -> RegisteredRequestBuilder<'_, T> {
+        self.registered_request().request_timeout(timeout)
+    }
+
+    /// Disables the request timeout for the next request.
+    pub fn no_request_timeout(&'_ self) -> RegisteredRequestBuilder<'_, T> {
+        self.registered_request().no_request_timeout()
+    }
+
     /// Sets the response timeout for the next request.
     pub fn response_timeout(&'_ self, timeout: Duration) -> RegisteredRequestBuilder<'_, T> {
         self.registered_request().response_timeout(timeout)
@@ -713,6 +733,7 @@ impl<'a, T: Timeout> UnregisteredRequestBuilder<'a, T> {
 pub struct RegisteredRequestBuilder<'a, T> {
     client: &'a Client<T>,
     status: CommandStatus,
+    request_timeout: Option<Duration>,
     response_timeout: Option<Duration>,
 }
 
@@ -731,6 +752,7 @@ impl<'a, T: Timeout> RegisteredRequestBuilder<'a, T> {
         Self {
             client,
             status,
+            request_timeout: client.inner.request_timeout,
             response_timeout: client.inner.response_timeout,
         }
     }
@@ -738,6 +760,18 @@ impl<'a, T: Timeout> RegisteredRequestBuilder<'a, T> {
     /// Sets the command status for the next request.
     pub const fn status(mut self, status: CommandStatus) -> Self {
         self.status = status;
+        self
+    }
+
+    /// Sets the request timeout for the next request.
+    pub fn request_timeout(mut self, timeout: Duration) -> Self {
+        self.request_timeout = Some(timeout);
+        self
+    }
+
+    /// Disables the request timeout for the next request.
+    pub fn no_request_timeout(mut self) -> Self {
+        self.request_timeout = None;
         self
     }
 
@@ -1040,6 +1074,7 @@ impl<'a, T: Timeout> NoWaitRequestBuilder<'a, T> {
 pub struct RawRegisteredRequestBuilder<'a, T> {
     client: &'a Client<T>,
     status: CommandStatus,
+    request_timeout: Option<Duration>,
     response_timeout: Option<Duration>,
 }
 
@@ -1048,6 +1083,7 @@ impl<'a, T: Timeout> RawRegisteredRequestBuilder<'a, T> {
         Self {
             client,
             status,
+            request_timeout: client.inner.request_timeout,
             response_timeout: client.inner.response_timeout,
         }
     }
@@ -1059,6 +1095,18 @@ impl<'a, T: Timeout> RawRegisteredRequestBuilder<'a, T> {
     /// Sets the command status for the next request.
     pub const fn status(mut self, status: CommandStatus) -> Self {
         self.status = status;
+        self
+    }
+
+    /// Sets the request timeout for the next request.
+    pub fn request_timeout(mut self, timeout: Duration) -> Self {
+        self.request_timeout = Some(timeout);
+        self
+    }
+
+    /// Disables the request timeout for the next request.
+    pub fn no_request_timeout(mut self) -> Self {
+        self.request_timeout = None;
         self
     }
 
