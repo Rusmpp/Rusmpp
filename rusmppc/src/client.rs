@@ -381,26 +381,6 @@ impl<T: Timeout> ClientInner<T> {
         Ok(())
     }
 
-    /// Increments [`Self::sequence_number`] by 2 wrapping around to 1 if it exceeds [`Self::max_sequence_number`], returning the old value.
-    fn next_sequence_number(&self) -> u32 {
-        crate::assertion::debug_assert_max_sequence_number!(
-            self.max_sequence_number,
-            crate::MIN_SEQUENCE_NUMBER,
-            crate::MAX_SEQUENCE_NUMBER
-        );
-
-        // XXX: We start from 1 and increment by 2 to not overlap with the connection's sequence number that starts from 2 and is incremented by 2.
-        self.sequence_number
-            .update(Ordering::Relaxed, Ordering::Relaxed, |sequence_number| {
-                crate::u32::u32_wrapping_increment(
-                    sequence_number,
-                    crate::SEQUENCE_NUMBER_INCREMENT,
-                    self.max_sequence_number,
-                    crate::INITIAL_CLIENT_SEQUENCE_NUMBER,
-                )
-            })
-    }
-
     async fn close(&self) -> Result<(), Error> {
         let (request, ack) = CloseRequest::new();
 
@@ -1355,16 +1335,5 @@ impl<'a, T: Timeout> RawRegisteredRequestBuilder<'a, T> {
         self,
     ) -> Result<(u32, impl Future<Output = Result<(), Error>>), Error> {
         self.send_extract_unit(Pdu::EnquireLink).await
-    }
-}
-
-#[cfg(test)]
-impl<T: Timeout> Client<T> {
-    pub(crate) fn max_sequence_number(&self) -> u32 {
-        self.inner.max_sequence_number
-    }
-
-    pub(crate) fn pub_next_sequence_number(&self) -> u32 {
-        self.inner.next_sequence_number()
     }
 }
