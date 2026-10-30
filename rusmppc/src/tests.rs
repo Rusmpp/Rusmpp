@@ -202,7 +202,7 @@ pub fn init_tracing() {
 }
 
 #[tokio::test]
-async fn cancel_request_future_should_remove_pending_response() {
+async fn cancel_send_future_should_remove_pending_response() {
     init_tracing();
 
     let (server, client) = tokio::io::duplex(1024);
@@ -250,9 +250,9 @@ async fn cancel_request_future_should_remove_pending_response() {
     let _ = events.count().await;
 }
 
-/// Similar to [`cancel_request_future_should_remove_pending_response`] but this one uses the raw request builder.
+/// Similar to [`cancel_send_future_should_remove_pending_response`] but this one uses the raw request builder.
 #[tokio::test]
-async fn raw_cancel_request_future_should_remove_pending_response() {
+async fn raw_cancel_send_future_should_remove_pending_response() {
     init_tracing();
 
     let (server, client) = tokio::io::duplex(1024);
@@ -306,7 +306,7 @@ async fn raw_cancel_request_future_should_remove_pending_response() {
 }
 
 #[tokio::test]
-async fn request_timeout_should_remove_pending_response() {
+async fn response_timeout_should_remove_pending_response() {
     init_tracing();
 
     let (server, client) = tokio::io::duplex(1024);
@@ -502,6 +502,76 @@ async fn enquire_link_timeout_idle_should_close_connection() {
     assert!(
         elapsed.as_secs() == 3,
         "Enquire link timeout did not occur as expected"
+    );
+}
+
+/// This test relies on [`enquire_link_timeout_idle_should_close_connection`] to be correct.
+#[tokio::test]
+async fn enquire_link_timeout_should_reset_on_incoming_commands() {
+    init_tracing();
+
+    let (server, client) = tokio::io::duplex(1024);
+
+    tokio::spawn(async move {
+        let mut framed = Framed::new(server, CommandCodec::new());
+
+        // Send an incoming command every second, at t = 1, 2, 3, 4
+        for sequence_number in 1..=4 {
+            tokio::time::sleep(Duration::from_secs(1)).await;
+
+            framed
+                .send(
+                    Command::builder()
+                        .status(CommandStatus::EsmeRok)
+                        .sequence_number(sequence_number)
+                        .pdu(AlertNotification::default()),
+                )
+                .await
+                .expect("Failed to send AlertNotification");
+        }
+
+        // keep the connection open
+        tokio::time::sleep(Duration::from_secs(10)).await;
+    });
+
+    let (client, events) = ConnectionBuilder::new()
+        .enquire_link_interval(Duration::from_secs(2))
+        .enquire_link_response_timeout(Duration::from_secs(1))
+        .connected(client);
+
+    let now = Instant::now();
+
+    let events = tokio::spawn(async move { events.collect::<Vec<Event>>().await });
+
+    // Without the reset, the connection would have been closed at t = 3s
+    tokio::time::sleep(Duration::from_millis(3500)).await;
+
+    assert!(
+        client.is_active(),
+        "Connection was closed even though the server kept sending commands"
+    );
+
+    let events = events.await.expect("Failed to collect events");
+
+    let elapsed = now.elapsed();
+
+    let alerts = events
+        .iter()
+        .filter(|event| {
+            matches!(event, Event::Incoming(command) if command.id() == CommandId::AlertNotification)
+        })
+        .count();
+
+    assert_eq!(alerts, 4, "Expected all AlertNotifications to be received");
+
+    assert_matches!(
+        events.last(),
+        Some(Event::Error(Error::EnquireLinkTimeout { .. }))
+    );
+
+    assert!(
+        elapsed.as_secs() == 7,
+        "Enquire link timeout did not occur as expected after the last incoming command"
     );
 }
 
