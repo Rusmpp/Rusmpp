@@ -380,6 +380,8 @@ impl<E, R> ConnectionBuilder<E, R> {
     /// Sets the request timeout.
     ///
     /// This timeout is used to determine how long the client should wait for a request to be sent to the server.
+    ///
+    /// If the timeout fired with [`Error::RequestTimeout`](crate::error::Error::RequestTimeout), the request will be dropped.
     pub fn request_timeout(mut self, request_timeout: Duration) -> Self {
         self.request_timeout = Some(request_timeout);
         self
@@ -762,11 +764,34 @@ impl<E, R> EventsConnectionBuilder<E, R> {
     /// # Panics
     ///
     /// Panics if `capacity` is 0.
-    pub fn capacity(mut self, capacity: usize) -> Self {
+    pub fn channel_capacity(mut self, capacity: usize) -> Self {
         assert!(capacity > 0, "Channel capacity must be greater than 0");
 
         self.builder.events_channel_capacity = capacity;
         self
+    }
+
+    /// Uses the default event channel that sends events through the event stream.
+    pub fn default(self) -> ConnectionBuilder<DefaultEventChannel, R> {
+        ConnectionBuilder {
+            max_command_length: self.builder.max_command_length,
+            min_sequence_number: self.builder.min_sequence_number,
+            max_sequence_number: self.builder.max_sequence_number,
+            enquire_link_interval: self.builder.enquire_link_interval,
+            enquire_link_response_timeout: self.builder.enquire_link_response_timeout,
+            auto_enquire_link_response: self.builder.auto_enquire_link_response,
+            request_timeout: self.builder.request_timeout,
+            response_timeout: self.builder.response_timeout,
+            check_interface_version: self.builder.check_interface_version,
+            events_channel_capacity: self.builder.events_channel_capacity,
+            actions_channel_capacity: self.builder.actions_channel_capacity,
+            #[cfg(all(feature = "tokio", feature = "rustls"))]
+            rustls_config: self.builder.rustls_config,
+            #[cfg(all(feature = "tokio", feature = "native-tls"))]
+            native_tls_connector: self.builder.native_tls_connector,
+            _e: std::marker::PhantomData,
+            _r: std::marker::PhantomData,
+        }
     }
 
     /// Discards all events from the background connection.

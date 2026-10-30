@@ -30,8 +30,18 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
     let (client, mut events) = ConnectionBuilder::new()
         // Every 5 seconds send an enquire link command to the server.
         .enquire_link_interval(Duration::from_secs(5))
+        // Set the request timeout to 2 seconds. If the request is not sent within 2 seconds, consider it a timeout and the request will be dropped.
+        .request_timeout(Duration::from_secs(2))
         // If the server does not respond within 2 seconds, consider it a timeout.
         .response_timeout(Duration::from_secs(2))
+        // Set the capacity of the channel used to send actions to the connection task.
+        // The client will wait for the channel to have capacity before sending a request to the server.
+        .channel_capacity(128)
+        .events()
+        // Set the capacity of the channel used to receive events from the connection task.
+        .channel_capacity(128)
+        // Use the default event channel that sends events through the event stream.
+        .default()
         // connect to the SMPP server using plain TCP
         // or use `smpps://rusmpps.rusmpp.org:2776` for a TLS connection.
         .connect("smpp://rusmpps.rusmpp.org:2775")
@@ -97,9 +107,9 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
 
     tracing::info!(?response, "Got SubmitSmResp");
 
-    // Send a command with a custom timeout.
+    // Send a command with a custom response timeout.
 
-    tracing::info!("Sending SubmitSm with a custom timeout");
+    tracing::info!("Sending SubmitSm with a custom response timeout");
 
     let response = client
         .response_timeout(Duration::from_secs(30))
@@ -108,12 +118,34 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
 
     tracing::info!(?response, "Got SubmitSmResp");
 
-    // Send a command without a timeout.
+    // Send a command without a response timeout.
 
-    tracing::info!("Sending SubmitSm without a timeout");
+    tracing::info!("Sending SubmitSm without a response timeout");
 
     let response = client
         .no_response_timeout()
+        .submit_sm(submit.clone())
+        .await?;
+
+    tracing::info!(?response, "Got SubmitSmResp");
+
+    // Send a command with a custom request timeout.
+
+    tracing::info!("Sending SubmitSm with a custom request timeout");
+
+    let response = client
+        .request_timeout(Duration::from_secs(5))
+        .submit_sm(submit.clone())
+        .await?;
+
+    tracing::info!(?response, "Got SubmitSmResp");
+
+    // Send a command without a request timeout.
+
+    tracing::info!("Sending SubmitSm without a request timeout");
+
+    let response = client
+        .no_request_timeout()
         .submit_sm(submit.clone())
         .await?;
 
