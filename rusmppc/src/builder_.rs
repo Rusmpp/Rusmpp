@@ -271,13 +271,31 @@ impl<E, R> ConnectionBuilder<E, R> {
     }
 
     /// Sets the minimum sequence number for outgoing commands.
-    pub const fn min_sequence_number(mut self, min_sequence_number: u32) -> Self {
+    ///
+    /// # Panics
+    ///
+    /// Panics if `min_sequence_number` is greater than `max_sequence_number`.
+    pub fn min_sequence_number(mut self, min_sequence_number: u32) -> Self {
+        crate::assertion::assert_min_less_or_equal_to!(
+            min_sequence_number,
+            self.max_sequence_number
+        );
+
         self.min_sequence_number = min_sequence_number;
         self
     }
 
     /// Sets the maximum sequence number for outgoing commands.
-    pub const fn max_sequence_number(mut self, max_sequence_number: u32) -> Self {
+    ///
+    /// # Panics
+    ///
+    /// Panics if `max_sequence_number` is less than `min_sequence_number`.
+    pub fn max_sequence_number(mut self, max_sequence_number: u32) -> Self {
+        crate::assertion::assert_min_less_or_equal_to!(
+            self.min_sequence_number,
+            max_sequence_number
+        );
+
         self.max_sequence_number = max_sequence_number;
         self
     }
@@ -285,6 +303,8 @@ impl<E, R> ConnectionBuilder<E, R> {
     /// Sets the enquire link interval.
     ///
     /// Used to determine how often an enquire link command should be sent to the server.
+    ///
+    /// The timer is reset each time a command is read from the server. If the timer expires, an enquire link command is sent to the server.
     pub fn enquire_link_interval(mut self, enquire_link_interval: Duration) -> Self {
         self.enquire_link_interval = Some(enquire_link_interval);
         self
@@ -347,7 +367,7 @@ impl<E, R> ConnectionBuilder<E, R> {
 
     /// Sets the request timeout.
     ///
-    /// TODO: docs
+    /// This timeout is used to determine how long the client should wait for a request to be sent to the server.
     pub fn request_timeout(mut self, request_timeout: Duration) -> Self {
         self.request_timeout = Some(request_timeout);
         self
@@ -355,7 +375,7 @@ impl<E, R> ConnectionBuilder<E, R> {
 
     /// Disables the request timeout.
     ///
-    /// TODO: docs
+    /// When disabled, the client will wait indefinitely for the request to be sent to the server.
     pub fn no_request_timeout(mut self) -> Self {
         self.request_timeout = None;
         self
@@ -363,7 +383,7 @@ impl<E, R> ConnectionBuilder<E, R> {
 
     /// Sets the request timeout.
     ///
-    /// TODO: docs
+    /// If set to `None`, no timeout will be used and the client will wait indefinitely for the request to be sent to the server.
     pub fn with_request_timeout(mut self, request_timeout: Option<Duration>) -> Self {
         self.request_timeout = request_timeout;
         self
