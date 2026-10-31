@@ -36,7 +36,7 @@ pub struct Connection<F, E, D: Delay> {
     urgent_actions: UnboundedReceiverStream<UrgentAction>,
     actions: crate::sync::ReceiverStream<Action>,
     events: E,
-    responses: BTreeMap<u32, Response>,
+    responses: BTreeMap<u32, (Response, CommandId)>,
     enquire_link_interval: Option<Duration>,
     enquire_link_response_timeout: Duration,
     enquire_link_timer: Timer<D>,
@@ -144,7 +144,10 @@ where
 
                     self.responses.insert(
                         sequence_number,
-                        Response::Connection(ConnectionCommandId::EnquireLink),
+                        (
+                            Response::Connection(ConnectionCommandId::EnquireLink),
+                            command.id(),
+                        ),
                     );
 
                     enquire_link_response_timer
@@ -181,7 +184,17 @@ where
                         UrgentAction::RemoveResponse(sequence_number) => {
                             tracing::debug!(target: CONNECTION_SMPP, sequence_number, "Received remove response");
 
-                            self.responses.remove(&sequence_number);
+                            if let Some((_, command_id)) = self.responses.remove(&sequence_number) {
+                                tracing::debug!(target: CONNECTION_SMPP, sequence_number, ?command_id, "Removed response");
+
+                                let _ = self
+                                    .events
+                                    .send_insight(Insight::Cancelled(CancelledEvent::Response {
+                                        sequence_number,
+                                        command_id,
+                                    }))
+                                    .await;
+                            }
                         }
                         UrgentAction::Close(close) => {
                             tracing::debug!(target: CONNECTION_SMPP, "Received close request");
@@ -234,8 +247,10 @@ where
                                     tracing::debug!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Sent command");
 
                                     if let Some(response) = request.response {
-                                        self.responses
-                                            .insert(sequence_number, Response::Client(response));
+                                        self.responses.insert(
+                                            sequence_number,
+                                            (Response::Client(response), id),
+                                        );
 
                                         tracing::debug!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Registered response");
                                     }
@@ -321,7 +336,7 @@ where
                     if id.is_response() {
                         tracing::trace!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Command is a response");
 
-                        if let Some(response) = self.responses.remove(&sequence_number) {
+                        if let Some((response, _)) = self.responses.remove(&sequence_number) {
                             tracing::trace!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Found matching response");
 
                             match response {
