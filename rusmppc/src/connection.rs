@@ -19,8 +19,11 @@ use tokio::sync::{
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use crate::{
-    Action, FairStreamExt, SequenceNumber, Timer, UrgentAction, error::Error, event::Insight,
-    event_::EventChannel, runtime_::Delay,
+    Action, FairStreamExt, SequenceNumber, Timer, UrgentAction,
+    error::Error,
+    event::{CancelledEvent, Insight},
+    event_::EventChannel,
+    runtime_::Delay,
 };
 
 const CONNECTION_SMPP: &str = "rusmppc::connection::smpp";
@@ -213,6 +216,13 @@ where
 
                             if request.start_send.send(()).is_err() {
                                 tracing::debug!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Request was dropped. Ignoring request");
+
+                                let _ = self
+                                    .events
+                                    .send_insight(Insight::Cancelled(CancelledEvent::Request(
+                                        request.command,
+                                    )))
+                                    .await;
 
                                 continue;
                             }
