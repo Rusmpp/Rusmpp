@@ -403,20 +403,24 @@ impl<T: Timeout> ClientInner<T> {
 
         let (request, start_send, sent, response) = Request::registered(command);
 
-        // TODO: this should be included in the request timeout.
-        self.actions
-            .send(Action::request(request))
-            .await
-            .map_err(|_| Error::ConnectionClosed)?;
+        let request = async {
+            self.actions
+                .send(Action::request(request))
+                .await
+                .map_err(|_| Error::ConnectionClosed)?;
 
-        tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Waiting for connection to start sending request");
+            tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Waiting for connection to start sending request");
+
+            start_send.await.map_err(|_| Error::ConnectionClosed)?;
+
+            Ok::<_, Error>(())
+        };
 
         match self.request_timeout {
-            None => start_send.await.map_err(|_| Error::ConnectionClosed)?,
-            Some(timeout) => T::timeout(timeout, start_send)
+            None => request.await?,
+            Some(timeout) => T::timeout(timeout, request)
                 .await
-                .ok_or_else(|| Error::request_timeout(sequence_number, timeout))?
-                .map_err(|_| Error::ConnectionClosed)?,
+                .ok_or_else(|| Error::request_timeout(sequence_number, timeout))??,
         };
 
         tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Waiting for connection to finish sending request");
@@ -526,7 +530,7 @@ impl<'a, T: Timeout> UnregisteredRequestBuilder<'a, T> {
         self.no_wait_request()
     }
 
-    async fn unregistered_request(
+    async fn send_unregistered(
         self,
         pdu: impl Into<Pdu>,
         sequence_number: u32,
@@ -544,21 +548,26 @@ impl<'a, T: Timeout> UnregisteredRequestBuilder<'a, T> {
 
         let (request, start_send, sent) = Request::unregistered(command);
 
-        self.client
-            .inner
-            .actions
-            .send(Action::request(request))
-            .await
-            .map_err(|_| Error::ConnectionClosed)?;
+        let request = async {
+            self.client
+                .inner
+                .actions
+                .send(Action::request(request))
+                .await
+                .map_err(|_| Error::ConnectionClosed)?;
 
-        tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Waiting for connection to start sending request");
+            tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Waiting for connection to start sending request");
+
+            start_send.await.map_err(|_| Error::ConnectionClosed)?;
+
+            Ok::<_, Error>(())
+        };
 
         match self.client.inner.request_timeout {
-            None => start_send.await.map_err(|_| Error::ConnectionClosed)?,
-            Some(timeout) => T::timeout(timeout, start_send)
+            None => request.await?,
+            Some(timeout) => T::timeout(timeout, request)
                 .await
-                .ok_or_else(|| Error::request_timeout(sequence_number, timeout))?
-                .map_err(|_| Error::ConnectionClosed)?,
+                .ok_or_else(|| Error::request_timeout(sequence_number, timeout))??,
         };
 
         tracing::trace!(target: TARGET, sequence_number, ?status, ?id, "Waiting for connection to finish sending request");
@@ -576,7 +585,7 @@ impl<'a, T: Timeout> UnregisteredRequestBuilder<'a, T> {
         sequence_number: u32,
         data_sm_resp: impl Into<DataSmResp>,
     ) -> Result<(), Error> {
-        self.unregistered_request(data_sm_resp.into(), sequence_number)
+        self.send_unregistered(data_sm_resp.into(), sequence_number)
             .await
     }
 
@@ -586,25 +595,25 @@ impl<'a, T: Timeout> UnregisteredRequestBuilder<'a, T> {
         sequence_number: u32,
         deliver_sm_resp: impl Into<DeliverSmResp>,
     ) -> Result<(), Error> {
-        self.unregistered_request(deliver_sm_resp.into(), sequence_number)
+        self.send_unregistered(deliver_sm_resp.into(), sequence_number)
             .await
     }
 
     /// Sends an [`UnbindResp`](Pdu::UnbindResp) command to the server.
     pub async fn unbind_resp(self, sequence_number: u32) -> Result<(), Error> {
-        self.unregistered_request(Pdu::UnbindResp, sequence_number)
+        self.send_unregistered(Pdu::UnbindResp, sequence_number)
             .await
     }
 
     /// Sends an [`EnquireLinkResp`](Pdu::EnquireLinkResp) command to the server.
     pub async fn enquire_link_resp(self, sequence_number: u32) -> Result<(), Error> {
-        self.unregistered_request(Pdu::EnquireLinkResp, sequence_number)
+        self.send_unregistered(Pdu::EnquireLinkResp, sequence_number)
             .await
     }
 
     /// Sends a [`GenericNack`](Pdu::GenericNack) command to the server.
     pub async fn generic_nack(self, sequence_number: u32) -> Result<(), Error> {
-        self.unregistered_request(Pdu::GenericNack, sequence_number)
+        self.send_unregistered(Pdu::GenericNack, sequence_number)
             .await
     }
 
@@ -965,7 +974,7 @@ impl<'a, T: Timeout> NoWaitRequestBuilder<'a, T> {
         let sequence_number = self.client.inner.sequence_number.next();
 
         self.unregistered_request()
-            .unregistered_request(pdu.into(), sequence_number)
+            .send_unregistered(pdu.into(), sequence_number)
             .await?;
 
         Ok(sequence_number)
