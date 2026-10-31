@@ -21,23 +21,23 @@ pub type DefaultWasmConnectionBuilder = ConnectionBuilder<DefaultEventChannel, W
 /// Builder for creating a new `SMPP` connection.
 #[derive(Debug, Clone)]
 pub struct ConnectionBuilder<E, R> {
-    pub(crate) max_command_length: usize,
-    pub(crate) min_sequence_number: u32,
-    pub(crate) max_sequence_number: u32,
-    pub(crate) enquire_link_interval: Option<Duration>,
+    max_command_length: usize,
+    min_sequence_number: u32,
+    max_sequence_number: u32,
+    enquire_link_interval: Option<Duration>,
     /// Timeout for waiting for a an enquire link response from the server.
-    pub(crate) enquire_link_response_timeout: Duration,
+    enquire_link_response_timeout: Duration,
     /// Whether to automatically respond to enquire link requests from the server.
-    pub(crate) auto_enquire_link_response: bool,
+    auto_enquire_link_response: bool,
     /// Timeout for waiting for a command to be sent to the server.
-    pub(crate) request_timeout: Option<Duration>,
+    request_timeout: Option<Duration>,
     /// Timeout for waiting for a response from the server.
-    pub(crate) response_timeout: Option<Duration>,
-    pub(crate) check_interface_version: bool,
+    response_timeout: Option<Duration>,
+    check_interface_version: bool,
     /// Capacity of the channel used to send events to the event stream.
-    pub(crate) events_channel_capacity: Option<usize>,
+    events_channel_capacity: Option<usize>,
     /// Capacity of the channel used to send actions to the connection task.
-    pub(crate) actions_channel_capacity: Option<usize>,
+    actions_channel_capacity: Option<usize>,
     /// TLS configurations provided by the user. If None, default configurations will be used.
     #[cfg(all(feature = "tokio", feature = "rustls"))]
     rustls_config: Option<rustls::ClientConfig>,
@@ -48,30 +48,11 @@ pub struct ConnectionBuilder<E, R> {
     _r: std::marker::PhantomData<R>,
 }
 
-impl Default for DefaultTokioConnectionBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl DefaultTokioConnectionBuilder {
-    /// Creates a new [`DefaultTokioConnectionBuilder`] with default configurations.
+impl<E, R> ConnectionBuilder<E, R> {
+    /// Creates a new [`ConnectionBuilder`] with default configurations.
     ///
-    /// # Defaults
-    /// - `max_command_length`: 4096 bytes
-    /// - `min_sequence_number`: 1
-    /// - `max_sequence_number`: 0x7FFFFFFF = 2147483647
-    /// - `enquire_link_interval`: 30 seconds
-    /// - `enquire_link_response_timeout`: 5 seconds
-    /// - `auto_enquire_link_response`: true
-    /// - `request_timeout`: None
-    /// - `response_timeout`: 5 seconds
-    /// - `check_interface_version`: true
-    /// - `events_channel_capacity`: Some(1024)
-    /// - `actions_channel_capacity`: Some(1024)
-    /// - `rustls_config`: default configuration will be used if TLS is enabled. See [`rustls_config`](Self::rustls_config) for more details.
-    /// - `native_tls_connector`: default connector will be used if TLS is enabled. See [`native_tls_connector`](Self::native_tls_connector) for more details.
-    pub fn new() -> Self {
+    #[doc = include_str!("../docs/defaults.md")]
+    fn with_defaults() -> Self {
         Self {
             max_command_length: 4096,
             min_sequence_number: crate::DEFAULT_MIN_SEQUENCE_NUMBER,
@@ -93,9 +74,49 @@ impl DefaultTokioConnectionBuilder {
         }
     }
 
+    /// Changes the event channel and/or runtime type, keeping all settings.
+    fn cast<E2, R2>(self) -> ConnectionBuilder<E2, R2> {
+        ConnectionBuilder {
+            max_command_length: self.max_command_length,
+            min_sequence_number: self.min_sequence_number,
+            max_sequence_number: self.max_sequence_number,
+            enquire_link_interval: self.enquire_link_interval,
+            enquire_link_response_timeout: self.enquire_link_response_timeout,
+            auto_enquire_link_response: self.auto_enquire_link_response,
+            request_timeout: self.request_timeout,
+            response_timeout: self.response_timeout,
+            check_interface_version: self.check_interface_version,
+            events_channel_capacity: self.events_channel_capacity,
+            actions_channel_capacity: self.actions_channel_capacity,
+            #[cfg(all(feature = "tokio", feature = "rustls"))]
+            rustls_config: self.rustls_config,
+            #[cfg(all(feature = "tokio", feature = "native-tls"))]
+            native_tls_connector: self.native_tls_connector,
+            _e: std::marker::PhantomData,
+            _r: std::marker::PhantomData,
+        }
+    }
+}
+
+impl Default for DefaultTokioConnectionBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl DefaultTokioConnectionBuilder {
     /// Creates a new [`DefaultTokioConnectionBuilder`] with default configurations.
     ///
-    /// See [`new`](Self::new) for more details.
+    #[doc = include_str!("../docs/defaults.md")]
+    /// - `rustls_config`: default configuration will be used if TLS is enabled. See [`rustls_config`](Self::rustls_config) for more details.
+    /// - `native_tls_connector`: default connector will be used if TLS is enabled. See [`native_tls_connector`](Self::native_tls_connector) for more details.
+    pub fn new() -> Self {
+        Self::with_defaults()
+    }
+
+    /// Creates a new [`DefaultTokioConnectionBuilder`] with default configurations.
+    ///
+    #[doc = include_str!("../docs/defaults.md")]
     pub fn new_tokio() -> Self {
         Self::new()
     }
@@ -110,38 +131,9 @@ impl Default for DefaultWasmConnectionBuilder {
 impl DefaultWasmConnectionBuilder {
     /// Creates a new [`DefaultWasmConnectionBuilder`] with default configurations.
     ///
-    /// # Defaults
-    /// - `max_command_length`: 4096 bytes
-    /// - `min_sequence_number`: 1
-    /// - `max_sequence_number`: 0x7FFFFFFF = 2147483647
-    /// - `enquire_link_interval`: 30 seconds
-    /// - `enquire_link_response_timeout`: 5 seconds
-    /// - `auto_enquire_link_response`: true
-    /// - `request_timeout`: None
-    /// - `response_timeout`: 5 seconds
-    /// - `check_interface_version`: true
-    /// - `events_channel_capacity`: Some(1024)
-    /// - `actions_channel_capacity`: Some(1024)
+    #[doc = include_str!("../docs/defaults.md")]
     pub fn new_wasm() -> Self {
-        Self {
-            max_command_length: 4096,
-            min_sequence_number: crate::DEFAULT_MIN_SEQUENCE_NUMBER,
-            max_sequence_number: crate::DEFAULT_MAX_SEQUENCE_NUMBER,
-            enquire_link_interval: Some(Duration::from_secs(30)),
-            enquire_link_response_timeout: Duration::from_secs(5),
-            auto_enquire_link_response: true,
-            request_timeout: None,
-            response_timeout: Some(Duration::from_secs(5)),
-            check_interface_version: true,
-            events_channel_capacity: Some(1024),
-            actions_channel_capacity: Some(1024),
-            #[cfg(all(feature = "tokio", feature = "rustls"))]
-            rustls_config: None,
-            #[cfg(all(feature = "tokio", feature = "native-tls"))]
-            native_tls_connector: None,
-            _e: std::marker::PhantomData,
-            _r: std::marker::PhantomData,
-        }
+        Self::with_defaults()
     }
 }
 
@@ -181,10 +173,12 @@ impl<E: EventChannel> ConnectionBuilder<E, Tokio> {
     /// ```
     ///
     /// # Supported URL schemes
+    ///
     /// - `smpp`: Connect using plain TCP.
     /// - `ssmpp` or `smpps`: Connect using TLS. Requires the `rustls` or `native-tls` features to be enabled.
     ///
     /// # Notes
+    ///
     /// - If no port is specified in the URL, the default port `2775` will be used.
     /// - Path and query parameters in the URL are ignored silently.
     ///
@@ -199,6 +193,8 @@ impl<E: EventChannel> ConnectionBuilder<E, Tokio> {
     /// - If the connection to the server fails.
     /// - If TLS is enabled (when using `ssmpp` or `smpps` schemes) but the `rustls` or `native-tls` features are not enabled.
     /// - If TLS handshake fails.
+    ///
+    #[doc = include_str!("../docs/events.md")]
     pub async fn connect(
         self,
         url: impl AsRef<str>,
@@ -222,6 +218,8 @@ impl<E: EventChannel> ConnectionBuilder<E, Tokio> {
     ///
     /// - The client is used as a handle to communicate with the server through the managed connection.
     /// - The event stream is used to receive events from the server, such as incoming messages or errors.
+    ///
+    #[doc = include_str!("../docs/events.md")]
     pub fn connected<S>(
         self,
         stream: S,
@@ -248,6 +246,8 @@ impl<E: EventChannel> ConnectionBuilder<E, Wasm> {
     ///
     /// - The client is used as a handle to communicate with the server through the managed connection.
     /// - The event stream is used to receive events from the server, such as incoming messages or errors.
+    ///
+    #[doc = include_str!("../docs/events.md")]
     pub fn connected<S>(
         self,
         stream: S,
@@ -528,48 +528,12 @@ impl<E, R> ConnectionBuilder<E, R> {
 
     /// Configures the connection to use the [`tokio`] runtime.
     pub fn tokio(self) -> ConnectionBuilder<E, Tokio> {
-        ConnectionBuilder {
-            max_command_length: self.max_command_length,
-            min_sequence_number: self.min_sequence_number,
-            max_sequence_number: self.max_sequence_number,
-            enquire_link_interval: self.enquire_link_interval,
-            enquire_link_response_timeout: self.enquire_link_response_timeout,
-            auto_enquire_link_response: self.auto_enquire_link_response,
-            request_timeout: self.request_timeout,
-            response_timeout: self.response_timeout,
-            check_interface_version: self.check_interface_version,
-            events_channel_capacity: self.events_channel_capacity,
-            actions_channel_capacity: self.actions_channel_capacity,
-            #[cfg(all(feature = "tokio", feature = "rustls"))]
-            rustls_config: self.rustls_config,
-            #[cfg(all(feature = "tokio", feature = "native-tls"))]
-            native_tls_connector: self.native_tls_connector,
-            _e: std::marker::PhantomData,
-            _r: std::marker::PhantomData,
-        }
+        self.cast()
     }
 
     /// Configures the connection to use the `wasm` runtime.
     pub fn wasm(self) -> ConnectionBuilder<E, Wasm> {
-        ConnectionBuilder {
-            max_command_length: self.max_command_length,
-            min_sequence_number: self.min_sequence_number,
-            max_sequence_number: self.max_sequence_number,
-            enquire_link_interval: self.enquire_link_interval,
-            enquire_link_response_timeout: self.enquire_link_response_timeout,
-            auto_enquire_link_response: self.auto_enquire_link_response,
-            request_timeout: self.request_timeout,
-            response_timeout: self.response_timeout,
-            check_interface_version: self.check_interface_version,
-            events_channel_capacity: self.events_channel_capacity,
-            actions_channel_capacity: self.actions_channel_capacity,
-            #[cfg(all(feature = "tokio", feature = "rustls"))]
-            rustls_config: self.rustls_config,
-            #[cfg(all(feature = "tokio", feature = "native-tls"))]
-            native_tls_connector: self.native_tls_connector,
-            _e: std::marker::PhantomData,
-            _r: std::marker::PhantomData,
-        }
+        self.cast()
     }
 }
 
@@ -822,71 +786,17 @@ impl<E, R> EventsConnectionBuilder<E, R> {
 
     /// Uses the default event channel that sends events through the event stream.
     pub fn default(self) -> ConnectionBuilder<DefaultEventChannel, R> {
-        ConnectionBuilder {
-            max_command_length: self.builder.max_command_length,
-            min_sequence_number: self.builder.min_sequence_number,
-            max_sequence_number: self.builder.max_sequence_number,
-            enquire_link_interval: self.builder.enquire_link_interval,
-            enquire_link_response_timeout: self.builder.enquire_link_response_timeout,
-            auto_enquire_link_response: self.builder.auto_enquire_link_response,
-            request_timeout: self.builder.request_timeout,
-            response_timeout: self.builder.response_timeout,
-            check_interface_version: self.builder.check_interface_version,
-            events_channel_capacity: self.builder.events_channel_capacity,
-            actions_channel_capacity: self.builder.actions_channel_capacity,
-            #[cfg(all(feature = "tokio", feature = "rustls"))]
-            rustls_config: self.builder.rustls_config,
-            #[cfg(all(feature = "tokio", feature = "native-tls"))]
-            native_tls_connector: self.builder.native_tls_connector,
-            _e: std::marker::PhantomData,
-            _r: std::marker::PhantomData,
-        }
+        self.builder.cast()
     }
 
     /// Discards all events from the background connection.
     pub fn discard(self) -> ConnectionBuilder<DiscardEventChannel, R> {
-        ConnectionBuilder {
-            max_command_length: self.builder.max_command_length,
-            min_sequence_number: self.builder.min_sequence_number,
-            max_sequence_number: self.builder.max_sequence_number,
-            enquire_link_interval: self.builder.enquire_link_interval,
-            enquire_link_response_timeout: self.builder.enquire_link_response_timeout,
-            auto_enquire_link_response: self.builder.auto_enquire_link_response,
-            request_timeout: self.builder.request_timeout,
-            response_timeout: self.builder.response_timeout,
-            check_interface_version: self.builder.check_interface_version,
-            events_channel_capacity: self.builder.events_channel_capacity,
-            actions_channel_capacity: self.builder.actions_channel_capacity,
-            #[cfg(all(feature = "tokio", feature = "rustls"))]
-            rustls_config: self.builder.rustls_config,
-            #[cfg(all(feature = "tokio", feature = "native-tls"))]
-            native_tls_connector: self.builder.native_tls_connector,
-            _e: std::marker::PhantomData,
-            _r: std::marker::PhantomData,
-        }
+        self.builder.cast()
     }
 
     /// Enables insight events from the background connection.
     pub fn insights(self) -> ConnectionBuilder<InsightEventChannel, R> {
-        ConnectionBuilder {
-            max_command_length: self.builder.max_command_length,
-            min_sequence_number: self.builder.min_sequence_number,
-            max_sequence_number: self.builder.max_sequence_number,
-            enquire_link_interval: self.builder.enquire_link_interval,
-            enquire_link_response_timeout: self.builder.enquire_link_response_timeout,
-            auto_enquire_link_response: self.builder.auto_enquire_link_response,
-            request_timeout: self.builder.request_timeout,
-            response_timeout: self.builder.response_timeout,
-            check_interface_version: self.builder.check_interface_version,
-            events_channel_capacity: self.builder.events_channel_capacity,
-            actions_channel_capacity: self.builder.actions_channel_capacity,
-            #[cfg(all(feature = "tokio", feature = "rustls"))]
-            rustls_config: self.builder.rustls_config,
-            #[cfg(all(feature = "tokio", feature = "native-tls"))]
-            native_tls_connector: self.builder.native_tls_connector,
-            _e: std::marker::PhantomData,
-            _r: std::marker::PhantomData,
-        }
+        self.builder.cast()
     }
 }
 
@@ -896,24 +806,6 @@ impl<E, R> ConnectionBuilder<E, R> {
         self,
     ) -> ConnectionBuilder<E, crate::mock::runtime::MockRuntime<crate::mock::delay::MockDelay, Tokio>>
     {
-        ConnectionBuilder {
-            max_command_length: self.max_command_length,
-            min_sequence_number: self.min_sequence_number,
-            max_sequence_number: self.max_sequence_number,
-            enquire_link_interval: self.enquire_link_interval,
-            enquire_link_response_timeout: self.enquire_link_response_timeout,
-            auto_enquire_link_response: self.auto_enquire_link_response,
-            request_timeout: self.request_timeout,
-            response_timeout: self.response_timeout,
-            check_interface_version: self.check_interface_version,
-            events_channel_capacity: self.events_channel_capacity,
-            actions_channel_capacity: self.actions_channel_capacity,
-            #[cfg(all(feature = "tokio", feature = "rustls"))]
-            rustls_config: self.rustls_config,
-            #[cfg(all(feature = "tokio", feature = "native-tls"))]
-            native_tls_connector: self.native_tls_connector,
-            _e: std::marker::PhantomData,
-            _r: std::marker::PhantomData,
-        }
+        self.cast()
     }
 }
