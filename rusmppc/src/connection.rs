@@ -94,23 +94,6 @@ impl<F, E: EventChannel, D: Delay> Connection<F, E, D> {
             events_rx,
         )
     }
-
-    pub fn with_framed<Fr>(self, framed: Fr) -> Connection<Fr, E, D> {
-        Connection {
-            sequence_number: self.sequence_number,
-            framed,
-            urgent_actions: self.urgent_actions,
-            actions: self.actions,
-            events: self.events,
-            responses: self.responses,
-            enquire_link_interval: self.enquire_link_interval,
-            enquire_link_response_timeout: self.enquire_link_response_timeout,
-            enquire_link_timer: self.enquire_link_timer,
-            enquire_link_response_timer: self.enquire_link_response_timer,
-            auto_enquire_link_response: self.auto_enquire_link_response,
-            _watch: self._watch,
-        }
-    }
 }
 
 impl<F, E: EventChannel, D: Delay> Connection<F, E, D>
@@ -447,6 +430,5 @@ where
     }
 }
 
-// TODO: enable
-// #[cfg(test)]
-// mod tests;
+#[cfg(test)]
+mod tests;

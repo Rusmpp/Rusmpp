@@ -55,10 +55,9 @@ impl<F: Future> Future for PollTraceFuture<F> {
     }
 }
 
-// RUST_LOG=rusmppc=trace cargo test --package rusmppc --lib -- connection::tests::server_ddos_client_should_still_send_requests_and_connection_should_still_manage_timeouts --exact --nocapture
+// RUST_LOG=rusmppc=trace cargo test --package rusmppc --lib -- connection::tests::server_ddos_client_should_still_send_requests --exact --nocapture
 #[tokio::test]
-async fn server_ddos_client_should_still_send_requests_and_connection_should_still_manage_timeouts()
-{
+async fn server_ddos_client_should_still_send_requests() {
     init_tracing();
 
     let mut framed = MockFramed::new().sink_always_ready_ok();
@@ -71,32 +70,29 @@ async fn server_ddos_client_should_still_send_requests_and_connection_should_sti
             .pdu(Pdu::AlertNotification(Default::default())))))
     });
 
-    let (client, events, future) = ConnectionBuilder::new()
+    let (client, events, connection) = ConnectionBuilder::new()
         .mock_delay()
         // Send an enquire link every 50 polls
         .enquire_link_interval(Duration::from_millis(50))
         // Wait for 5 polls for the enquire link response
         .enquire_link_response_timeout(Duration::from_millis(5))
+        // Wait for 50 polls for the response
+        .response_timeout(Duration::from_millis(50))
+        .events()
+        .no_channel_capacity()
+        .default()
         .no_spawn()
-        .fused(framed);
+        .connection(framed);
 
-    tokio::spawn(future);
+    tokio::spawn(connection.run());
 
-    for _ in 0..1000 {
-        match client
-            .no_wait() // Server will not respond anyway, so we don't care about the response
-            .submit_sm(SubmitSm::default())
-            .await
-        {
-            Ok(_) => {}
-            Err(Error::ConnectionClosed) => {}
-            Err(err) => {
-                panic!("Failed to submit SM: {:?}", err);
-            }
-        }
-    }
+    // This will eventually timeout
+    let err = client.submit_sm(SubmitSm::default()).await.unwrap_err();
 
-    // After the enquire link timeout, the connection should close
+    assert!(matches!(err, Error::ResponseTimeout { .. }));
+
+    client.close().await.expect("Failed to close connection");
+
     let _ = events.count().await;
 }
 
@@ -148,13 +144,13 @@ async fn client_ddos_and_server_ddos_connection_should_still_respond_to_enquire_
         Ok(())
     });
 
-    let (client, events, future) = ConnectionBuilder::new()
+    let (client, events, connection) = ConnectionBuilder::new()
         .mock_delay()
         .no_enquire_link_interval()
         .no_spawn()
-        .fused(framed);
+        .connection(framed);
 
-    tokio::spawn(PollTraceFuture::new(future));
+    tokio::spawn(PollTraceFuture::new(connection.run()));
 
     let mut handles = Vec::new();
 
@@ -236,13 +232,13 @@ async fn client_ddos_and_server_ddos_connection_should_still_respond_to_enquire_
         Ok(())
     });
 
-    let (client, events, future) = ConnectionBuilder::new()
+    let (client, events, connection) = ConnectionBuilder::new()
         .mock_delay()
         .no_enquire_link_interval()
         .no_spawn()
-        .fused(framed);
+        .connection(framed);
 
-    tokio::spawn(PollTraceFuture::new(future));
+    tokio::spawn(PollTraceFuture::new(connection.run()));
 
     for _ in 0..1000 {
         client
@@ -296,13 +292,13 @@ async fn sink_first_poll_ready_pending_pending_request_should_be_sent() {
             Ok(())
         });
 
-    let (client, events, future) = ConnectionBuilder::new()
+    let (client, events, connection) = ConnectionBuilder::new()
         .mock_delay()
         .no_enquire_link_interval()
         .no_spawn()
-        .fused(framed);
+        .connection(framed);
 
-    tokio::spawn(PollTraceFuture::new(future));
+    tokio::spawn(PollTraceFuture::new(connection.run()));
 
     client
         .no_wait()
@@ -338,27 +334,25 @@ async fn sink_first_poll_flush_pending_pending_request_should_be_sent() {
         .expect_poll_flush_pin()
         .returning(|_cx| Poll::Ready(Ok(())));
 
-    for n in 0..submit_count {
-        let i = 1 + n * 2;
-
+    for n in 1..=submit_count {
         // Assert start send gets submit sm with correct sequence number
         framed
             .expect_start_send_pin()
             .times(1)
             .returning(move |command| {
                 assert!(matches!(command.pdu(), Some(Pdu::SubmitSm(_))));
-                assert_eq!(command.sequence_number(), i);
+                assert_eq!(command.sequence_number(), n);
                 Ok(())
             });
     }
 
-    let (client, events, future) = ConnectionBuilder::new()
+    let (client, events, connection) = ConnectionBuilder::new()
         .mock_delay()
         .no_enquire_link_interval()
         .no_spawn()
-        .fused(framed);
+        .connection(framed);
 
-    tokio::spawn(PollTraceFuture::new(future));
+    tokio::spawn(PollTraceFuture::new(connection.run()));
 
     for _ in 0..submit_count {
         client

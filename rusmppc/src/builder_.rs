@@ -734,27 +734,28 @@ impl<E: EventChannel, R: Delay + Timeout> NoSpawnConnectionBuilder<E, R> {
             CommandCodec::new().with_max_length(self.builder.max_command_length),
         );
 
-        let (client, events, connection) = self.connection();
+        let (client, events, connection) = self.connection(framed);
 
-        (client, events, connection.with_framed(framed).run())
+        (client, events, connection.run())
     }
 
     /// Consumes `self` and creates a new [`Client`] along with the connection and event stream.
-    pub(crate) fn connection(
+    pub(crate) fn connection<F>(
         self,
+        framed: F,
     ) -> (
         Client<R>,
         impl Stream<Item = E::Event> + Unpin + 'static,
-        Connection<(), E, R>,
+        Connection<F, E, R>,
     ) {
         let sequence_number = SequenceNumber::new(
             self.builder.min_sequence_number,
             self.builder.max_sequence_number,
         );
 
-        let (connection, watch, urgent_actions, actions, events) = Connection::<(), E, R>::new(
+        let (connection, watch, urgent_actions, actions, events) = Connection::<F, E, R>::new(
             sequence_number.clone(),
-            (),
+            framed,
             self.builder.enquire_link_interval,
             self.builder.enquire_link_response_timeout,
             self.builder.auto_enquire_link_response,
