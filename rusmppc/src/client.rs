@@ -403,6 +403,7 @@ impl<T: Timeout> ClientInner<T> {
 
         let (request, start_send, sent, response) = Request::registered(command);
 
+        // TODO: this should be included in the request timeout.
         self.actions
             .send(Action::request(request))
             .await

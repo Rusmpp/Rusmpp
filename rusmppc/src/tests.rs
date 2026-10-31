@@ -39,6 +39,8 @@ pub struct Server {
     enquire_link_delay: Duration,
     response_delay: Duration,
     close_connection_delay: Duration,
+    /// The no_response is used to make the server not respond to any command, while still reading from it's stream.
+    no_response: bool,
 }
 
 impl Server {
@@ -48,7 +50,13 @@ impl Server {
             enquire_link_delay: Duration::from_millis(500),
             response_delay: Duration::from_millis(500),
             close_connection_delay: Duration::from_secs(10),
+            no_response: false,
         }
+    }
+
+    pub fn no_response(mut self) -> Self {
+        self.no_response = true;
+        self
     }
 
     pub fn bind_delay(mut self, delay: Duration) -> Self {
@@ -76,6 +84,10 @@ impl Server {
 
         let future = async move {
             while let Some(Ok(command)) = framed.next().await {
+                if self.no_response {
+                    continue;
+                }
+
                 let pdu: Pdu = match command.id() {
                     CommandId::EnquireLink => {
                         tokio::time::sleep(self.enquire_link_delay).await;
@@ -561,32 +573,33 @@ async fn enquire_link_timeout_busy_sequential_should_close_connection() {
     tokio::spawn(async move {
         Server::new()
             .enquire_link_delay(Duration::from_secs(5))
-            .response_delay(Duration::from_millis(100))
+            .no_response()
             .run(server)
             .await;
     });
 
     let (client, events) = ConnectionBuilder::new()
-        .enquire_link_interval(Duration::from_secs(2))
+        .enquire_link_interval(Duration::from_secs(1))
         .enquire_link_response_timeout(Duration::from_secs(1))
+        .no_channel_capacity()
+        .events()
+        .no_channel_capacity()
+        .default()
         .connected(client);
 
-    let now = Instant::now();
-
     loop {
-        if let Err(Error::ConnectionClosed) = client.submit_sm(SubmitSm::default()).await {
+        if let Err(Error::ConnectionClosed) = client.no_wait().submit_sm(SubmitSm::default()).await
+        {
             // Connection closed as expected
             break;
         }
     }
 
-    let _ = events.count().await;
+    let events = events.collect::<Vec<Event>>().await;
 
-    let elapsed = now.elapsed();
-
-    assert!(
-        elapsed.as_secs() == 3,
-        "Enquire link timeout did not occur as expected"
+    assert_matches!(
+        events.last(),
+        Some(Event::Error(Error::EnquireLinkTimeout { .. }))
     );
 }
 
@@ -599,18 +612,22 @@ async fn enquire_link_timeout_busy_concurrent_should_close_connection() {
     tokio::spawn(async move {
         Server::new()
             .enquire_link_delay(Duration::from_secs(5))
-            .response_delay(Duration::from_millis(100))
+            .no_response()
             .run(server)
             .await;
     });
 
     let (client, events) = ConnectionBuilder::new()
-        .enquire_link_interval(Duration::from_secs(2))
+        .enquire_link_interval(Duration::from_secs(1))
         .enquire_link_response_timeout(Duration::from_secs(1))
+        .no_channel_capacity()
+        .events()
+        .no_channel_capacity()
+        .default()
         .connected(client);
 
     loop {
-        if !client.is_active() {
+        if client.is_closed() {
             break;
         }
 
@@ -620,8 +637,8 @@ async fn enquire_link_timeout_busy_concurrent_should_close_connection() {
             let _ = client_clone.submit_sm(SubmitSm::default()).await;
         });
 
-        // No sleep => Test hangs
-        tokio::time::sleep(Duration::from_nanos(1)).await;
+        // Without this line the whole test hangs
+        tokio::task::yield_now().await;
     }
 
     let events = events.collect::<Vec<Event>>().await;
@@ -774,8 +791,9 @@ async fn server_sends_an_operation_with_the_same_sequence_number_of_a_pending_re
 
 /// See `server_ddos_client_should_still_send_requests_and_connection_should_still_manage_timeouts` in `connection/tests.rs`` for a more reliable test of the same behavior.
 #[tokio::test]
-async fn server_ddos_client_should_still_send_requests_and_connection_should_still_manage_timeouts()
-{
+async fn server_ddos_client_should_still_send_requests() {
+    init_tracing();
+
     // Eventually, the stream poll_next will return pending, after the duplex stream reaches max_buf_size.
     // The loop guards inside the connection do not really have any effect on the connection's ability to handle timeouts in this particular case.
     // They guard against the connection being stuck in the stream poll loop (poll_next never returns pending).
@@ -811,15 +829,18 @@ async fn server_ddos_client_should_still_send_requests_and_connection_should_sti
         .enquire_link_interval(Duration::from_secs(1))
         .enquire_link_response_timeout(Duration::from_millis(500))
         .response_timeout(Duration::from_millis(500))
+        .events()
+        .no_channel_capacity()
+        .default()
         .connected(client);
 
-    client
-        .no_wait() // Server will not respond anyway, so we don't care about the response
-        .submit_sm(SubmitSm::default())
-        .await
-        .expect("Failed to submit SM");
+    // This will eventually timeout
+    let err = client.submit_sm(SubmitSm::default()).await.unwrap_err();
 
-    // After the enquire link timeout, the connection should close
+    assert!(matches!(err, Error::ResponseTimeout { .. }));
+
+    client.close().await.expect("Failed to close connection");
+
     let _ = events.count().await;
 }
 
