@@ -49,24 +49,33 @@ pub trait EventChannel: Send + 'static {
     type Event;
 
     /// Creates a new [`EventChannel`] instance.
-    fn new(sender: tokio::sync::mpsc::UnboundedSender<Self::Event>) -> Self
+    fn new(sender: crate::sync::Sender<Self::Event>) -> Self
     where
         Self: Sized;
 
     /// Sends an [`Error`] event through the event channel.
-    fn send_error(&self, error: Error) -> Result<(), SendError<Self::Event>>;
+    fn send_error(
+        &self,
+        error: Error,
+    ) -> impl Future<Output = Result<(), SendError<Self::Event>>> + Send;
 
     /// Sends an incoming [`Command`] event through the event channel.
-    fn send_incoming(&self, command: Command) -> Result<(), SendError<Self::Event>>;
+    fn send_incoming(
+        &self,
+        command: Command,
+    ) -> impl Future<Output = Result<(), SendError<Self::Event>>> + Send;
 
     /// Sends an [`Insight`] event through the event channel.
-    fn send_insight(&self, insight: Insight) -> Result<(), SendError<Self::Event>>;
+    fn send_insight(
+        &self,
+        insight: Insight,
+    ) -> impl Future<Output = Result<(), SendError<Self::Event>>> + Send;
 }
 
 /// The default `EventChannel` implementation that sends [`Event`]s through the event stream.
 #[derive(Clone)]
 pub struct DefaultEventChannel {
-    sender: tokio::sync::mpsc::UnboundedSender<Event>,
+    sender: crate::sync::Sender<Event>,
 }
 
 impl Debug for DefaultEventChannel {
@@ -78,19 +87,19 @@ impl Debug for DefaultEventChannel {
 impl EventChannel for DefaultEventChannel {
     type Event = Event;
 
-    fn new(sender: tokio::sync::mpsc::UnboundedSender<Self::Event>) -> Self {
+    fn new(sender: crate::sync::Sender<Self::Event>) -> Self {
         Self { sender }
     }
 
-    fn send_error(&self, error: Error) -> Result<(), SendError<Self::Event>> {
-        self.sender.send(Event::Error(error))
+    async fn send_error(&self, error: Error) -> Result<(), SendError<Self::Event>> {
+        self.sender.send(Event::Error(error)).await
     }
 
-    fn send_incoming(&self, command: Command) -> Result<(), SendError<Self::Event>> {
-        self.sender.send(Event::Incoming(command))
+    async fn send_incoming(&self, command: Command) -> Result<(), SendError<Self::Event>> {
+        self.sender.send(Event::Incoming(command)).await
     }
 
-    fn send_insight(&self, _insight: Insight) -> Result<(), SendError<Self::Event>> {
+    async fn send_insight(&self, _insight: Insight) -> Result<(), SendError<Self::Event>> {
         // Noop for default event channel
 
         Ok(())
@@ -102,7 +111,7 @@ impl EventChannel for DefaultEventChannel {
 pub struct DiscardEventChannel {
     // even if we don't use it, we should keep it alive to avoid closing the event stream
     // closing the event stream is associated with the connection being closed/dropped
-    _sender: tokio::sync::mpsc::UnboundedSender<()>,
+    _sender: crate::sync::Sender<()>,
 }
 
 impl Debug for DiscardEventChannel {
@@ -114,19 +123,19 @@ impl Debug for DiscardEventChannel {
 impl EventChannel for DiscardEventChannel {
     type Event = ();
 
-    fn new(sender: tokio::sync::mpsc::UnboundedSender<Self::Event>) -> Self {
+    fn new(sender: crate::sync::Sender<Self::Event>) -> Self {
         Self { _sender: sender }
     }
 
-    fn send_error(&self, _error: Error) -> Result<(), SendError<Self::Event>> {
+    async fn send_error(&self, _error: Error) -> Result<(), SendError<Self::Event>> {
         Ok(())
     }
 
-    fn send_incoming(&self, _command: Command) -> Result<(), SendError<Self::Event>> {
+    async fn send_incoming(&self, _command: Command) -> Result<(), SendError<Self::Event>> {
         Ok(())
     }
 
-    fn send_insight(&self, _insight: Insight) -> Result<(), SendError<Self::Event>> {
+    async fn send_insight(&self, _insight: Insight) -> Result<(), SendError<Self::Event>> {
         Ok(())
     }
 }
@@ -134,7 +143,7 @@ impl EventChannel for DiscardEventChannel {
 /// An `EventChannel` implementation that sends [`InsightEvent`]s through the event stream.
 #[derive(Clone)]
 pub struct InsightEventChannel {
-    sender: tokio::sync::mpsc::UnboundedSender<InsightEvent>,
+    sender: crate::sync::Sender<InsightEvent>,
 }
 
 impl Debug for InsightEventChannel {
@@ -146,19 +155,19 @@ impl Debug for InsightEventChannel {
 impl EventChannel for InsightEventChannel {
     type Event = InsightEvent;
 
-    fn new(sender: tokio::sync::mpsc::UnboundedSender<Self::Event>) -> Self {
+    fn new(sender: crate::sync::Sender<Self::Event>) -> Self {
         Self { sender }
     }
 
-    fn send_error(&self, error: Error) -> Result<(), SendError<Self::Event>> {
-        self.sender.send(InsightEvent::Error(error))
+    async fn send_error(&self, error: Error) -> Result<(), SendError<Self::Event>> {
+        self.sender.send(InsightEvent::Error(error)).await
     }
 
-    fn send_incoming(&self, command: Command) -> Result<(), SendError<Self::Event>> {
-        self.sender.send(InsightEvent::Incoming(command))
+    async fn send_incoming(&self, command: Command) -> Result<(), SendError<Self::Event>> {
+        self.sender.send(InsightEvent::Incoming(command)).await
     }
 
-    fn send_insight(&self, insight: Insight) -> Result<(), SendError<Self::Event>> {
-        self.sender.send(InsightEvent::Insight(insight))
+    async fn send_insight(&self, insight: Insight) -> Result<(), SendError<Self::Event>> {
+        self.sender.send(InsightEvent::Insight(insight)).await
     }
 }

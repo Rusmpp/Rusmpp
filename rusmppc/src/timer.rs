@@ -39,6 +39,17 @@ impl<D: Delay> Timer<D> {
 
         self.project().state.set(Some(delay));
     }
+
+    /// Reactivates the timer with a new duration.
+    ///
+    /// If the timer is deactivated nothing happens.
+    pub fn reactivate(self: Pin<&mut Self>, duration: Duration) {
+        let mut this = self.project();
+
+        if this.state.is_some() {
+            this.state.set(Some(D::delay(duration)));
+        }
+    }
 }
 
 impl<D: Delay> Future for Timer<D> {

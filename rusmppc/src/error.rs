@@ -70,7 +70,19 @@ pub enum Error {
         /// The timeout duration.
         timeout: Duration,
     },
-    /// The `SMPP` operation timed out.
+    /// The `SMPP` request timed out.
+    ///
+    /// The connection could not send the request within the specified timeout.
+    ///
+    /// This error is returned by methods that send commands, such as [`bind_transceiver`](crate::client::Client::bind_transceiver) and [`unbind`](crate::client::Client::unbind).
+    #[error("Request timed out: sequence number: {sequence_number}, timeout: {timeout:?}")]
+    RequestTimeout {
+        /// The sequence number of the request that timed out.
+        sequence_number: u32,
+        /// The timeout duration.
+        timeout: Duration,
+    },
+    /// The `SMPP` response timed out.
     ///
     /// The server did not respond to the request within the specified timeout.
     ///
@@ -117,6 +129,13 @@ impl Error {
         Self::UnsupportedInterfaceVersion {
             version,
             supported_version: InterfaceVersion::Smpp5_0,
+        }
+    }
+
+    pub(crate) const fn request_timeout(sequence_number: u32, timeout: Duration) -> Self {
+        Self::RequestTimeout {
+            sequence_number,
+            timeout,
         }
     }
 
