@@ -19,8 +19,11 @@ use tokio::sync::{
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use crate::{
-    Action, FairStreamExt, SequenceNumber, Timer, UrgentAction, error::Error, event::Insight,
-    event_::EventChannel, runtime_::Delay,
+    Action, FairStreamExt, SequenceNumber, Timer, UrgentAction,
+    error::Error,
+    event::{CancelledEvent, Insight},
+    event_::EventChannel,
+    runtime_::Delay,
 };
 
 const CONNECTION_SMPP: &str = "rusmppc::connection::smpp";
@@ -33,7 +36,7 @@ pub struct Connection<F, E, D: Delay> {
     urgent_actions: UnboundedReceiverStream<UrgentAction>,
     actions: crate::sync::ReceiverStream<Action>,
     events: E,
-    responses: BTreeMap<u32, Response>,
+    responses: BTreeMap<u32, (Response, CommandId)>,
     enquire_link_interval: Option<Duration>,
     enquire_link_response_timeout: Duration,
     enquire_link_timer: Timer<D>,
@@ -141,7 +144,10 @@ where
 
                     self.responses.insert(
                         sequence_number,
-                        Response::Connection(ConnectionCommandId::EnquireLink),
+                        (
+                            Response::Connection(ConnectionCommandId::EnquireLink),
+                            command.id(),
+                        ),
                     );
 
                     enquire_link_response_timer
@@ -150,10 +156,7 @@ where
 
                     enquire_link_timer.as_mut().deactivate();
 
-                    let _ = self
-                        .events
-                        .send_insight(Insight::SentEnquireLink(sequence_number))
-                        .await;
+                    let _ = self.events.send_insight(Insight::Sent(command)).await;
                 }
                 Ready::EnquireLinkResponseTimer => {
                     tracing::trace!(target: TIMER, "Enquire link response timer fired");
@@ -181,7 +184,17 @@ where
                         UrgentAction::RemoveResponse(sequence_number) => {
                             tracing::debug!(target: CONNECTION_SMPP, sequence_number, "Received remove response");
 
-                            self.responses.remove(&sequence_number);
+                            if let Some((_, command_id)) = self.responses.remove(&sequence_number) {
+                                tracing::debug!(target: CONNECTION_SMPP, sequence_number, ?command_id, "Removed response");
+
+                                let _ = self
+                                    .events
+                                    .send_insight(Insight::Cancelled(CancelledEvent::Response {
+                                        sequence_number,
+                                        command_id,
+                                    }))
+                                    .await;
+                            }
                         }
                         UrgentAction::Close(close) => {
                             tracing::debug!(target: CONNECTION_SMPP, "Received close request");
@@ -217,6 +230,13 @@ where
                             if request.start_send.send(()).is_err() {
                                 tracing::debug!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Request was dropped. Ignoring request");
 
+                                let _ = self
+                                    .events
+                                    .send_insight(Insight::Cancelled(CancelledEvent::Request(
+                                        request.command,
+                                    )))
+                                    .await;
+
                                 continue;
                             }
 
@@ -227,8 +247,10 @@ where
                                     tracing::debug!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Sent command");
 
                                     if let Some(response) = request.response {
-                                        self.responses
-                                            .insert(sequence_number, Response::Client(response));
+                                        self.responses.insert(
+                                            sequence_number,
+                                            (Response::Client(response), id),
+                                        );
 
                                         tracing::debug!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Registered response");
                                     }
@@ -289,10 +311,7 @@ where
                     if let CommandId::EnquireLink = command.id()
                         && self.auto_enquire_link_response
                     {
-                        let _ = self
-                            .events
-                            .send_insight(Insight::ReceivedEnquireLink(sequence_number))
-                            .await;
+                        let _ = self.events.send_insight(Insight::Received(command)).await;
 
                         let response = Command::builder()
                             .status(CommandStatus::EsmeRok)
@@ -309,10 +328,7 @@ where
                             break;
                         }
 
-                        let _ = self
-                            .events
-                            .send_insight(Insight::SentEnquireLinkResp(sequence_number))
-                            .await;
+                        let _ = self.events.send_insight(Insight::Sent(response)).await;
 
                         continue;
                     }
@@ -320,7 +336,7 @@ where
                     if id.is_response() {
                         tracing::trace!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Command is a response");
 
-                        if let Some(response) = self.responses.remove(&sequence_number) {
+                        if let Some((response, _)) = self.responses.remove(&sequence_number) {
                             tracing::trace!(target: CONNECTION_SMPP, sequence_number, ?status, ?id, "Found matching response");
 
                             match response {
@@ -343,9 +359,7 @@ where
 
                                         let _ = self
                                             .events
-                                            .send_insight(Insight::ReceivedEnquireLinkResp(
-                                                sequence_number,
-                                            ))
+                                            .send_insight(Insight::Received(command))
                                             .await;
                                     }
                                 }

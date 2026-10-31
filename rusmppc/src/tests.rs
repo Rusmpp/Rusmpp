@@ -14,7 +14,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use futures::{SinkExt, StreamExt};
+use futures::{SinkExt, Stream, StreamExt};
 use rusmpp::{
     Command, CommandId, CommandStatus, Pdu,
     pdus::{
@@ -27,9 +27,9 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::codec::Framed;
 
 use crate::{
-    ConnectionBuilder,
+    Client, ConnectionBuilder,
     error::Error,
-    event::{Event, Insight, InsightEvent},
+    event::{CancelledEvent, Event, Insight, InsightEvent},
     mock::io::MockIo,
 };
 
@@ -211,161 +211,6 @@ pub fn init_tracing() {
         .with_line_number(true)
         .with_ansi(false)
         .try_init();
-}
-
-#[tokio::test]
-async fn cancel_send_future_should_remove_pending_response() {
-    init_tracing();
-
-    let (server, client) = tokio::io::duplex(1024);
-
-    tokio::spawn(async move {
-        Server::new().run(server).await;
-    });
-
-    let (client, mut events) = ConnectionBuilder::new()
-        .response_timeout(Duration::from_millis(1000))
-        .connected(client);
-
-    let future = client.submit_sm(SubmitSm::default());
-
-    tokio::select! {
-        _ = tokio::time::sleep(Duration::from_millis(100)) => {
-            tracing::debug!("Canceling request future");
-        }
-        _ = future => {}
-    }
-
-    let pending_response = client
-        .pending_responses()
-        .await
-        .expect("Failed to get pending responses");
-
-    assert!(
-        !pending_response.contains(&1),
-        "Pending response was not removed"
-    );
-
-    // The submit sm response should be sent to the event stream
-
-    let Some(Event::Incoming(command)) = events.next().await else {
-        panic!("Expected command event");
-    };
-
-    assert!(matches!(command.id(), CommandId::SubmitSmResp));
-    assert_eq!(command.sequence_number(), 1);
-
-    client.close().await.expect("Failed to close connection");
-
-    client.closed().await;
-
-    let _ = events.count().await;
-}
-
-/// Similar to [`cancel_send_future_should_remove_pending_response`] but this one uses the raw request builder.
-#[tokio::test]
-async fn raw_cancel_send_future_should_remove_pending_response() {
-    init_tracing();
-
-    let (server, client) = tokio::io::duplex(1024);
-
-    tokio::spawn(async move {
-        Server::new().run(server).await;
-    });
-
-    let (client, mut events) = ConnectionBuilder::new()
-        .response_timeout(Duration::from_millis(1000))
-        .connected(client);
-
-    let future = client
-        .raw()
-        .send(SubmitSm::default())
-        .await
-        .expect("Failed to send submit SM")
-        .1;
-
-    tokio::select! {
-        _ = tokio::time::sleep(Duration::from_millis(100)) => {
-            tracing::debug!("Canceling request future");
-        }
-        _ = future => {}
-    }
-
-    let pending_response = client
-        .pending_responses()
-        .await
-        .expect("Failed to get pending responses");
-
-    assert!(
-        !pending_response.contains(&1),
-        "Pending response was not removed"
-    );
-
-    // The submit sm response should be sent to the event stream
-
-    let Some(Event::Incoming(command)) = events.next().await else {
-        panic!("Expected command event");
-    };
-
-    assert!(matches!(command.id(), CommandId::SubmitSmResp));
-    assert_eq!(command.sequence_number(), 1);
-
-    client.close().await.expect("Failed to close connection");
-
-    client.closed().await;
-
-    let _ = events.count().await;
-}
-
-#[tokio::test]
-async fn response_timeout_should_remove_pending_response() {
-    init_tracing();
-
-    let (server, client) = tokio::io::duplex(1024);
-
-    tokio::spawn(async move {
-        Server::new()
-            .bind_delay(Duration::from_millis(200))
-            .response_delay(Duration::from_secs(1))
-            .run(server)
-            .await;
-    });
-
-    let (client, mut events) = ConnectionBuilder::new()
-        .response_timeout(Duration::from_millis(500))
-        .connected(client);
-
-    let Error::ResponseTimeout {
-        sequence_number, ..
-    } = client.submit_sm(SubmitSm::default()).await.unwrap_err()
-    else {
-        panic!("Expected timeout error");
-    };
-
-    let pending_response = client
-        .pending_responses()
-        .await
-        .expect("Failed to get pending responses");
-
-    assert!(
-        !pending_response.contains(&sequence_number),
-        "Pending response was not removed"
-    );
-
-    // The submit sm response should be sent to the event stream
-
-    let Some(Event::Incoming(command)) = events.next().await else {
-        panic!("Expected command event");
-    };
-
-    assert!(matches!(command.id(), CommandId::SubmitSmResp));
-    assert_eq!(command.sequence_number(), sequence_number);
-
-    client.close().await.expect("Failed to close connection");
-
-    client.closed().await;
-
-    let _ = events.count().await;
 }
 
 #[tokio::test]
@@ -986,8 +831,12 @@ async fn sent_enquire_link_and_received_enquire_link_response_should_be_sent_thr
         .connected(client);
 
     let expected_events = vec![
-        Insight::SentEnquireLink(1),
-        Insight::ReceivedEnquireLinkResp(1),
+        Insight::Sent(Command::new(CommandStatus::EsmeRok, 1, Pdu::EnquireLink)),
+        Insight::Received(Command::new(
+            CommandStatus::EsmeRok,
+            1,
+            Pdu::EnquireLinkResp,
+        )),
     ];
 
     let mut collected_events = Vec::new();
@@ -1037,8 +886,12 @@ async fn received_enquire_link_and_sent_enquire_link_response_should_be_sent_thr
         .connected(client);
 
     let expected_events = vec![
-        Insight::ReceivedEnquireLink(1),
-        Insight::SentEnquireLinkResp(1),
+        Insight::Received(Command::new(CommandStatus::EsmeRok, 1, Pdu::EnquireLink)),
+        Insight::Sent(Command::new(
+            CommandStatus::EsmeRok,
+            1,
+            Pdu::EnquireLinkResp,
+        )),
     ];
 
     let mut collected_events = Vec::new();
@@ -1229,8 +1082,9 @@ mod request {
     /// and the server is not reading), so the submit sm can not be sent before `give_up` gives up on it.
     ///
     /// Once the server starts reading, it should only receive the enquire link and never the submit sm,
-    /// and the given up request should not have a pending response.
-    async fn assert_given_up_request_not_sent(
+    /// the given up request should not have a pending response,
+    /// and the connection should emit an [`Insight::Cancelled`] ([`CancelledEvent::Request`]) event for the submit sm.
+    async fn assert_given_up_request_not_sent_and_cancelled(
         builder: DefaultTokioConnectionBuilder,
         give_up: impl AsyncFnOnce(&Client),
     ) {
@@ -1260,13 +1114,21 @@ mod request {
         client.closed().await;
 
         let events = events.collect::<Vec<_>>().await;
-        let sent_enquire_links = events
-            .into_iter()
-            .filter_map(|event| match event {
-                InsightEvent::Insight(Insight::SentEnquireLink(number)) => Some(number),
-                _ => None,
-            })
-            .collect::<Vec<_>>();
+
+        let mut sent_enquire_links = Vec::new();
+        let mut cancelled_requests = Vec::new();
+
+        for event in events {
+            match event {
+                InsightEvent::Insight(Insight::Sent(command)) => {
+                    sent_enquire_links.push(command.sequence_number());
+                }
+                InsightEvent::Insight(Insight::Cancelled(CancelledEvent::Request(command))) => {
+                    cancelled_requests.push(command);
+                }
+                _ => {}
+            }
+        }
 
         let received = server.await.expect("Failed to await server");
 
@@ -1287,12 +1149,31 @@ mod request {
             !received.contains(&CommandId::SubmitSm),
             "Connection sent the submit sm even though the request was given up on"
         );
+
+        assert_eq!(
+            cancelled_requests.len(),
+            1,
+            "Expected exactly one cancelled request insight, got: {cancelled_requests:?}"
+        );
+
+        let cancelled = &cancelled_requests[0];
+
+        assert_eq!(
+            cancelled.id(),
+            CommandId::SubmitSm,
+            "Cancelled request insight should be for the submit sm"
+        );
+
+        assert!(
+            !sent_enquire_links.contains(&cancelled.sequence_number()),
+            "Cancelled request should never have been sent"
+        );
     }
 
     /// The request timeout fires before the submit sm can be sent.
     #[tokio::test]
-    async fn timeout_should_not_send_request() {
-        assert_given_up_request_not_sent(
+    async fn timeout_should_not_send_request_and_should_produce_insight_event_cancelled() {
+        assert_given_up_request_not_sent_and_cancelled(
             builder().request_timeout(GIVE_UP_AFTER),
             async |client| {
                 let error = client.submit_sm(SubmitSm::default()).await.unwrap_err();
@@ -1305,8 +1186,8 @@ mod request {
 
     /// The caller drops the request future (via `tokio::select!`) before the submit sm can be sent.
     #[tokio::test]
-    async fn dropped_should_not_send_request() {
-        assert_given_up_request_not_sent(builder(), async |client| {
+    async fn dropped_should_not_send_request_and_should_produce_insight_event_cancelled() {
+        assert_given_up_request_not_sent_and_cancelled(builder(), async |client| {
             tokio::select! {
                 result = client.submit_sm(SubmitSm::default()) => {
                     panic!("Submit sm should not have completed, got: {result:?}");
@@ -1338,5 +1219,187 @@ mod request {
         client.closed().await;
 
         let _ = events.count().await;
+    }
+}
+
+mod response {
+    use super::*;
+
+    /// Waits for the (no longer awaited) `SubmitSmResp` with `sequence_number` to be piped through the events,
+    /// closes the connection, and asserts that exactly one [`CancelledEvent::Response`] insight was emitted for the submit sm.
+    async fn assert_response_piped_through_events_and_cancelled(
+        client: &Client,
+        mut events: impl Stream<Item = InsightEvent> + Unpin,
+        sequence_number: u32,
+    ) {
+        let mut cancelled = Vec::new();
+        let mut response_received = false;
+
+        while let Some(event) = events.next().await {
+            match event {
+                InsightEvent::Incoming(command) if command.id() == CommandId::SubmitSmResp => {
+                    assert_eq!(command.sequence_number(), sequence_number);
+
+                    response_received = true;
+
+                    break;
+                }
+                InsightEvent::Insight(Insight::Cancelled(event)) => cancelled.push(event),
+                _ => {}
+            }
+        }
+
+        assert!(
+            response_received,
+            "The submit sm response should be sent to the event stream"
+        );
+
+        client.close().await.expect("Failed to close connection");
+
+        client.closed().await;
+
+        // Drain the rest of the stream in case the insight arrives after the response
+        while let Some(event) = events.next().await {
+            if let InsightEvent::Insight(Insight::Cancelled(event)) = event {
+                cancelled.push(event);
+            }
+        }
+
+        let expected = CancelledEvent::Response {
+            sequence_number,
+            command_id: CommandId::SubmitSm,
+        };
+
+        let count = cancelled.iter().filter(|event| **event == expected).count();
+
+        assert_eq!(
+            count, 1,
+            "Expected exactly one cancelled response insight for the submit sm, got: {cancelled:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn cancel_send_future_should_remove_pending_response_and_should_produce_insight_event_cancelled()
+     {
+        init_tracing();
+
+        let (server, client) = tokio::io::duplex(1024);
+
+        tokio::spawn(async move {
+            Server::new().run(server).await;
+        });
+
+        let (client, events) = ConnectionBuilder::new()
+            .response_timeout(Duration::from_millis(1000))
+            .events()
+            .insights()
+            .connected(client);
+
+        let future = client.submit_sm(SubmitSm::default());
+
+        tokio::select! {
+            _ = tokio::time::sleep(Duration::from_millis(100)) => {
+                tracing::debug!("Canceling request future");
+            }
+            _ = future => {}
+        }
+
+        let pending_response = client
+            .pending_responses()
+            .await
+            .expect("Failed to get pending responses");
+
+        assert!(
+            !pending_response.contains(&1),
+            "Pending response was not removed"
+        );
+
+        assert_response_piped_through_events_and_cancelled(&client, events, 1).await;
+    }
+
+    /// Similar to [`cancel_send_future_should_remove_pending_response_and_should_produce_insight_event_cancelled`] but this one uses the raw request builder.
+    #[tokio::test]
+    async fn raw_cancel_send_future_should_remove_pending_response_and_should_produce_insight_event_cancelled()
+     {
+        init_tracing();
+
+        let (server, client) = tokio::io::duplex(1024);
+
+        tokio::spawn(async move {
+            Server::new().run(server).await;
+        });
+
+        let (client, events) = ConnectionBuilder::new()
+            .response_timeout(Duration::from_millis(1000))
+            .events()
+            .insights()
+            .connected(client);
+
+        let future = client
+            .raw()
+            .send(SubmitSm::default())
+            .await
+            .expect("Failed to send submit SM")
+            .1;
+
+        tokio::select! {
+            _ = tokio::time::sleep(Duration::from_millis(100)) => {
+                tracing::debug!("Canceling request future");
+            }
+            _ = future => {}
+        }
+
+        let pending_response = client
+            .pending_responses()
+            .await
+            .expect("Failed to get pending responses");
+
+        assert!(
+            !pending_response.contains(&1),
+            "Pending response was not removed"
+        );
+
+        assert_response_piped_through_events_and_cancelled(&client, events, 1).await;
+    }
+
+    #[tokio::test]
+    async fn response_timeout_should_remove_pending_response_and_should_produce_insight_event_cancelled()
+     {
+        init_tracing();
+
+        let (server, client) = tokio::io::duplex(1024);
+
+        tokio::spawn(async move {
+            Server::new()
+                .bind_delay(Duration::from_millis(200))
+                .response_delay(Duration::from_secs(1))
+                .run(server)
+                .await;
+        });
+
+        let (client, events) = ConnectionBuilder::new()
+            .response_timeout(Duration::from_millis(500))
+            .events()
+            .insights()
+            .connected(client);
+
+        let Error::ResponseTimeout {
+            sequence_number, ..
+        } = client.submit_sm(SubmitSm::default()).await.unwrap_err()
+        else {
+            panic!("Expected timeout error");
+        };
+
+        let pending_response = client
+            .pending_responses()
+            .await
+            .expect("Failed to get pending responses");
+
+        assert!(
+            !pending_response.contains(&sequence_number),
+            "Pending response was not removed"
+        );
+
+        assert_response_piped_through_events_and_cancelled(&client, events, sequence_number).await;
     }
 }

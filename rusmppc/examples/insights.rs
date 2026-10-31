@@ -17,7 +17,7 @@ use rusmpp::{
 };
 use rusmppc::{
     ConnectionBuilder,
-    event::{Insight, InsightEvent},
+    event::{CancelledEvent, Insight, InsightEvent},
 };
 
 #[tokio::main]
@@ -53,17 +53,20 @@ async fn main() -> Result<(), Box<dyn core::error::Error>> {
                 InsightEvent::Incoming(command) => {
                     tracing::info!(?command, "Incoming command");
                 }
-                InsightEvent::Insight(Insight::SentEnquireLink(sequence_number)) => {
-                    tracing::info!(%sequence_number, "Sent EnquireLink");
+                InsightEvent::Insight(Insight::Sent(command)) => {
+                    tracing::info!(?command, "Sent command");
                 }
-                InsightEvent::Insight(Insight::ReceivedEnquireLinkResp(sequence_number)) => {
-                    tracing::info!(%sequence_number, "Received EnquireLinkResp");
+                InsightEvent::Insight(Insight::Received(command)) => {
+                    tracing::info!(?command, "Received command");
                 }
-                InsightEvent::Insight(Insight::ReceivedEnquireLink(sequence_number)) => {
-                    tracing::info!(%sequence_number, "Received EnquireLink");
+                InsightEvent::Insight(Insight::Cancelled(CancelledEvent::Request(command))) => {
+                    tracing::info!(?command, "Cancelled request");
                 }
-                InsightEvent::Insight(Insight::SentEnquireLinkResp(sequence_number)) => {
-                    tracing::info!(%sequence_number, "Sent EnquireLinkResp");
+                InsightEvent::Insight(Insight::Cancelled(CancelledEvent::Response {
+                    sequence_number,
+                    command_id,
+                })) => {
+                    tracing::info!(%sequence_number, ?command_id, "Cancelled response");
                 }
                 InsightEvent::Error(error) => {
                     tracing::error!(?error, "Connection error");

@@ -128,7 +128,7 @@ mod event_;
 
 pub mod event {
     //! Types related to events emitted by the `SMPP` connection.
-    pub use super::event_::{Event, Insight, InsightEvent};
+    pub use super::event_::{CancelledEvent, Event, Insight, InsightEvent};
 }
 
 pub mod channel {

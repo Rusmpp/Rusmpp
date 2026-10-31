@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use rusmpp::Command;
+use rusmpp::{Command, CommandId};
 use tokio::sync::mpsc::error::SendError;
 
 use crate::error::Error;
@@ -31,18 +31,31 @@ pub enum InsightEvent {
     Insight(Insight),
 }
 
+/// A request or a response was cancelled.
+#[allow(clippy::large_enum_variant)]
+#[derive(Debug, PartialEq, Eq)]
+pub enum CancelledEvent {
+    /// A request was cancelled due to cancelling the request future or [`Error::RequestTimeout`].
+    Request(Command),
+    /// Waiting for a response was cancelled due to cancelling the request/response future or [`Error::ResponseTimeout`].
+    Response {
+        /// The sequence number of the request that was cancelled.
+        sequence_number: u32,
+        /// The command ID of the associated request.
+        command_id: CommandId,
+    },
+}
+
 /// Connection insight event.
 #[non_exhaustive]
 #[derive(Debug, PartialEq, Eq)]
 pub enum Insight {
-    /// Sent EnquireLink command to the server.
-    SentEnquireLink(u32),
-    /// Received EnquireLinkResp from the server.
-    ReceivedEnquireLinkResp(u32),
-    /// Received EnquireLink command from the server.
-    ReceivedEnquireLink(u32),
-    /// Sent EnquireLinkResp to the server.
-    SentEnquireLinkResp(u32),
+    /// The connection sent a command.
+    Sent(Command),
+    /// The connection received a command.
+    Received(Command),
+    /// A request or a response was cancelled.
+    Cancelled(CancelledEvent),
 }
 
 pub trait EventChannel: Send + 'static {
