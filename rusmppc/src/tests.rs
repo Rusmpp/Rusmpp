@@ -986,8 +986,12 @@ async fn sent_enquire_link_and_received_enquire_link_response_should_be_sent_thr
         .connected(client);
 
     let expected_events = vec![
-        Insight::SentEnquireLink(1),
-        Insight::ReceivedEnquireLinkResp(1),
+        Insight::Sent(Command::new(CommandStatus::EsmeRok, 1, Pdu::EnquireLink)),
+        Insight::Received(Command::new(
+            CommandStatus::EsmeRok,
+            1,
+            Pdu::EnquireLinkResp,
+        )),
     ];
 
     let mut collected_events = Vec::new();
@@ -1037,8 +1041,12 @@ async fn received_enquire_link_and_sent_enquire_link_response_should_be_sent_thr
         .connected(client);
 
     let expected_events = vec![
-        Insight::ReceivedEnquireLink(1),
-        Insight::SentEnquireLinkResp(1),
+        Insight::Received(Command::new(CommandStatus::EsmeRok, 1, Pdu::EnquireLink)),
+        Insight::Sent(Command::new(
+            CommandStatus::EsmeRok,
+            1,
+            Pdu::EnquireLinkResp,
+        )),
     ];
 
     let mut collected_events = Vec::new();
@@ -1263,7 +1271,7 @@ mod request {
         let sent_enquire_links = events
             .into_iter()
             .filter_map(|event| match event {
-                InsightEvent::Insight(Insight::SentEnquireLink(number)) => Some(number),
+                InsightEvent::Insight(Insight::Sent(command)) => Some(command.sequence_number()),
                 _ => None,
             })
             .collect::<Vec<_>>();

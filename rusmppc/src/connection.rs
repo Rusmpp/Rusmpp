@@ -150,10 +150,7 @@ where
 
                     enquire_link_timer.as_mut().deactivate();
 
-                    let _ = self
-                        .events
-                        .send_insight(Insight::SentEnquireLink(sequence_number))
-                        .await;
+                    let _ = self.events.send_insight(Insight::Sent(command)).await;
                 }
                 Ready::EnquireLinkResponseTimer => {
                     tracing::trace!(target: TIMER, "Enquire link response timer fired");
@@ -289,10 +286,7 @@ where
                     if let CommandId::EnquireLink = command.id()
                         && self.auto_enquire_link_response
                     {
-                        let _ = self
-                            .events
-                            .send_insight(Insight::ReceivedEnquireLink(sequence_number))
-                            .await;
+                        let _ = self.events.send_insight(Insight::Received(command)).await;
 
                         let response = Command::builder()
                             .status(CommandStatus::EsmeRok)
@@ -309,10 +303,7 @@ where
                             break;
                         }
 
-                        let _ = self
-                            .events
-                            .send_insight(Insight::SentEnquireLinkResp(sequence_number))
-                            .await;
+                        let _ = self.events.send_insight(Insight::Sent(response)).await;
 
                         continue;
                     }
@@ -343,9 +334,7 @@ where
 
                                         let _ = self
                                             .events
-                                            .send_insight(Insight::ReceivedEnquireLinkResp(
-                                                sequence_number,
-                                            ))
+                                            .send_insight(Insight::Received(command))
                                             .await;
                                     }
                                 }
