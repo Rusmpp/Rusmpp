@@ -21,20 +21,14 @@ impl Gsm7BitSpanishAlphabet {
 }
 
 impl Gsm7BitSpanishAlphabet {
-    /// Encodes the given character into a spanish GSM 7-bit encoded byte.
-    ///
-    /// # Returns
-    ///
-    /// - `Some(encoded)` if the character is found in the GSM 7-bit tables.
-    /// - `None` if the character is not found.
-    pub const fn encode(&self, ch: char) -> Option<Encoded> {
-        if let Some(byte) = Standard::encode(ch) {
-            Some(Encoded::Standard(byte))
-        } else if let Some(byte) = Extended::encode(ch) {
-            Some(Encoded::Extended(byte))
-        } else {
-            None
-        }
+    /// Encodes the given character into a `spanish` GSM 7-bit encoded byte using the standard character set.   
+    pub const fn encode_standard(&self, ch: char) -> Option<u8> {
+        Standard::encode(ch)
+    }
+
+    /// Encodes the given character into a `spanish` GSM 7-bit encoded byte using the extended character set.
+    pub const fn encode_extended(&self, ch: char) -> Option<u8> {
+        Extended::encode(ch)
     }
 
     /// Decodes the given spanish GSM 7-bit encoded byte into a character.

@@ -118,8 +118,7 @@ mod impl_owned {
     impl Gsm7BitUnpackedEncoder {
         /// Encodes the given message into a vector of bytes.
         pub fn encode_to_vec(&self, input: &str) -> Result<Vec<u8>, Gsm7BitEncodeError> {
-            self.alphabet
-                .encode_to_vec(input)
+            Gsm7BitAlphabet::encode_to_vec(&self.standard_alphabet, &self.extended_alphabet, input)
                 .map_err(Gsm7BitEncodeError::InvalidCharacter)
         }
     }
