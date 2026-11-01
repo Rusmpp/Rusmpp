@@ -19,16 +19,10 @@ bytes = { version = "1", default-features = false }
 itertools = "0.15.0"
 
 [features]
-default = ["concatenation", "encoding", "alloc"]
+default = ["alloc"]
 
 # Enables the `alloc` crate.
 alloc = ["rusmpp-core/alloc"]
-
-# Enables concatenation support.
-concatenation = ["encoding"]
-
-# Enables encoding/decoding support.
-encoding = []
 
 [package.metadata.docs.rs]
 all-features = true
@@ -37,24 +31,24 @@ rustdoc-args = ["--cfg", "docsrs"]
 [[example]]
 name = "submit_sm_sar_multipart"
 path = "examples/submit_sm_sar_multipart.rs"
-required-features = ["alloc", "concatenation"]
+required-features = ["alloc"]
 
 [[example]]
 name = "submit_sm_multipart"
 path = "examples/submit_sm_multipart.rs"
-required-features = ["alloc", "concatenation"]
+required-features = ["alloc"]
 
 [[example]]
 name = "submit_sm_multipart_fallback"
 path = "examples/submit_sm_multipart_fallback.rs"
-required-features = ["alloc", "concatenation"]
+required-features = ["alloc"]
 
 [[example]]
 name = "submit_sm_encode"
 path = "examples/submit_sm_encode.rs"
-required-features = ["alloc", "concatenation"]
+required-features = ["alloc"]
 
 [[example]]
 name = "submit_sm_multipart_decode"
 path = "examples/submit_sm_multipart_decode.rs"
-required-features = ["alloc", "concatenation"]
+required-features = ["alloc"]

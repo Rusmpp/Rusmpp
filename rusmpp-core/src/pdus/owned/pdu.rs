@@ -1,10 +1,8 @@
-use bytes::BytesMut;
-
 use crate::{
     CommandId, Sealed,
     decode::{
         AnyOctetStringDecodeError, DecodeResultExt,
-        owned::{Decode, DecodeErrorType, DecodeWithKeyOptional, DecodeWithLength},
+        owned::{Buf, Decode, DecodeErrorType, DecodeWithKeyOptional, DecodeWithLength},
     },
     encode::Length,
     types::owned::AnyOctetString,
@@ -522,7 +520,7 @@ impl DecodeWithKeyOptional for Pdu {
 
     fn decode(
         key: Self::Key,
-        src: &mut BytesMut,
+        src: &mut impl Buf,
         length: usize,
     ) -> Result<Option<(Self, usize)>, Self::Error> {
         if length == 0 {

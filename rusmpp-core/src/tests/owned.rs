@@ -27,6 +27,14 @@ where
 
         let mut encoded = buf.split_to(original.length());
 
+        {
+            let mut slice = encoded.iter().as_slice();
+
+            let (decoded, _size) = T::decode(&mut slice).expect("Failed to decode");
+
+            assert_eq!(original, decoded);
+        }
+
         let (decoded, _size) = T::decode(&mut encoded).expect("Failed to decode");
 
         assert_eq!(original, decoded);
@@ -47,6 +55,15 @@ where
         original.encode(&mut buf);
 
         let mut encoded = buf.split_to(original.length());
+
+        {
+            let mut slice = encoded.iter().as_slice();
+
+            let (decoded, _size) =
+                T::decode(&mut slice, original.length()).expect("Failed to decode");
+
+            assert_eq!(original, decoded);
+        }
 
         let (decoded, _size) =
             T::decode(&mut encoded, original.length()).expect("Failed to decode");

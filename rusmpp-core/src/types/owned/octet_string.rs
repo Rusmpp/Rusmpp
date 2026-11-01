@@ -285,7 +285,10 @@ impl<const MIN: usize, const MAX: usize> DecodeErrorType for OctetString<MIN, MA
 }
 
 impl<const MIN: usize, const MAX: usize> DecodeWithLength for OctetString<MIN, MAX> {
-    fn decode(src: &mut BytesMut, length: usize) -> Result<(Self, usize), Self::Error> {
+    fn decode(
+        src: &mut impl crate::decode::owned::Buf,
+        length: usize,
+    ) -> Result<(Self, usize), Self::Error> {
         Self::_ASSERT_VALID;
 
         if length > MAX {
@@ -306,7 +309,7 @@ impl<const MIN: usize, const MAX: usize> DecodeWithLength for OctetString<MIN, M
             return Err(OctetStringDecodeError::UnexpectedEndOfBuffer);
         }
 
-        let bytes = src.split_to(length).freeze();
+        let bytes = src.split_to(length).into_bytes();
 
         Ok((Self { bytes }, length))
     }
@@ -384,6 +387,16 @@ const _: () = {
         }
     }
 };
+
+impl<const MIN: usize, const MAX: usize> From<crate::types::borrowed::OctetString<'_, MIN, MAX>>
+    for OctetString<MIN, MAX>
+{
+    fn from(value: crate::types::borrowed::OctetString<'_, MIN, MAX>) -> Self {
+        Self {
+            bytes: Bytes::copy_from_slice(value.bytes()),
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {

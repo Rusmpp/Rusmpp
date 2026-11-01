@@ -211,12 +211,15 @@ impl DecodeErrorType for AnyOctetString {
 }
 
 impl DecodeWithLength for AnyOctetString {
-    fn decode(src: &mut BytesMut, length: usize) -> Result<(Self, usize), Self::Error> {
+    fn decode(
+        src: &mut impl crate::decode::owned::Buf,
+        length: usize,
+    ) -> Result<(Self, usize), Self::Error> {
         if src.len() < length {
             return Err(AnyOctetStringDecodeError::UnexpectedEndOfBuffer);
         }
 
-        let bytes = src.split_to(length).freeze();
+        let bytes = src.split_to(length).into_bytes();
 
         Ok((Self { bytes }, length))
     }
@@ -276,6 +279,14 @@ const _: () = {
         }
     }
 };
+
+impl From<crate::types::borrowed::AnyOctetString<'_>> for AnyOctetString {
+    fn from(value: crate::types::borrowed::AnyOctetString<'_>) -> Self {
+        Self {
+            bytes: Bytes::copy_from_slice(value.bytes()),
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {

@@ -1,8 +1,12 @@
+use rusmpp_core::udhs::values::NationalLanguageIndicator;
+
+use crate::encoding::gsm7bit::alphabet::macros::{decode, encode};
+
 use super::Encoded;
 
 /// Default GSM 7-bit alphabet.
 #[non_exhaustive]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Gsm7BitDefaultAlphabet;
 
 impl Default for Gsm7BitDefaultAlphabet {
@@ -19,23 +23,17 @@ impl Gsm7BitDefaultAlphabet {
 }
 
 impl Gsm7BitDefaultAlphabet {
-    /// Encodes the given character into a default GSM 7-bit encoded byte.
-    ///
-    /// # Returns
-    ///
-    /// - `Some(Self)` if the character is found in the GSM 7-bit tables.
-    /// - `None` if the character is not found.
-    pub const fn encode(&self, ch: char) -> Option<Encoded> {
-        if let Some(byte) = Standard::encode(ch) {
-            Some(Encoded::Standard(byte))
-        } else if let Some(byte) = Extended::encode(ch) {
-            Some(Encoded::Extended(byte))
-        } else {
-            None
-        }
+    /// Encodes the given character into a `default` GSM 7-bit encoded byte using the standard character set.   
+    pub const fn encode_standard(&self, ch: char) -> Option<u8> {
+        Standard::encode(ch)
     }
 
-    /// Decodes the given default GSM 7-bit encoded byte into a character.
+    /// Encodes the given character into a `default` GSM 7-bit encoded byte using the extended character set.
+    pub const fn encode_extended(&self, ch: char) -> Option<u8> {
+        Extended::encode(ch)
+    }
+
+    /// Decodes the given `default` GSM 7-bit encoded byte into a character.
     ///
     /// # Returns
     ///
@@ -57,6 +55,16 @@ impl Gsm7BitDefaultAlphabet {
     pub const fn extended() -> &'static [(char, u8)] {
         EXTENDED
     }
+
+    /// Returns the standard [`NationalLanguageIndicator`] for the `default` GSM 7-bit alphabet.
+    pub const fn standard_national_language_indicator() -> Option<NationalLanguageIndicator> {
+        None
+    }
+
+    /// Returns the extended [`NationalLanguageIndicator`] for the `default` GSM 7-bit alphabet.
+    pub const fn extended_national_language_indicator() -> Option<NationalLanguageIndicator> {
+        None
+    }
 }
 
 pub(super) struct Standard;
@@ -65,69 +73,21 @@ struct Extended;
 
 impl Standard {
     pub(super) const fn encode(ch: char) -> Option<u8> {
-        let mut i = 0;
-
-        while i < STANDARD.len() {
-            let (c, byte) = STANDARD[i];
-
-            if c == ch {
-                return Some(byte);
-            }
-
-            i += 1;
-        }
-
-        None
+        encode!(ch, STANDARD)
     }
 
     pub(super) const fn decode(byte: u8) -> Option<char> {
-        let mut i = 0;
-
-        while i < STANDARD.len() {
-            let (c, b) = STANDARD[i];
-
-            if b == byte {
-                return Some(c);
-            }
-
-            i += 1;
-        }
-
-        None
+        decode!(byte, STANDARD)
     }
 }
 
 impl Extended {
     const fn encode(ch: char) -> Option<u8> {
-        let mut i = 0;
-
-        while i < EXTENDED.len() {
-            let (c, byte) = EXTENDED[i];
-
-            if c == ch {
-                return Some(byte);
-            }
-
-            i += 1;
-        }
-
-        None
+        encode!(ch, EXTENDED)
     }
 
     const fn decode(byte: u8) -> Option<char> {
-        let mut i = 0;
-
-        while i < EXTENDED.len() {
-            let (c, b) = EXTENDED[i];
-
-            if b == byte {
-                return Some(c);
-            }
-
-            i += 1;
-        }
-
-        None
+        decode!(byte, EXTENDED)
     }
 }
 

@@ -343,7 +343,7 @@ impl<const MIN: usize, const MAX: usize> DecodeErrorType for COctetString<MIN, M
 }
 
 impl<const MIN: usize, const MAX: usize> Decode for COctetString<MIN, MAX> {
-    fn decode(src: &mut BytesMut) -> Result<(Self, usize), Self::Error> {
+    fn decode(src: &mut impl crate::decode::owned::Buf) -> Result<(Self, usize), Self::Error> {
         Self::_ASSERT_VALID;
 
         if src.len() < MIN {
@@ -354,12 +354,13 @@ impl<const MIN: usize, const MAX: usize> Decode for COctetString<MIN, MAX> {
         }
 
         let index = src
+            .as_slice()
             .iter()
             .take(MAX)
-            .position(|&b| b == 0)
+            .position(|b| *b == 0)
             .ok_or(COctetStringDecodeError::NotNullTerminated)?;
 
-        let bytes = src.split_to(index + 1).freeze();
+        let bytes = src.split_to(index + 1).into_bytes();
 
         if !bytes.is_ascii() {
             return Err(COctetStringDecodeError::NotAscii);
@@ -435,6 +436,16 @@ const _: () = {
         }
     }
 };
+
+impl<const MIN: usize, const MAX: usize> From<crate::types::borrowed::COctetString<'_, MIN, MAX>>
+    for COctetString<MIN, MAX>
+{
+    fn from(value: crate::types::borrowed::COctetString<'_, MIN, MAX>) -> Self {
+        Self {
+            bytes: Bytes::copy_from_slice(value.bytes()),
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {

@@ -6,7 +6,6 @@ pub use encoder::Encoder;
 mod decoder;
 pub use decoder::{Decoder, SupportedDecodeError, SupportedDecoder};
 
-mod traits;
-pub use traits::{Encoded, EncodedBuilder};
-
-mod fallback;
+// TODO: restore
+// mod traits;
+// pub use traits::{Encoded, EncodedBuilder};

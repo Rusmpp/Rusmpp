@@ -13,7 +13,7 @@ use futures::StreamExt;
 use pyo3::{pyclass, pymethods, types::PyType, Bound, Py, PyAny, PyResult, Python};
 use pyo3_async_runtimes::tokio::future_into_py;
 use rusmpp::{
-    extra::{concatenation::Multipart, encoding::Encoded},
+    // extra::{concatenation::Multipart, encoding::Encoded},
     pdus::{BindReceiver, BindTransceiver, BindTransmitter, DeliverSmResp, SubmitSm},
     tlvs::MessageSubmissionRequestTlvValue,
     types::{COctetString, EmptyOrFullCOctetString, OctetString},
@@ -564,18 +564,22 @@ impl Client {
 
         tracing::debug!(?pdu, "Built Pdu");
 
-        let multipart = pdu
-            .udh_multipart(&short_message)
-            .max_short_message_size(max_short_message_size)
-            .reference_u8(reference)
-            .encoder(encoder)
-            .build()
-            .map_err(Exception::from)?
-            .into_iter()
-            .map(From::from)
-            .collect();
+        // TODO: re-enable
 
-        Ok(multipart)
+        // let multipart = pdu
+        //     .udh_multipart(&short_message)
+        //     .max_short_message_size(max_short_message_size)
+        //     .reference_u8(reference)
+        //     .encoder(encoder)
+        //     .build()
+        //     .map_err(Exception::from)?
+        //     .into_iter()
+        //     .map(From::from)
+        //     .collect();
+
+        // Ok(multipart)
+
+        todo!()
     }
 
     #[classmethod]
@@ -656,13 +660,17 @@ impl Client {
 
         tracing::debug!(?pdu, "Built Pdu");
 
-        let encoded = pdu
-            .encoded(&short_message)
-            .encoder(encoder)
-            .build()
-            .map(From::from)
-            .map_err(Exception::from)?;
+        // TODO: re-enable
 
-        Ok(encoded)
+        // let encoded = pdu
+        //     .encoded(&short_message)
+        //     .encoder(encoder)
+        //     .build()
+        //     .map(From::from)
+        //     .map_err(Exception::from)?;
+
+        // Ok(encoded)
+
+        todo!()
     }
 }

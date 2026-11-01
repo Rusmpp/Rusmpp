@@ -1,21 +1,27 @@
 mod default;
+mod macros;
 mod spanish;
+mod turkish;
 
 pub use default::Gsm7BitDefaultAlphabet;
-
 pub use spanish::Gsm7BitSpanishAlphabet;
+pub use turkish::Gsm7BitTurkishAlphabet;
+
+use rusmpp_core::udhs::values::NationalLanguageIndicator;
 
 /// GSM 7-bit escape character.
 pub const ESCAPE_CHARACTER: u8 = 0x1B;
 
 /// GSM 7-bit alphabet.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 #[non_exhaustive]
 pub enum Gsm7BitAlphabet {
     /// Default GSM 7-bit alphabet.
     Default(Gsm7BitDefaultAlphabet),
     /// Spanish GSM 7-bit alphabet.
     Spanish(Gsm7BitSpanishAlphabet),
+    /// Turkish GSM 7-bit alphabet.
+    Turkish(Gsm7BitTurkishAlphabet),
 }
 
 impl Default for Gsm7BitAlphabet {
@@ -40,11 +46,17 @@ impl Gsm7BitAlphabet {
         Self::Spanish(Gsm7BitSpanishAlphabet::new())
     }
 
+    /// Creates a new [`Gsm7BitAlphabet`] with the [`Gsm7BitTurkishAlphabet`].
+    pub const fn turkish() -> Self {
+        Self::Turkish(Gsm7BitTurkishAlphabet::new())
+    }
+
     /// Returns the standard GSM 7-bit character set.
     pub const fn standard(&self) -> &'static [(char, u8)] {
         match self {
             Self::Default(_) => Gsm7BitDefaultAlphabet::standard(),
             Self::Spanish(_) => Gsm7BitSpanishAlphabet::standard(),
+            Self::Turkish(_) => Gsm7BitTurkishAlphabet::standard(),
         }
     }
 
@@ -53,19 +65,43 @@ impl Gsm7BitAlphabet {
         match self {
             Self::Default(_) => Gsm7BitDefaultAlphabet::extended(),
             Self::Spanish(_) => Gsm7BitSpanishAlphabet::extended(),
+            Self::Turkish(_) => Gsm7BitTurkishAlphabet::extended(),
         }
     }
 
-    /// Encodes the given character into a GSM 7-bit encoded byte.
-    ///
-    /// # Returns
-    ///
-    /// - `Some(Encoded)` if the character is found in the GSM 7-bit tables.
-    /// - `None` if the character is not found.
-    pub const fn encode(&self, ch: char) -> Option<Encoded> {
+    /// Returns the standard [`NationalLanguageIndicator`].
+    pub const fn standard_national_language_indicator(&self) -> Option<NationalLanguageIndicator> {
         match self {
-            Self::Default(alphabet) => alphabet.encode(ch),
-            Self::Spanish(alphabet) => alphabet.encode(ch),
+            Self::Default(_) => Gsm7BitDefaultAlphabet::standard_national_language_indicator(),
+            Self::Spanish(_) => Gsm7BitSpanishAlphabet::standard_national_language_indicator(),
+            Self::Turkish(_) => Gsm7BitTurkishAlphabet::standard_national_language_indicator(),
+        }
+    }
+
+    /// Returns the extended [`NationalLanguageIndicator`].
+    pub const fn extended_national_language_indicator(&self) -> Option<NationalLanguageIndicator> {
+        match self {
+            Self::Default(_) => Gsm7BitDefaultAlphabet::extended_national_language_indicator(),
+            Self::Spanish(_) => Gsm7BitSpanishAlphabet::extended_national_language_indicator(),
+            Self::Turkish(_) => Gsm7BitTurkishAlphabet::extended_national_language_indicator(),
+        }
+    }
+
+    /// Encodes the given character into a GSM 7-bit encoded byte using the standard character set.   
+    pub const fn encode_standard(&self, ch: char) -> Option<u8> {
+        match self {
+            Self::Default(alphabet) => alphabet.encode_standard(ch),
+            Self::Spanish(alphabet) => alphabet.encode_standard(ch),
+            Self::Turkish(alphabet) => alphabet.encode_standard(ch),
+        }
+    }
+
+    /// Encodes the given character into a GSM 7-bit encoded byte using the extended character set.
+    pub const fn encode_extended(&self, ch: char) -> Option<u8> {
+        match self {
+            Self::Default(alphabet) => alphabet.encode_extended(ch),
+            Self::Spanish(alphabet) => alphabet.encode_extended(ch),
+            Self::Turkish(alphabet) => alphabet.encode_extended(ch),
         }
     }
 
@@ -79,6 +115,7 @@ impl Gsm7BitAlphabet {
         match self {
             Self::Default(alphabet) => alphabet.decode(encoded),
             Self::Spanish(alphabet) => alphabet.decode(encoded),
+            Self::Turkish(alphabet) => alphabet.decode(encoded),
         }
     }
 
@@ -89,7 +126,11 @@ impl Gsm7BitAlphabet {
     /// - Returns `Err(char)` if a character in the message cannot be encoded.
     #[cfg(any(test, feature = "alloc"))]
     #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    pub(crate) fn encode_to_vec(&self, message: &str) -> Result<alloc::vec::Vec<u8>, char> {
+    pub(crate) fn encode_to_vec(
+        standard: &Self,
+        extended: &Self,
+        message: &str,
+    ) -> Result<alloc::vec::Vec<u8>, char> {
         // We double the amount of `bytes` we have in the worst case.
         //
         // If the amount of `bytes` is equals to the amount of `chars`
@@ -102,13 +143,15 @@ impl Gsm7BitAlphabet {
         let mut encoded = alloc::vec::Vec::with_capacity(message.len() * 2);
 
         for ch in message.chars() {
-            match self.encode(ch) {
-                Some(Encoded::Standard(byte)) => encoded.push(byte),
-                Some(Encoded::Extended(byte)) => {
-                    encoded.push(ESCAPE_CHARACTER);
-                    encoded.push(byte);
-                }
-                None => return Err(ch),
+            match standard.encode_standard(ch) {
+                Some(byte) => encoded.push(byte),
+                None => match extended.encode_extended(ch) {
+                    Some(byte) => {
+                        encoded.push(ESCAPE_CHARACTER);
+                        encoded.push(byte);
+                    }
+                    None => return Err(ch),
+                },
             }
         }
 

@@ -47,9 +47,7 @@ impl crate::decode::owned::DecodeErrorType for u16 {
 
 #[cfg(feature = "alloc")]
 impl crate::decode::owned::Decode for u16 {
-    fn decode(src: &mut bytes::BytesMut) -> Result<(Self, usize), Self::Error> {
-        use bytes::Buf;
-
+    fn decode(src: &mut impl crate::decode::owned::Buf) -> Result<(Self, usize), Self::Error> {
         if src.len() < 2 {
             return Err(IntegerDecodeError::UnexpectedEndOfBuffer);
         }

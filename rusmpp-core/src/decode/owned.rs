@@ -1,10 +1,108 @@
 //! Traits for decoding `SMPP` values with owned data.
 
-use bytes::BytesMut;
-
 use crate::Sealed;
 
 use super::error::VecDecodeError;
+
+/// A decode buffer. Used by all decoding traits.
+///
+/// - [`Decode`]
+/// - [`DecodeWithLength`]
+/// - [`DecodeWithKey`]
+/// - [`DecodeWithKeyOptional`]
+pub trait Buf: Sealed {
+    /// Get a single byte from the buffer.
+    ///
+    /// Moves the buffer forward by 1 byte.
+    fn get_u8(&mut self) -> u8;
+
+    /// Get a 2-byte unsigned integer from the buffer in big-endian byte order.
+    ///
+    /// Moves the buffer forward by 2 bytes.
+    fn get_u16(&mut self) -> u16;
+
+    /// Get a 4-byte unsigned integer from the buffer in big-endian byte order.
+    ///
+    /// Moves the buffer forward by 4 bytes.
+    fn get_u32(&mut self) -> u32;
+
+    /// Split the buffer into two at the given index, returning the first part and leaving the second part in the original buffer.
+    fn split_to(&mut self, at: usize) -> Self;
+
+    /// Get a slice of the buffer without consuming it.
+    fn as_slice(&self) -> &[u8];
+
+    /// Convert the buffer into a [`bytes::Bytes`] instance, consuming the buffer.
+    fn into_bytes(self) -> bytes::Bytes;
+
+    /// Get the length of the buffer.
+    fn len(&self) -> usize {
+        self.as_slice().len()
+    }
+
+    /// Check if the buffer is empty.
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+}
+
+impl Buf for &[u8] {
+    fn get_u8(&mut self) -> u8 {
+        bytes::Buf::get_u8(self)
+    }
+
+    fn get_u16(&mut self) -> u16 {
+        bytes::Buf::get_u16(self)
+    }
+
+    fn get_u32(&mut self) -> u32 {
+        bytes::Buf::get_u32(self)
+    }
+
+    fn split_to(&mut self, at: usize) -> Self {
+        let (head, tail) = self.split_at(at);
+
+        *self = tail;
+
+        head
+    }
+
+    fn into_bytes(self) -> bytes::Bytes {
+        bytes::Bytes::copy_from_slice(self)
+    }
+
+    fn as_slice(&self) -> &[u8] {
+        self
+    }
+}
+
+impl Sealed for bytes::BytesMut {}
+
+impl Buf for bytes::BytesMut {
+    fn get_u8(&mut self) -> u8 {
+        bytes::Buf::get_u8(self)
+    }
+
+    fn get_u16(&mut self) -> u16 {
+        bytes::Buf::get_u16(self)
+    }
+
+    fn get_u32(&mut self) -> u32 {
+        bytes::Buf::get_u32(self)
+    }
+
+    fn split_to(&mut self, at: usize) -> Self {
+        self.split_to(at)
+    }
+
+    fn into_bytes(self) -> bytes::Bytes {
+        self.freeze()
+    }
+
+    fn as_slice(&self) -> &[u8] {
+        self.as_ref()
+    }
+}
 
 /// Trait for defining the error type for all decoding traits.
 ///
@@ -34,18 +132,18 @@ where
 /// Trait for decoding `SMPP` values from a buffer.
 pub trait Decode: DecodeErrorType + Sized + Sealed {
     /// Decode a value from a buffer.
-    fn decode(src: &mut BytesMut) -> Result<(Self, usize), Self::Error>;
+    fn decode(src: &mut impl Buf) -> Result<(Self, usize), Self::Error>;
 }
 
 /// Trait for decoding `SMPP` values from a buffer with a specified length.
 pub trait DecodeWithLength: DecodeErrorType + Sized + Sealed {
     /// Decode a value from a buffer, with a specified length
-    fn decode(src: &mut BytesMut, length: usize) -> Result<(Self, usize), Self::Error>;
+    fn decode(src: &mut impl Buf, length: usize) -> Result<(Self, usize), Self::Error>;
 }
 
 /// Everything that implements [`Decode`] also implements [`DecodeWithLength`] by ignoring the length.
 impl<T: Decode> DecodeWithLength for T {
-    fn decode(src: &mut BytesMut, _length: usize) -> Result<(Self, usize), Self::Error> {
+    fn decode(src: &mut impl Buf, _length: usize) -> Result<(Self, usize), Self::Error> {
         Decode::decode(src)
     }
 }
@@ -57,7 +155,7 @@ pub trait DecodeWithKey: DecodeErrorType + Sized + Sealed {
     /// Decode a value from a buffer, using a key to determine the type.
     fn decode(
         key: Self::Key,
-        src: &mut BytesMut,
+        src: &mut impl Buf,
         length: usize,
     ) -> Result<(Self, usize), Self::Error>;
 }
@@ -69,19 +167,19 @@ pub trait DecodeWithKeyOptional: DecodeErrorType + Sized + Sealed {
     /// Decode an optional value from a buffer, using a key to determine the type.
     fn decode(
         key: Self::Key,
-        src: &mut BytesMut,
+        src: &mut impl Buf,
         length: usize,
     ) -> Result<Option<(Self, usize)>, Self::Error>;
 }
 
 pub(crate) trait DecodeExt: Decode {
-    fn decode_move(src: &mut BytesMut, size: usize) -> Result<(Self, usize), Self::Error> {
+    fn decode_move(src: &mut impl Buf, size: usize) -> Result<(Self, usize), Self::Error> {
         Self::decode(src).map(|(this, size_)| (this, size + size_))
     }
 
     /// Decode a vector of values from a buffer with a specified count.
     fn counted(
-        src: &mut BytesMut,
+        src: &mut impl Buf,
         count: usize,
     ) -> Result<(alloc::vec::Vec<Self>, usize), Self::Error> {
         (0..count).try_fold(
@@ -97,7 +195,7 @@ pub(crate) trait DecodeExt: Decode {
     }
 
     fn counted_move(
-        src: &mut BytesMut,
+        src: &mut impl Buf,
         count: usize,
         size: usize,
     ) -> Result<(alloc::vec::Vec<Self>, usize), Self::Error> {
@@ -108,7 +206,7 @@ pub(crate) trait DecodeExt: Decode {
     ///
     /// If the length is 0, return `None`.
     fn length_checked_decode(
-        src: &mut BytesMut,
+        src: &mut impl Buf,
         length: usize,
     ) -> Result<Option<(Self, usize)>, Self::Error> {
         (length > 0)
@@ -118,7 +216,7 @@ pub(crate) trait DecodeExt: Decode {
     }
 
     fn length_checked_decode_move(
-        src: &mut BytesMut,
+        src: &mut impl Buf,
         length: usize,
         size: usize,
     ) -> Result<Option<(Self, usize)>, Self::Error> {
@@ -131,7 +229,7 @@ impl<T: Decode> DecodeExt for T {}
 
 pub(crate) trait DecodeWithLengthExt: DecodeWithLength {
     fn decode_move(
-        src: &mut BytesMut,
+        src: &mut impl Buf,
         length: usize,
         size: usize,
     ) -> Result<(Self, usize), Self::Error> {
@@ -147,7 +245,7 @@ pub(crate) trait DecodeWithKeyExt: DecodeWithKey {
     /// If the length is 0, return `None`.
     fn optional_length_checked_decode(
         key: Self::Key,
-        src: &mut BytesMut,
+        src: &mut impl Buf,
         length: usize,
     ) -> Result<Option<(Self, usize)>, Self::Error> {
         (length > 0)
@@ -158,7 +256,7 @@ pub(crate) trait DecodeWithKeyExt: DecodeWithKey {
 
     fn optional_length_checked_decode_move(
         key: Self::Key,
-        src: &mut BytesMut,
+        src: &mut impl Buf,
         length: usize,
         size: usize,
     ) -> Result<Option<(Self, usize)>, Self::Error> {
@@ -169,7 +267,7 @@ pub(crate) trait DecodeWithKeyExt: DecodeWithKey {
     /// Decode a value from a slice, using a key to determine the type ignoring the length.
     fn no_length_decode_move(
         key: Self::Key,
-        src: &mut BytesMut,
+        src: &mut impl Buf,
         size: usize,
     ) -> Result<(Self, usize), Self::Error> {
         Self::decode(key, src, 0).map(|(this, size_)| (this, size + size_))
@@ -181,7 +279,7 @@ impl<T: DecodeWithKey> DecodeWithKeyExt for T {}
 pub(crate) trait DecodeWithKeyOptionalExt: DecodeWithKeyOptional {
     fn decode_move(
         key: Self::Key,
-        src: &mut BytesMut,
+        src: &mut impl Buf,
         length: usize,
         size: usize,
     ) -> Result<Option<(Self, usize)>, Self::Error> {
@@ -193,7 +291,7 @@ pub(crate) trait DecodeWithKeyOptionalExt: DecodeWithKeyOptional {
 impl<T: DecodeWithKeyOptional> DecodeWithKeyOptionalExt for T {}
 
 impl<T: Decode> DecodeWithLength for alloc::vec::Vec<T> {
-    fn decode(src: &mut BytesMut, length: usize) -> Result<(Self, usize), Self::Error> {
+    fn decode(src: &mut impl Buf, length: usize) -> Result<(Self, usize), Self::Error> {
         if length == 0 {
             return Ok((alloc::vec::Vec::new(), 0));
         }
@@ -223,6 +321,8 @@ impl<T: Decode> DecodeWithLength for alloc::vec::Vec<T> {
 #[cfg(test)]
 mod tests {
     use alloc::vec::Vec;
+
+    use bytes::BytesMut;
 
     use crate::{
         decode::{COctetStringDecodeError, IntegerDecodeError},
